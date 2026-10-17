@@ -20,7 +20,7 @@ positionsnummer (Pos), profil, material och längd, hålgrupper och ritningens s
     (huvuddelen som "B/1 b/1 UPE140");
   - hålangivelser 4*Ø14 - M12x44 i vyer där hålen syns som cirklar;
   - måttkedjor till hål och hålgruppernas mitt, totalmått;
-  - materiallista (STYCKLIT. | PROFIL | MATERIAL | ANT. | LÄNGD | AREA/st | VIKT/st, sorterad på vikt, TOTALT)
+  - materiallista ovanför titelrutan (STYCKLIT. | PROFIL | MATERIAL | ANT. | LÄNGD | AREA/st | VIKT/st, sorterad på vikt, TOTALT)
     med rutan ALLMÄNNA NOTERINGAR, noter i versaler nere till vänster och titelblocket ifyllt.
 Exporterar <modell>.pdf, <modell>.png och <modell>_materiallista.csv.
 
@@ -694,9 +694,10 @@ def _jobb():
             hojd = sum(vd["topp"] + vd["h"] / n + vd["botten"] for vd in lst) + 4 * (len(lst) - 1)
             bredd = max(vd["vanster"] for vd in lst) + max(vd["w"] for vd in lst) / n
             return bredd, hojd
+        ML_X, ML_Y = 574.0 - mw, 68.0                   # materiallistan: högerkant mot titelrutan, ovanför revisionstabellen
         def y_min(bredd):
             y1 = max(26.0 + nh_ + 6, 60.0)
-            return max(y1, 20.0 + mh + 6) if X0 + bredd > 270 else y1
+            return max(y1, ML_Y + mh + 6) if X0 + bredd > ML_X - 4 else y1
 
         def ryms(k):
             b, h = kolumn(huvud_v, k)
@@ -717,7 +718,7 @@ def _jobb():
         xr0 = X0 + bv + 22
         ns = None
         if snitt_v:
-            yr1 = 92.0
+            yr1 = max(92.0, ML_Y + mh + 6)                 # snitten slutar ovanför materiallistan
             ns = a.get("skala_snitt") or next((k for k in SKALOR if min(n, 5) <= k <= n * 1.0001 and kolumn(snitt_v, k)[0] <= 568 - xr0 and kolumn(snitt_v, k)[1] <= Y0 - yr1), None)
             if ns is None:
                 ns = next((k for k in SKALOR if kolumn(snitt_v, k)[0] <= 568 - xr0 and kolumn(snitt_v, k)[1] <= Y0 - yr1), SKALOR[-1])
@@ -752,7 +753,7 @@ def _jobb():
             vd["vy"] = vy
         # isometri i ytan nere till höger (under snitten, ovanför revisionstabellen)
         ni = None
-        ix0, ix1, iy0, iy1 = max(xr0, 410.0), 568.0, 74.0, min(ylagst, 300.0)
+        ix0, ix1, iy0, iy1 = max(xr0, 410.0), 568.0, ML_Y + mh + 6, min(ylagst, 300.0)
         wi_ = projicera(komp, *ISO)
         wi, hi = wi_[1] - wi_[0], wi_[3] - wi_[2]
         if ix1 - ix0 > 40 and iy1 - iy0 > 30:
@@ -891,7 +892,7 @@ def _jobb():
             symbol(doc, page, "RubrikIsometri", sv, iso.v.X.Value - w_ / 2, iso.v.Y.Value - hi / ni / 2 - 2, w_, h_)
 
         # ---- materiallista, noter, titelblock
-        symbol(doc, page, "Materiallista", ml, 404 - mw, 20 + mh, mw, mh)
+        symbol(doc, page, "Materiallista", ml, ML_X, ML_Y + mh, mw, mh)
         if noter:
             symbol(doc, page, "Noter", nsvg, X0, 26.0 + nh_, nw, nh_)
         skalor = sorted({n} | ({ns} if ns else set()))          # som Tekla: huvudvyer och snitt (inte isometrin)
