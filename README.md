@@ -29,7 +29,7 @@ Ingen FreeCAD-installation behövs på egen dator. Allt körs i Claude Codes mol
    först och använd din fork.
 2. Starta en ny session på https://claude.ai/code, eller i Claude-appen på telefonen under **Code**, med
    `richalund/Steelworks-shopdrawings` (eller din fork) som repo.
-3. Sessionen installerar FreeCAD i bakgrunden när den startar (5–10 minuter, ca 4 GB). Du kan börja
+3. Sessionen installerar FreeCAD i bakgrunden när den startar (10–15 minuter, ca 4 GB). Du kan börja
    beskriva vad som ska ritas direkt; Claude väntar in installationen innan första ritningen. Vill du
    slippa väntan varje gång: lägg `bash .claude/skills/freecad-styrning/scripts/installera_linux.sh` som
    setup-skript i molnmiljön (Settings → Environments), så sparas installationen i miljöns cache.

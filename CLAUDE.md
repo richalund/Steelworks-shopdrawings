@@ -4,7 +4,7 @@ Repot innehåller skillen `freecad-styrning` (`.claude/skills/freecad-styrning/S
 plåt- och stålkonstruktioner i FreeCAD från Python, med tillverkningsritningar (TechDraw, PDF),
 DXF-utbredning, sammanställningsritningar i Tekla-stil och STEP.
 
-- I en molnsession installerar SessionStart-hooken FreeCAD i bakgrunden (5–10 min första gången i en
+- I en molnsession installerar SessionStart-hooken FreeCAD i bakgrunden (10–15 min första gången i en
   ny container). Vänta på att `/opt/freecad/bin/freecad` finns innan första ritningen, eller kör
   `bash .claude/skills/freecad-styrning/scripts/installera_linux.sh` själv.
 - Kör skripten med system-`python3`, inte FreeCADs Python i `/opt/freecad/bin`.

@@ -9,7 +9,7 @@ if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
   exit 0
 fi
 
-echo '{"async": true, "asyncTimeout": 900000}'
+echo '{"async": true, "asyncTimeout": 1800000}'
 
 cd "$CLAUDE_PROJECT_DIR"
 bash .claude/skills/freecad-styrning/scripts/installera_linux.sh
