@@ -3,7 +3,8 @@
   python ritning.py "<del.FCStd>" --namn "Dataställ" --nummer "DS-01" [--skala 2] [--skala-utbredning 2]
                     [--material "Stål S235, obehandlad"] [--foretag "Firma AB"] [--ritad-av AB] [--ut <mapp>]
 
-Titelblockets företagsnamn och signatur kan också sättas med miljövariablerna FC_FORETAG och FC_RITAD_AV.
+Titelblockets företagsnamn, signatur och logga tas från foretag.json (scripts/foretag.py satt ...) eller
+miljövariablerna FC_FORETAG, FC_RITAD_AV och FC_LOGGA om de inte ges på kommandoraden.
 
 Delen ska ha en SheetMetal-utbredning (objektet "Utbredning", som datastall.py skapar) och gärna en
 profilskiss "Profil" med namngivna mått; de namngivna måtten och vinklarna sätts ut i profilvyn
@@ -33,8 +34,11 @@ def args(argv=None):
     ap.add_argument("--skala-utbredning", dest="skala_ut", type=float, default=None, help="1:N på blad 2 (standard: automatiskt)")
     ap.add_argument("--ut", default=None)
     ap.add_argument("--material", default="Stål S235, obehandlad")
-    ap.add_argument("--ritad-av", dest="ritad_av", default=os.environ.get("FC_RITAD_AV", ""), help="signatur i titelblocket (standard: miljövariabeln FC_RITAD_AV)")
-    ap.add_argument("--foretag", default=os.environ.get("FC_FORETAG", ""), help="företagsnamn i titelblocket (standard: miljövariabeln FC_FORETAG)")
+    import foretag
+    u = foretag.las()
+    ap.add_argument("--ritad-av", dest="ritad_av", default=u["ritad_av"], help="signatur i titelblocket (standard: foretag.json eller FC_RITAD_AV)")
+    ap.add_argument("--foretag", default=u["foretag"], help="företagsnamn i titelblocket (standard: foretag.json eller FC_FORETAG)")
+    ap.add_argument("--logga", default=u["logga"], help="PNG/JPEG i stället för företagsnamnet (standard: foretag.json eller FC_LOGGA)")
     ap.add_argument("--ytbehandling", default="Ytbehandling enligt beställning.")
     ap.add_argument("--utan-kallor", dest="utan_kallor", action="store_true",
                     help="ingen not om var materialkvaliteten är verifierad (kallor.py)")
@@ -61,11 +65,11 @@ def _jobb():
     from FreeCAD import Vector as V
     import TechDrawGui
     from PySide import QtGui
-    import fcapi, plat, dfm
+    import fcapi, plat, dfm, foretag
     import pd as pdm
     from fcapi import logg, pump
 
-    mall = os.path.join(os.path.dirname(fcapi.jobb()["skriptmapp"]), "mallar", "A3.svg")
+    mall = [os.path.join(os.path.dirname(fcapi.jobb()["skriptmapp"]), "mallar", "A3.svg")]   # byts mot kopia med logga i huvud()
 
     def textbredd(s, h):
         f = QtGui.QFont("Century Gothic")
@@ -208,7 +212,7 @@ def _jobb():
     def nytt_blad(doc, namn, f):
         page = doc.addObject("TechDraw::DrawPage", namn)
         tpl = doc.addObject("TechDraw::DrawSVGTemplate", namn + "_mall")
-        tpl.Template = mall
+        tpl.Template = mall[0]
         page.Template = tpl
         et = tpl.EditableTexts
         et.update(f)
@@ -872,6 +876,9 @@ def _jobb():
         bas = os.path.join(utmapp, os.path.splitext(os.path.basename(fil))[0])
         doc = App.openDocument(fil)
         logg("Rensade gamla ritningsobjekt:", rensa(doc))
+        if a.get("logga"):
+            mall[0] = foretag.mall_med_logga(mall[0], a["logga"], utmapp)
+            logg("Logga i titelblocket:", a["logga"])
         falt = dict(Namn=a["namn"], Ritningsnummer=a["nummer"], Datum=time.strftime("%Y-%m-%d"), RitadAv=a["ritad_av"],
                     Filnamn=os.path.basename(bas), Foretag=a.get("foretag") or "")
         u = doc.getObject("Utbredning")

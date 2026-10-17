@@ -35,7 +35,8 @@ Ingen FreeCAD-installation behövs på egen dator. Allt körs i Claude Codes mol
    setup-skript i molnmiljön (Settings → Environments), så sparas installationen i miljöns cache.
 4. Skriv t.ex. *"Rita en fotplatta 300×300×15 med fyra hål Ø22 c/c 240 och gör ritning"*. Claude bygger
    modellen, gör ritningen, visar PNG:en och lägger filerna i `ut/`.
-5. Första gången frågar Claude efter företagsnamn, adress och signatur till titelblocket.
+5. Första gången frågar Claude efter företagsnamn, adress, signatur och logga till titelblocket och sparar
+   dem för resten av sessionen (`scripts/foretag.py`).
 
 ## Använda lokalt (Windows, egen FreeCAD)
 
@@ -56,20 +57,24 @@ Förutsättningar (se `SKILL.md`):
 
 ## Företagsuppgifter i titelblocket
 
-Mallarna i `mallar/` är neutrala. Sätt företagsnamn, adress och signaturer en gång med miljövariabler:
+Mallarna i `mallar/` är neutrala. Första gången frågar Claude efter företagsnamn, adress, signatur och
+eventuell logga och sparar svaren med `scripts/foretag.py`; sedan används de automatiskt:
 
-```
-FC_FORETAG="Firma AB"
-FC_ADRESS="Gatan 1|123 45 Staden|firma.se 08-123 45 67"
-FC_RITAD_AV=AB
-FC_HANDLAGGARE=AB
-FC_ANSVARIG="A. Bson"
+```bash
+python3 $S/scripts/foretag.py visa
+python3 $S/scripts/foretag.py satt --foretag "Firma AB" --adress "Gatan 1" "123 45 Staden" "firma.se 08-123 45 67" \
+        --ritad-av AB --handlaggare AB --ansvarig "A. Bson" --logga logga.png
 ```
 
-eller per kommando med `--foretag`, `--adress`, `--ritad-av`, `--handlaggare`, `--ansvarig`. Vill du ha en
-logga byter du `Foretag`-texten i `mallar/A3.svg` och `mallar/A2_tekla.svg` mot en `<image>`; rutan anges i
-mallens kommentar. I en molnsession kan variablerna läggas i miljöns inställningar så att de följer med
-varje session.
+Uppgifterna hamnar i `foretag.json` (arbetsmappen eller `~/.config/freecad-styrning/`, på Windows
+`%APPDATA%\freecad-styrning\`). Loggan (PNG/JPEG) bäddas in i titelblocket i stället för namnet. Allt går
+också att ge per kommando (`--foretag`, `--adress`, `--ritad-av`, `--handlaggare`, `--ansvarig`, `--logga`)
+eller med miljövariablerna `FC_FORETAG`, `FC_ADRESS` (rader åtskilda med `|`), `FC_RITAD_AV`,
+`FC_HANDLAGGARE`, `FC_ANSVARIG`, `FC_LOGGA`.
+
+I en molnsession försvinner `foretag.json` med containern. Vill du slippa frågan varje gång: lägg
+miljövariablerna i molnmiljöns inställningar (Settings → Environments), eller forka repot privat och lägg
+`foretag.json` och loggan i forken (filen är gitignorerad, ta bort raden i `.gitignore` i så fall).
 
 ## Profilmått och materialkvaliteter verifieras mot öppna källor
 
@@ -129,6 +134,7 @@ CLAUDE.md                        – instruktioner till Claude Code för repot
   scripts/partdesign.py          – bygg / satt / las för Part Design-delar
   scripts/stal.py                – profiltabeller, Konstruktion, hålgrupper, gering, materiallista
   scripts/kallor.py              – profilmått och materialkvaliteter ur öppna källor, cache, källangivelse
+  scripts/foretag.py             – företagsuppgifter och logga till titelblocket (foretag.json)
   scripts/sammanstallning.py     – bygg konstruktion + A2-sammanställningsritning
   scripts/plat.py, datastall.py  – SheetMetal, utbredning, DXF, exempeldel
   scripts/ritning.py             – A3-ritning för plåt och Part Design, DXF-utbredning

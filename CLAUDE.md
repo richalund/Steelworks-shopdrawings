@@ -11,9 +11,10 @@ DXF-utbredning, sammanställningsritningar i Tekla-stil och STEP.
 - Lägg allt som genereras (FCStd, PDF, PNG, DXF, STEP) i mappen `ut/` i repot, som är ignorerad av git.
   Visa PNG:erna för användaren efter varje ritning. Vill användaren ha filerna i en Drive-mapp eller
   liknande, kopiera dit dem efteråt.
-- Företagsuppgifterna i titelblocket saknas som standard: fråga användaren om företagsnamn, adress
-  och signatur första gången och skicka dem med `--foretag`, `--adress`, `--ritad-av` (eller sätt
-  `FC_FORETAG`, `FC_ADRESS`, `FC_RITAD_AV`).
+- Företagsuppgifterna i titelblocket saknas som standard. Kör
+  `python3 .claude/skills/freecad-styrning/scripts/foretag.py visa` före första ritningen; står det SAKNAS,
+  fråga användaren (AskUserQuestion-formuläret) om företagsnamn, adress, signatur, handläggare, ansvarig och
+  eventuell logga, och spara med `foretag.py satt ...`. Fråga inte igen i samma session.
 - Profilmått och materialkvaliteter hämtas från öppna källor på nätet via `scripts/kallor.py` (cache i
   `~/.cache/freecad-styrning/kallor`) och ritningen anger var de är verifierade. Hitta aldrig på mått: finns
   profilen eller kvaliteten inte i någon källa, sök efter tabellen, säg till användaren och lägg in måtten

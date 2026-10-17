@@ -6,8 +6,9 @@
         [--bet A --rev "A|Bultad anslutning ram–väggfäste|2026-10-07|AB"] [--stomnat A-B/2] [--not "..."]
         [--snitt A:x=300:- ...] [--skala 10] [--skala-snitt 10] [--hal 22] [--svets 3.0] [--ut <mapp>]
 
-Företag, adress och signaturer i titelblocket kan också sättas med miljövariablerna FC_FORETAG, FC_ADRESS
-(rader åtskilda med |), FC_RITAD_AV, FC_HANDLAGGARE och FC_ANSVARIG.
+Företag, adress, signaturer och logga i titelblocket tas från foretag.json (scripts/foretag.py satt ...) eller
+miljövariablerna FC_FORETAG, FC_ADRESS (rader åtskilda med |), FC_RITAD_AV, FC_HANDLAGGARE, FC_ANSVARIG och
+FC_LOGGA om de inte ges på kommandoraden.
 
 `bygg` kör ett konstruktionsskript (se ../konstruktioner/ och stal.py) och sparar modellen: delar med
 positionsnummer (Pos), profil, material och längd, hålgrupper och ritningens standardval.
@@ -51,11 +52,14 @@ def args(argv=None):
     ap.add_argument("--step", action="store_true")
     ap.add_argument("--uppdrag", default="")
     ap.add_argument("--objekt", nargs="*", default=None, help="upp till tre rader: fastighet/projekt, kund, adress")
-    ap.add_argument("--foretag", default=os.environ.get("FC_FORETAG", ""), help="företagsnamn i titelblocket (standard: miljövariabeln FC_FORETAG)")
-    ap.add_argument("--adress", nargs="*", default=None, help="upp till tre adressrader i titelblocket (standard: FC_ADRESS, rader åtskilda med |)")
-    ap.add_argument("--ritad-av", dest="ritad_av", default=os.environ.get("FC_RITAD_AV", ""), help="RITAD/KONSTR AV (standard: FC_RITAD_AV)")
-    ap.add_argument("--handlaggare", default=os.environ.get("FC_HANDLAGGARE", ""), help="HANDLÄGGARE (standard: FC_HANDLAGGARE)")
-    ap.add_argument("--ansvarig", default=os.environ.get("FC_ANSVARIG", ""), help="ANSVARIG (standard: FC_ANSVARIG)")
+    import foretag
+    u = foretag.las()
+    ap.add_argument("--foretag", default=u["foretag"], help="företagsnamn i titelblocket (standard: foretag.json eller FC_FORETAG)")
+    ap.add_argument("--adress", nargs="*", default=u["adress"], help="upp till tre adressrader i titelblocket (standard: foretag.json eller FC_ADRESS, rader åtskilda med |)")
+    ap.add_argument("--ritad-av", dest="ritad_av", default=u["ritad_av"], help="RITAD/KONSTR AV (standard: foretag.json eller FC_RITAD_AV)")
+    ap.add_argument("--handlaggare", default=u["handlaggare"], help="HANDLÄGGARE (standard: foretag.json eller FC_HANDLAGGARE)")
+    ap.add_argument("--ansvarig", default=u["ansvarig"], help="ANSVARIG (standard: foretag.json eller FC_ANSVARIG)")
+    ap.add_argument("--logga", default=u["logga"], help="PNG/JPEG i stället för företagsnamnet (standard: foretag.json eller FC_LOGGA)")
     ap.add_argument("--datum", default=None)
     ap.add_argument("--bet", default="")
     ap.add_argument("--rev", default="", help="BET|ÄNDRINGEN AVSER|DATUM|SIGN (eller BET|ANT|TEXT|DATUM|SIGN)")
@@ -168,7 +172,7 @@ def _jobb():
     import FreeCAD as App, FreeCADGui as Gui, Part
     from FreeCAD import Vector as V
     from PySide import QtGui
-    import fcapi, stal
+    import fcapi, stal, foretag
     from fcapi import logg, pump
 
     skillmapp = os.path.dirname(fcapi.jobb()["skriptmapp"])
@@ -366,12 +370,21 @@ def _jobb():
         return s
 
     def rensa(doc):
-        namn = [o.Name for o in doc.Objects if o.TypeId.startswith("TechDraw::")]
+        """Ta bort ritningsobjekt från en tidigare körning. Ett blad tar med sig sina vyer, så gå på namn."""
+        # Vyer först, sedan blad och mallar, och låt TechDraws bakgrundsberäkning bli klar innan:
+        # att ta bort ett blad vars vyer fortfarande räknas kraschar FreeCAD (sett i 1.x på Linux).
+        td = [o for o in doc.Objects if o.TypeId.startswith("TechDraw::")]
+        ordning = {"TechDraw::DrawPage": 1, "TechDraw::DrawSVGTemplate": 2}
+        namn = [o.Name for o in sorted(td, key=lambda o: ordning.get(o.TypeId, 0))]
+        if namn and fcapi.har_gui():
+            fcapi.pump(1.0)
+        borta = 0
         for n in namn:
             if doc.getObject(n) is not None:
                 doc.removeObject(n)
+                borta += 1
         doc.recompute()
-        return len(namn)
+        return borta
 
     def stall_in():
         """TechDraw-inställningar för jobbet (sparas inte: FreeCAD avslutas med os._exit)."""
@@ -720,7 +733,9 @@ def _jobb():
         # ---- blad, mall, vyer
         page = doc.addObject("TechDraw::DrawPage", "Sammanstallningsritning")
         tpl = doc.addObject("TechDraw::DrawSVGTemplate", "Mall")
-        tpl.Template = MALL
+        tpl.Template = foretag.mall_med_logga(MALL, a.get("logga"), utmapp)
+        if a.get("logga"):
+            logg("Logga i titelblocket:", a["logga"])
         page.Template = tpl
         vyobj = {}
         for vd in vdef:
@@ -882,10 +897,7 @@ def _jobb():
             rev = [rev[0], ""] + rev[1:]
         rev = (rev + [""] * 5)[:5]
         obj = (a.get("objekt") or []) + ["", "", ""]
-        adr = a.get("adress")
-        if adr is None:
-            adr = [r.strip() for r in os.environ.get("FC_ADRESS", "").split("|") if r.strip()]
-        adr = list(adr) + ["", "", ""]
+        adr = list(a.get("adress") or []) + ["", "", ""]
         falt = dict(Foretag=a.get("foretag") or "", Adress1=adr[0], Adress2=adr[1], Adress3=adr[2],
                     Uppdrag=a["uppdrag"], RitadAv=a["ritad_av"], Datum=a.get("datum") or time.strftime("%Y-%m-%d"),
                     Handlaggare=a["handlaggare"], Ansvarig=a["ansvarig"], Objekt1=obj[0], Objekt2=obj[1], Objekt3=obj[2],

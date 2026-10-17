@@ -24,11 +24,28 @@ skripten går runt.
   samtidigt som ett skript sparar den.
 
 ## Företagsuppgifter i titelblocket
-Mallarna i `mallar/` är neutrala. Företagsnamn, adress och signaturer sätts per kommando (`--foretag`,
-`--adress`, `--ritad-av`, `--handlaggare`, `--ansvarig`) eller en gång för alla med miljövariablerna
-`FC_FORETAG`, `FC_ADRESS` (rader åtskilda med `|`), `FC_RITAD_AV`, `FC_HANDLAGGARE` och `FC_ANSVARIG`.
-Vill man ha en logga: byt `Foretag`-texten i `mallar/A3.svg` respektive `mallar/A2_tekla.svg` mot en
-`<image>` i rutan som anges i mallens kommentar. Fråga användaren om uppgifterna saknas första gången.
+Mallarna i `mallar/` är neutrala. Uppgifterna sparas en gång med `scripts/foretag.py` och används sedan av
+`ritning.py` och `sammanstallning.py` automatiskt:
+
+```
+python3 scripts/foretag.py visa
+python3 scripts/foretag.py satt --foretag "Firma AB" --adress "Gatan 1" "123 45 Staden" "firma.se 08-123 45 67" \
+        --ritad-av AB --handlaggare AB --ansvarig "A. Bson" [--logga logga.png]
+```
+
+**Första gången i en session:** kör `foretag.py visa`. Står det SAKNAS, fråga användaren innan första
+ritningen, med AskUserQuestion-formuläret om det finns (annars i chatten): företagsnamn, adressrader,
+signatur (RITAD AV), handläggare, ansvarig och om en logga (PNG/JPEG) ska användas i stället för namnet.
+Spara svaren med `foretag.py satt` och fortsätt. Fråga inte igen i samma session. Enstaka fält kan alltid
+ges per kommando (`--foretag`, `--adress`, `--ritad-av`, `--handlaggare`, `--ansvarig`, `--logga`) och
+miljövariablerna `FC_FORETAG`, `FC_ADRESS` (rader åtskilda med `|`), `FC_RITAD_AV`, `FC_HANDLAGGARE`,
+`FC_ANSVARIG`, `FC_LOGGA` går före filen.
+
+Filen heter `foretag.json` och söks i `FC_FORETAG_FIL`, i arbetsmappen och i `~/.config/freecad-styrning/`
+(Windows `%APPDATA%\freecad-styrning\`). I en molnsession försvinner den med containern; vill användaren
+slippa frågan varje gång, föreslå miljövariablerna i molnmiljöns inställningar eller en `foretag.json` i
+en egen (privat) fork. `foretag.json` är gitignorerad i repot. Loggan läggs in som inbäddad bild i en kopia
+av mallen i utmappen (`_A3_logga.svg`, `_A2_tekla_logga.svg`), i rutan som mallens kommentar anger.
 
 ## Källor för profilmått och materialkvaliteter
 `scripts/kallor.py` hämtar profilmått och nominella hållfasthetsvärden från öppna databaser på nätet och
@@ -205,6 +222,7 @@ t.ex. ritningsnummer, material och ytbehandling i noterna.
 - `scripts/fcapi.py` startar FreeCAD och kör jobb; `scripts/plat.py` utbredning och DXF; `scripts/pd.py`
   Part Design-hjälpare; `scripts/datastall.py`, `scripts/partdesign.py` och `scripts/ritning.py` är kommandona.
 - `scripts/kallor.py` profilmått och materialkvaliteter ur öppna källor på nätet, med cache och källangivelse.
+- `scripts/foretag.py` företagsuppgifter och logga till titelblocket (foretag.json).
 - `scripts/sammanstallning.py` (bygg + sammanställningsritning) och `scripts/stal.py` (profiltabeller,
   Konstruktion, hålgrupper, materiallista); `konstruktioner/*.py` konstruktionsskript.
 - `scripts/rendera_pdf.py` PDF till PNG för granskning; `scripts/installera_linux.sh` installation på Linux.
