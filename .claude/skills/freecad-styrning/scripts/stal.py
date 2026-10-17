@@ -430,6 +430,18 @@ class Konstruktion:
         self._placera(d, (V(1, 0, 0), V(0, 1, 0), V(0, 0, 1)), tuple(mitt))
         return self._ny(d, pos, profil, material, huvuddel)
 
+    def egen(self, pos, profil, bygg, mitt=(0, 0, 0), rot=((1, 0, 0), (0, 1, 0), (0, 0, 1)), material=None, huvuddel=False):
+        """Egen kropp som konstruktionsskriptet bygger självt: `bygg(d)` får en pd.Del (skisser, Pad, Pocket, Hole,
+        Fillet, mönster ... enligt references/partdesign.md) och ritar delen kring kroppens origo; kroppen placeras
+        sedan med `mitt` (tal eller uttryck) och `rot` = (x-, y-, z-riktning) och får positionsnummer, profiltext
+        i materiallistan och material som de andra delarna. Det är vägen för allt som balk/plat/skiva inte täcker,
+        utan att ändra skillen: hjälpfunktionerna ligger i det egna skriptet."""
+        from FreeCAD import Vector as V
+        d = self._del(pos)
+        bygg(d)
+        self._placera(d, tuple(V(*r) for r in rot), tuple(mitt))
+        return self._ny(d, pos, profil, material, huvuddel)
+
     def hal(self, delar, punkter, riktning, d=None, bult=None, langd=None):
         """Hål med diametern d (eller bultens: M12 -> Ø14) genom `delar` i punkterna (globala tal), längs
         riktningen: en skiss med cirklarna och en Pocket (genom allt, åt båda hållen) i varje kropp. Med `langd`

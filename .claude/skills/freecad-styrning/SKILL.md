@@ -74,8 +74,10 @@ Skillen installeras från Steelworks-shopdrawings och ska gå att uppdatera där
 `.claude/skills/freecad-styrning/`. Allt som görs för användaren läggs utanför skillen:
 - nya konstruktionsskript i `egna/konstruktioner/`, nya delskript i `egna/delar/` (i repots rot; lokalt i
   användarens projektmapp). Skripten tar vilken sökväg som helst: `sammanstallning.py bygg egna/konstruktioner/x.py`.
-- hjälpfunktioner som skillen saknar skrivs i det egna skriptet med API:t i `scripts/pd.py` och `scripts/stal.py`
-  (skisser, features, `k.balk`, `k.plat`, `k.skiva`, `k.hal`, `k.gera`), inte i skillens filer.
+- hjälpfunktioner som skillen saknar skrivs i det egna skriptet, inte i skillens filer. Delar som `k.balk`,
+  `k.plat` och `k.skiva` inte täcker byggs med `k.egen(pos, "TEXT", bygg, mitt=, rot=, material=)`, där
+  `bygg(d)` ritar kroppen med Part Design-API:t i `scripts/pd.py` (skisser, Pad, Pocket, Hole, Fillet, mönster).
+  Det är regel, inte undantag: varje ritning har sina egna utmaningar, och de löses i det skriptet.
 - företagsuppgifter i `egna/foretag.json` (eller konfigmappen), genererade filer i `ut/`.
 Saknas något i skillen som inte går att lösa i det egna skriptet: säg det till användaren och föreslå att det
 rapporteras som ett ärende på github.com/richalund/Steelworks-shopdrawings, i stället för att ändra skillen lokalt.
@@ -156,7 +158,7 @@ Modellen byggs med ett konstruktionsskript i `konstruktioner/` (API i `scripts/s
 (sammanställningsmärke, t.ex. `B/1`), `VARIABLER` (kalkylbladet `Variabler`), `RITNING` (vyer, snitt, noter,
 stomnät) och `bygg(k, v)` med `k.balk(pos, profil, start, slut, upp=, oppning=)`, `k.plat(pos, "PL10*110",
 mitt=, langd=, lriktning=, briktning=)` och `k.hal(delar, punkter, riktning, bult="M12x44")` och `k.gera(del, yttre_hörn, inre_hörn)` (geringskapning, t.ex.
-UPE-ram med 45°-hörn). `k.skiva(pos, "GLAS 8", langd, bredd, t, mitt=, material="Glas", form="ellips"|"rektangel")`
+UPE-ram med 45°-hörn). `k.egen(pos, "TEXT", bygg)` för kroppar som skriptet bygger självt med pd-API:t. `k.skiva(pos, "GLAS 8", langd, bredd, t, mitt=, material="Glas", form="ellips"|"rektangel")`
 ger en plan skiva (bordsskiva, glas, lock; vikt med 2500 kg/m3 för glas). `k.gera` kapar också plant: två
 punkter i kapplanet och `upp=` vald så att profilens y-riktning ligger i planet (se `konstruktioner/soffbord.py`,
 ett trebent bord med utåtlutade rör, nav-och-ekrar-ram och oval glasskiva). Varje del blir en
