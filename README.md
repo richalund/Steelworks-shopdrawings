@@ -24,12 +24,15 @@ Claude Code, lokalt eller i molnet.
 Ingen FreeCAD-installation behövs på egen dator. Allt körs i Claude Codes molncontainer och resultatet
 (PNG, PDF, DXF, STEP, FCStd) går att öppna och ladda ner från sessionen.
 
-1. Forka repot till ditt eget GitHub-konto (knappen **Fork** uppe till höger) och ge Claude GitHub-appen
-   åtkomst till det (https://claude.ai/connect-github).
+1. Koppla ditt GitHub-konto till Claude (https://claude.ai/connect-github). Ett publikt repo som det här
+   går att köra direkt utan att forka. Vill du spara egna delskript eller resultat i git, forka repot
+   först och använd din fork.
 2. Starta en ny session på https://claude.ai/code, eller i Claude-appen på telefonen under **Code**, med
-   din fork som repo.
-3. Sessionen installerar FreeCAD i bakgrunden första gången (5–10 minuter, ca 4 GB). Du kan börja
-   beskriva vad som ska ritas direkt. Claude väntar in installationen innan första ritningen.
+   `richalund/Steelworks-shopdrawings` (eller din fork) som repo.
+3. Sessionen installerar FreeCAD i bakgrunden när den startar (5–10 minuter, ca 4 GB). Du kan börja
+   beskriva vad som ska ritas direkt; Claude väntar in installationen innan första ritningen. Vill du
+   slippa väntan varje gång: lägg `bash .claude/skills/freecad-styrning/scripts/installera_linux.sh` som
+   setup-skript i molnmiljön (Settings → Environments), så sparas installationen i miljöns cache.
 4. Skriv t.ex. *"Rita en fotplatta 300×300×15 med fyra hål Ø22 c/c 240 och gör ritning"*. Claude bygger
    modellen, gör ritningen, visar PNG:en och lägger filerna i `ut/`.
 5. Första gången frågar Claude efter företagsnamn, adress och signatur till titelblocket.
