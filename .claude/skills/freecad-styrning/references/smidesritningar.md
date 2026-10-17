@@ -3,7 +3,7 @@
 Konventionerna nedan är uttagna ur ett fyrtiotal svenska Tekla-ritningar (GA och sammanställningar) från ett
 smidesföretag, 2026-10: räcken och grindar, balkonger, avväxlingar, pelare och balkar, trappor samt stagningar.
 Använd dem som facit för hur en smidesritning ska se ut när en ritning görs i FreeCAD eller granskas.
-Exempelnummer i texten (`f26.0865`, `B/1`) är bara exempel på format.
+Exempelnummer i texten (`2026-001`, `B/1`) är bara exempel på format.
 
 ## Ritningstyper
 | Typ | Format | Skala | Innehåll |
@@ -71,7 +71,7 @@ Ordning: status → underlag → material/ytbehandling → nivåer → svets/bul
 - **Etapp/Antal** (ruta uppe till höger).
 
 ## Titelblock (nere till höger, liggande)
-Företagets logga eller namn med adressrader; fält UPPDRAG NR (t.ex. `f26.0865`), RITAD/KONSTR AV (signatur),
+Företagets logga eller namn med adressrader; fält UPPDRAG NR (t.ex. `2026-001`), RITAD/KONSTR AV (signatur),
 DATUM, HANDLÄGGARE, ANSVARIG, objekt i tre rader (fastighet/projekt, kund, adress), SKALA (flera skalor om
 snitten har annan: `1:10 1:20`), NUMMER (märket), BET (revisionsbokstav). Revisionstabell ovanför:
 `BET | ANT | ÄNDRINGEN AVSER | DATUM | SIGN` (t.ex. `A | Bultad anslutning ram–väggfäste, noter | 2026-10-07 | AB`).
