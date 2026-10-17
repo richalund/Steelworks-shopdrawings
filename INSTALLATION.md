@@ -63,6 +63,8 @@ macOS: `/Applications/FreeCAD.app/Contents/MacOS/FreeCADCmd`), och lägg tilläg
 - med git: `git clone --depth 1 --branch V0.7.24-beta https://github.com/shaise/FreeCAD_SheetMetal "<Mod>/SheetMetal"`
 - utan git: ladda ner https://github.com/shaise/FreeCAD_SheetMetal/archive/refs/tags/V0.7.24-beta.zip, packa upp och
   döp mappen till `SheetMetal`.
+Går github.com inte att nå: hämta filerna från jsDelivr-spegeln `https://cdn.jsdelivr.net/gh/shaise/FreeCAD_SheetMetal@V0.7.24-beta/<fil>`
+(fillista: `https://data.jsdelivr.com/v1/package/gh/shaise/FreeCAD_SheetMetal@V0.7.24-beta/flat`), som `installera_linux.sh` gör.
 Kontroll: `<Mod>/SheetMetal/package.xml` innehåller `<version>0.7.24<`. Alternativ för användaren: FreeCAD →
 Verktyg → Tilläggshanterare → SheetMetal (senaste versionen fungerar oftast också).
 
