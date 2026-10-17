@@ -6,9 +6,9 @@
   python3 foretag.py ta-bort
 
 Ordning när ritningen görs: kommandoradsargument > miljövariabler FC_FORETAG, FC_ADRESS (rader åtskilda med |),
-FC_RITAD_AV, FC_HANDLAGGARE, FC_ANSVARIG, FC_LOGGA > foretag.json. Filen söks i FC_FORETAG_FIL, i arbetsmappen
-(foretag.json) och i användarens konfigmapp (~/.config/freecad-styrning/foretag.json, på Windows
-%APPDATA%\\freecad-styrning\\foretag.json). `satt` skriver till arbetsmappens foretag.json om den redan finns,
+FC_RITAD_AV, FC_HANDLAGGARE, FC_ANSVARIG, FC_LOGGA > foretag.json. Filen söks i FC_FORETAG_FIL, i egna/foretag.json och
+foretag.json i arbetsmappen och i användarens konfigmapp (~/.config/freecad-styrning/foretag.json, på Windows
+%APPDATA%\\freecad-styrning\\foretag.json). `satt` skriver till den fil som hittas, annars till egna/foretag.json om mappen egna finns,
 annars till konfigmappen; `--fil` väljer. Loggan (PNG eller JPEG) läggs in i titelblocket i stället för
 företagsnamnet, i rutan som mallen anger i sin kommentar.
 """
@@ -29,7 +29,8 @@ def konfigfil():
 
 def hitta_fil():
     """Första foretag.json som finns: FC_FORETAG_FIL, arbetsmappen, konfigmappen. None om ingen."""
-    for f in (os.environ.get("FC_FORETAG_FIL"), os.path.join(os.getcwd(), "foretag.json"), konfigfil()):
+    for f in (os.environ.get("FC_FORETAG_FIL"), os.path.join(os.getcwd(), "egna", "foretag.json"),
+              os.path.join(os.getcwd(), "foretag.json"), konfigfil()):
         if f and os.path.exists(f):
             return f
     return None
@@ -74,8 +75,8 @@ def saknas(u=None):
 
 def satt(fil=None, **varden):
     """Sparar (slår ihop med det som redan finns i filen). Returnerar sökvägen."""
-    fil = fil or os.environ.get("FC_FORETAG_FIL") or (
-        os.path.join(os.getcwd(), "foretag.json") if os.path.exists(os.path.join(os.getcwd(), "foretag.json")) else konfigfil())
+    fil = fil or os.environ.get("FC_FORETAG_FIL") or hitta_fil() or (
+        os.path.join(os.getcwd(), "egna", "foretag.json") if os.path.isdir(os.path.join(os.getcwd(), "egna")) else konfigfil())
     d = {}
     if os.path.exists(fil):
         with open(fil, encoding="utf-8") as f:

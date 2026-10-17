@@ -19,3 +19,6 @@ DXF-utbredning, sammanställningsritningar i Tekla-stil och STEP.
   `~/.cache/freecad-styrning/kallor`) och ritningen anger var de är verifierade. Hitta aldrig på mått: finns
   profilen eller kvaliteten inte i någon källa, sök efter tabellen, säg till användaren och lägg in måtten
   med källan i en kommentar.
+- Ändra inte skillens filer i `.claude/skills/freecad-styrning/`. Egna konstruktionsskript läggs i
+  `egna/konstruktioner/`, delskript i `egna/delar/`, företagsuppgifter i `egna/foretag.json`, hjälpfunktioner
+  som saknas i det egna skriptet. Se `egna/README.md`.

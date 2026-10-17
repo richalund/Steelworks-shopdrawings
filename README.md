@@ -38,6 +38,14 @@ Ingen FreeCAD-installation behövs på egen dator. Allt körs i Claude Codes mol
 5. Första gången frågar Claude efter företagsnamn, adress, signatur och logga till titelblocket och sparar
    dem för resten av sessionen (`scripts/foretag.py`).
 
+## Egna skript: skillen rörs inte
+
+Skillen är generisk och ska kunna uppdateras från det här repot. Eget material ligger därför utanför den, i
+`egna/`: konstruktionsskript i `egna/konstruktioner/`, delskript i `egna/delar/`, företagsuppgifter och logga i
+`egna/foretag.json`. Hjälpfunktioner som skillen saknar skrivs i det egna skriptet. Se `egna/README.md`.
+I en fork följer `egna/` med mellan sessionerna, och skillen uppdateras genom att hämta in `main` från det här
+repot utan konflikter.
+
 ## Använda lokalt (Windows, egen FreeCAD)
 
 ```bash
@@ -125,6 +133,7 @@ loggen löpande. Ett jobb tar 5–10 sekunder plus själva bygget.
 
 ```
 CLAUDE.md                        – instruktioner till Claude Code för repot
+egna/                            – användarens egna konstruktioner, delar och företagsuppgifter
 .claude/settings.json            – SessionStart-hook som installerar FreeCAD i molnsessioner
 .claude/hooks/session-start.sh
 .claude/skills/freecad-styrning/

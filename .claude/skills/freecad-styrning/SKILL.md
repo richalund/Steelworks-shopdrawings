@@ -41,7 +41,7 @@ ges per kommando (`--foretag`, `--adress`, `--ritad-av`, `--handlaggare`, `--ans
 miljövariablerna `FC_FORETAG`, `FC_ADRESS` (rader åtskilda med `|`), `FC_RITAD_AV`, `FC_HANDLAGGARE`,
 `FC_ANSVARIG`, `FC_LOGGA` går före filen.
 
-Filen heter `foretag.json` och söks i `FC_FORETAG_FIL`, i arbetsmappen och i `~/.config/freecad-styrning/`
+Filen heter `foretag.json` och söks i `FC_FORETAG_FIL`, i `egna/`, i arbetsmappen och i `~/.config/freecad-styrning/`
 (Windows `%APPDATA%\freecad-styrning\`). I en molnsession försvinner den med containern; vill användaren
 slippa frågan varje gång, föreslå miljövariablerna i molnmiljöns inställningar eller en `foretag.json` i
 en egen (privat) fork. `foretag.json` är gitignorerad i repot. Loggan läggs in som inbäddad bild i en kopia
@@ -68,6 +68,19 @@ efter "Material:". Inga nycklar eller konton behövs.
 - Finns profilen eller kvaliteten inte i någon källa: hitta inte på mått. Sök (WebSearch) efter tillverkarens
   eller standardens tabell, säg till användaren vad som inte kunde verifieras och lägg in måtten i
   konstruktionsskriptet eller tabellen i `stal.py` med källan i en kommentar.
+
+## Skillen ändras inte – eget material ligger utanför
+Skillen installeras från Steelworks-shopdrawings och ska gå att uppdatera därifrån. Ändra därför inte filerna i
+`.claude/skills/freecad-styrning/`. Allt som görs för användaren läggs utanför skillen:
+- nya konstruktionsskript i `egna/konstruktioner/`, nya delskript i `egna/delar/` (i repots rot; lokalt i
+  användarens projektmapp). Skripten tar vilken sökväg som helst: `sammanstallning.py bygg egna/konstruktioner/x.py`.
+- hjälpfunktioner som skillen saknar skrivs i det egna skriptet med API:t i `scripts/pd.py` och `scripts/stal.py`
+  (skisser, features, `k.balk`, `k.plat`, `k.skiva`, `k.hal`, `k.gera`), inte i skillens filer.
+- företagsuppgifter i `egna/foretag.json` (eller konfigmappen), genererade filer i `ut/`.
+Saknas något i skillen som inte går att lösa i det egna skriptet: säg det till användaren och föreslå att det
+rapporteras som ett ärende på github.com/richalund/Steelworks-shopdrawings, i stället för att ändra skillen lokalt.
+I en molnsession utan fork försvinner allt eget när containern stängs; föreslå en egen fork om användaren vill
+behålla sina skript.
 
 ## Arbetssätt
 **Regel: rita alltid med FreeCADs egna verktyg så att användaren kan redigera vidare.**
