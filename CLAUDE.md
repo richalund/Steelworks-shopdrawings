@@ -9,8 +9,8 @@ DXF-utbredning, sammanställningsritningar i Tekla-stil och STEP.
   `bash .claude/skills/freecad-styrning/scripts/installera_linux.sh` själv.
 - Kör skripten med system-`python3`, inte FreeCADs Python i `/opt/freecad/bin`.
 - Lägg allt som genereras (FCStd, PDF, PNG, DXF, STEP) i mappen `ut/` i repot, som är ignorerad av git.
-  Visa PNG:erna för användaren efter varje ritning. Vill användaren ha filerna i en Drive-mapp eller
-  liknande, kopiera dit dem efteråt.
+  Visa PNG:erna för användaren efter varje ritning. Vill användaren ha filerna någon annanstans, kopiera
+  dit dem efteråt.
 - Företagsuppgifterna i titelblocket saknas som standard. Kör
   `python3 .claude/skills/freecad-styrning/scripts/foretag.py visa` före första ritningen; står det SAKNAS,
   fråga användaren (AskUserQuestion-formuläret) om företagsnamn, adress, signatur, handläggare, ansvarig och
