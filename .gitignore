@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+# Genererade leveranser hör hemma i projektmappen, inte i repot
+*.FCStd
+*.FCBak
+*.pdf
+*.png
+*.dxf
+*.step
+*.stp
+ut/

@@ -1,0 +1,4 @@
+interface:
+  display_name: "FreeCAD-styrning"
+  short_description: "Bygger och ändrar parametriska plåtdelar (SheetMetal) och solida delar (Part Design) i FreeCAD (licensfritt) och tar fram ritning (PDF), STEP och DXF"
+  default_prompt: "Använd $freecad-styrning för att ändra måtten i FreeCAD-modellen, kontrollera geometrin och ta fram ritning, PDF och DXF-utbredning i projektmappen."

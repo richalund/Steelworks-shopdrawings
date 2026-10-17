@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- A3 liggande med enkelt titelblock nere till höger. Geometri uppmätt ur en SolidWorks-mall (2026-10).
+     Redigerbara fält: Foretag, Namn, Ritningsnummer, Datum, RitadAv, Filnamn. Byt ut Foretag-texten mot en
+     logga (<image> i rutan x 315-381, y 242-256) om så önskas. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     xmlns:freecad="http://www.freecad.org/wiki/index.php?title=Svg_Namespace"
+     width="420mm" height="297mm" viewBox="0 0 420 297" version="1.1">
+ <g id="ram" fill="none" stroke="#c0c0c0" stroke-width="0.5">
+  <rect x="4.97" y="5.01" width="410" height="287.02"/>
+ </g>
+ <g id="titelblock" fill="none" stroke="#808080" stroke-width="0.35">
+  <path d="M 414.97,242 H 315 V 292.03"/>
+  <path d="M 315,255.9 H 414.97"/>
+  <path d="M 315,281.05 H 414.97"/>
+  <path d="M 381.78,242 V 255.9"/>
+  <path d="M 358.99,281.05 V 292.03"/>
+ </g>
+ <g id="texter" fill="#808080" font-family="Century Gothic" font-weight="normal" font-style="normal">
+  <text x="317.5" y="251.3" font-size="5.3" freecad:editable="Foretag"><tspan>Företag</tspan></text>
+  <text x="382.41" y="245.38" font-size="2.82"><tspan>Datum</tspan></text>
+  <text x="385.41" y="251.47" font-size="4.67" freecad:editable="Datum"><tspan>Datum</tspan></text>
+  <text x="316.49" y="259.52" font-size="3.53"><tspan>Beskrivning</tspan></text>
+  <text x="364.99" y="267.41" font-size="7.05" text-anchor="middle" freecad:editable="Namn"><tspan>Namn</tspan></text>
+  <text x="364.99" y="274.07" font-size="4.67" text-anchor="middle" freecad:editable="Ritningsnummer"><tspan>Ritningsnummer</tspan></text>
+  <text x="316.24" y="284.41" font-size="2.82"><tspan>Ritad av</tspan></text>
+  <text x="318.34" y="289.22" font-size="4.67" freecad:editable="RitadAv"><tspan></tspan></text>
+  <text x="360.16" y="284.41" font-size="2.82"><tspan>Filnamn</tspan></text>
+  <text x="361.02" y="289.22" font-size="3.5" freecad:editable="Filnamn"><tspan>Filnamn</tspan></text>
+ </g>
+</svg>
