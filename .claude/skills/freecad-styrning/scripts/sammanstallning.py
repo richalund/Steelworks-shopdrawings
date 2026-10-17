@@ -702,6 +702,9 @@ def _jobb():
             b, h = kolumn(huvud_v, k)
             return b <= 330 and h <= Y0 - y_min(b)
         n = a.get("skala") or next((k for k in SKALOR if ryms(k)), SKALOR[-1])
+        if not ryms(n):
+            logg("OBS: huvudvyerna ryms inte i skala 1:%s med noterna och materiallistan (%.0f x %.0f mm, plats %.0f x %.0f): "
+                 "välj mindre skala, färre noter eller färre vyer" % (fmt(n), kolumn(huvud_v, n)[0], kolumn(huvud_v, n)[1], 330, Y0 - y_min(kolumn(huvud_v, n)[0])))
         bv, _ = kolumn(huvud_v, n)
         vl = max(vd["vanster"] for vd in huvud_v)
         xc = X0 + vl + max(vd["w"] for vd in huvud_v) / n / 2

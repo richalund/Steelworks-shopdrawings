@@ -39,12 +39,16 @@ HEB = {100: (100, 100, 6, 10, 12), 120: (120, 120, 6.5, 11, 12), 140: (140, 140,
        180: (180, 180, 8.5, 14, 15), 200: (200, 200, 9, 15, 18), 220: (220, 220, 9.5, 16, 18), 240: (240, 240, 10, 17, 21),
        260: (260, 260, 10, 17.5, 24), 280: (280, 280, 10.5, 18, 24), 300: (300, 300, 11, 19, 27)}
 
-DENSITET = {"stal": 7850.0, "rostfritt": 8000.0, "aluminium": 2700.0}
+DENSITET = {"stal": 7850.0, "rostfritt": 8000.0, "aluminium": 2700.0, "glas": 2500.0, "tra": 500.0}
 NUM = r"(\d+(?:\.\d+)?)"
 
 
 def densitet(material):
     m = (material or "").upper()
+    if m.startswith("GLAS"):
+        return DENSITET["glas"]
+    if m.startswith(("TRÄ", "TRA", "EK", "FURU", "BJÖRK", "BJORK", "C24")):
+        return DENSITET["tra"]
     if m.startswith(("6060", "6063", "6082", "AL", "EN AW")):
         return DENSITET["aluminium"]
     if m.startswith(("1.4", "EN 1.4", "ROSTFRITT", "SS", "A2", "A4")):
@@ -411,6 +415,21 @@ class Konstruktion:
         return self._ny(d, pos, profil, material, huvuddel)
 
     # -------------------------------------------------------------- hål
+    def skiva(self, pos, profil, langd, bredd, t, mitt=(0, 0, 0), material=None, form="ellips", huvuddel=False):
+        """Plan skiva (bordsskiva, lock, glas): ellips eller rektangel langd x bredd (tal eller uttryck mot
+        Variabler, x- resp. y-riktning) med tjockleken t uppåt från `mitt` (skivans undersida). `profil` är
+        texten i materiallistan (t.ex. "GLAS 8"), `material` t.ex. "Glas 8 mm härdat" (vikt med 2500 kg/m3)."""
+        d = self._del(pos)
+        sk = d.skiss("Tvarsnitt", "XY")
+        if form == "ellips":
+            sk.ellips(langd, bredd, namn=("Langd", "Bredd"))
+        else:
+            sk.rektangel(langd, bredd, namn=("Langd", "Bredd"))
+        d.kloss(sk, t, "Tjocklek")
+        from FreeCAD import Vector as V
+        self._placera(d, (V(1, 0, 0), V(0, 1, 0), V(0, 0, 1)), tuple(mitt))
+        return self._ny(d, pos, profil, material, huvuddel)
+
     def hal(self, delar, punkter, riktning, d=None, bult=None, langd=None):
         """Hål med diametern d (eller bultens: M12 -> Ø14) genom `delar` i punkterna (globala tal), längs
         riktningen: en skiss med cirklarna och en Pocket (genom allt, åt båda hållen) i varje kropp. Med `langd`

@@ -143,7 +143,10 @@ Modellen byggs med ett konstruktionsskript i `konstruktioner/` (API i `scripts/s
 (sammanställningsmärke, t.ex. `B/1`), `VARIABLER` (kalkylbladet `Variabler`), `RITNING` (vyer, snitt, noter,
 stomnät) och `bygg(k, v)` med `k.balk(pos, profil, start, slut, upp=, oppning=)`, `k.plat(pos, "PL10*110",
 mitt=, langd=, lriktning=, briktning=)` och `k.hal(delar, punkter, riktning, bult="M12x44")` och `k.gera(del, yttre_hörn, inre_hörn)` (geringskapning, t.ex.
-UPE-ram med 45°-hörn). Varje del blir en
+UPE-ram med 45°-hörn). `k.skiva(pos, "GLAS 8", langd, bredd, t, mitt=, material="Glas", form="ellips"|"rektangel")`
+ger en plan skiva (bordsskiva, glas, lock; vikt med 2500 kg/m3 för glas). `k.gera` kapar också plant: två
+punkter i kapplanet och `upp=` vald så att profilens y-riktning ligger i planet (se `konstruktioner/soffbord.py`,
+ett trebent bord med utåtlutade rör, nav-och-ekrar-ram och oval glasskiva). Varje del blir en
 Part Design-kropp (skissen Tvarsnitt fullt bestämd med rotradier som bågar, Pad `Langd`, hål som Pocket) med
 egenskaperna Pos/Profil/Material. Koordinater och längder får vara uttryck mot Variabler (`"Langd"`,
 `"Djup - 32.5"`, även hålens lägen): då följer delar och hål med när användaren ändrar en variabel i FreeCAD.

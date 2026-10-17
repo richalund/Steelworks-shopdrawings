@@ -468,7 +468,7 @@ def text_material(info, namn=None, kort=False):
     """En mening om materialkvaliteten och var den är verifierad; info från material(). namn = texten på
     ritningen. kort=True ger en kortare form för A3-bladens noter."""
     if not info:
-        return "Material %s: kvaliteten kunde inte verifieras mot någon källa." % (namn or "")
+        return "Material %s: ej verifierat mot någon källa." % (namn or "")
     k = info["kalla"]
     s = "%s enl. %s: fy %s MPa, fu %s MPa" % (info["beteckning"], info["standard"], _num(info["fy"]), _num(info["fu"]))
     if info.get("t_omrade"):

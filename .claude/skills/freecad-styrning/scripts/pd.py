@@ -354,6 +354,21 @@ class Skiss:
         self.placera(c, MITT, *mitt)
         return c
 
+    def ellips(self, langd, bredd, mitt=(0, 0), namn=(None, None)):
+        """Ellips med storaxeln `langd` längs x och lillaxeln `bredd` längs y, mitten i (x, y). Axlarna läggs in
+        som hjälpgeometri (exposeInternalGeometry) och måttsätts till langd och bredd, så att ellipsen blir
+        fullt bestämd. Returnerar geometriindex."""
+        a, b = self._v(langd) / 2, self._v(bredd) / 2
+        e = self.geo(Part.Ellipse(V(self._v(mitt[0]), self._v(mitt[1]), 0), max(a, b), min(a, b)))
+        self.obj.exposeInternalGeometry(e)
+        linjer = [i for i in range(e + 1, self.obj.GeometryCount) if self.obj.Geometry[i].TypeId == "Part::GeomLineSegment"]
+        stor, lill = sorted(linjer, key=lambda i: -self.obj.Geometry[i].length())[:2]
+        self.begr("Horizontal", stor if a >= b else lill)
+        self.matt("Distance", stor, varde=langd if a >= b else bredd, namn=namn[0] if a >= b else namn[1])
+        self.matt("Distance", lill, varde=bredd if a >= b else langd, namn=namn[1] if a >= b else namn[0])
+        self.placera(e, MITT, *mitt)
+        return e
+
     def halbild(self, d, ccx, ccy=0, mitt=(0, 0), namn=(None, None, None)):
         """Hål i rektangulärt mönster ccx x ccy kring mitt (4 hål; ccy = 0 eller ccx = 0 ger 2 hål på rad).
         Lika diametrar och symmetri kring mitten, så att mönstret följer variablerna. Returnerar index."""
