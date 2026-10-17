@@ -46,6 +46,8 @@ Ovanför listan **ALLMÄNNA NOTERINGAR**: `ALLA HÅL ÄR 22 mm OM EJ ANNAT ANGES
 
 ## Material och infästning som återkommer
 - Stål: S355J2 (balkar, plåt), S355J2H (VKR), S235JR (räcken), S355N. Aluminium 6060-T6 för räcken/grindar.
+- Noterna avslutas med var profilmåtten (standard, databas, datum) och materialkvaliteten (fy/fu enligt
+  EN 1993-1-1 tab. 3.1, källa, datum) är verifierade; raderna kommer från `scripts/kallor.py`.
   Trä C24, ek för handledare.
 - Bultar: `M12 8.8 FZV`, hålangivelse `4*Ø14 - M12x44` (antal*håldiameter - bult). Kemankare M12 i Ø14.
   Avlånga hål för montageglapp anges i not.

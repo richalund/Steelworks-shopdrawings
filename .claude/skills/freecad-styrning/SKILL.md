@@ -30,6 +30,28 @@ Mallarna i `mallar/` är neutrala. Företagsnamn, adress och signaturer sätts p
 Vill man ha en logga: byt `Foretag`-texten i `mallar/A3.svg` respektive `mallar/A2_tekla.svg` mot en
 `<image>` i rutan som anges i mallens kommentar. Fråga användaren om uppgifterna saknas första gången.
 
+## Källor för profilmått och materialkvaliteter
+`scripts/kallor.py` hämtar profilmått och nominella hållfasthetsvärden från öppna databaser på nätet och
+sparar dem i en lokal cache (`~/.cache/freecad-styrning/kallor`, förnyas efter 30 dagar). Varje uppgift bär
+med sig källa, standard och hämtdatum, och ritningarna anger var måtten och materialet är verifierade:
+A2-sammanställningen i noterna nere till vänster (och sist i `_materiallista.csv`), A3-bladet i raderna
+efter "Material:". Inga nycklar eller konton behövs.
+- Profilmått: Steel_Section_Database (github.com/ulmewix, MIT): EN 10365:2017 (IPE, HEA, HEB, HEM, UPE),
+  EN 10219-2 (kallformade VKR/RHS/SHS/rör), EN 10210-2 (varmformade KKR), EN 10056-1 (L). Reserv:
+  FreeCAD:s egen profiltabell `profiles.csv` (utan rotradier), sist de inbyggda tabellerna i `stal.py`,
+  som då märks "ej verifierade" på ritningen. `stal.tolka()` använder källorna automatiskt vid `bygg`, och
+  loggen visar en rad per profil med mått och källa.
+- Materialkvaliteter: eurocodeapplied.com, tabellen med nominellt fy/fu enligt EN 1993-1-1 tab. 3.1
+  (EN 10025-2…6, EN 10210-1, EN 10219-1) per tjockleksområde; reserv FreeCAD:s materialkort (`Steel-*.FCMat`).
+  Kvaliteten tolkas ur materialtexten (`S355J2`, `S355J2H`, `Stål S235, obehandlad`); H-kvaliteter räknas
+  som EN 10219-1 (kallformat) om inte profilen är KKR. Verifieringen görs när ritningen tas fram.
+- Kontrollera själv: `python3 scripts/kallor.py profil UPE140 "VKR100*6.3"`, `python3 scripts/kallor.py material
+  S355J2 --t 12`, `... status` (cache och källor), `... uppdatera` (hämta om). `FC_KALLOR=offline` använder bara
+  cache och inbyggt; `--utan-kallor` på `ritning.py` och `sammanstallning.py ritning` tar bort noterna.
+- Finns profilen eller kvaliteten inte i någon källa: hitta inte på mått. Sök (WebSearch) efter tillverkarens
+  eller standardens tabell, säg till användaren vad som inte kunde verifieras och lägg in måtten i
+  konstruktionsskriptet eller tabellen i `stal.py` med källan i en kommentar.
+
 ## Arbetssätt
 **Regel: rita alltid med FreeCADs egna verktyg så att användaren kan redigera vidare.**
 Modellen ska bestå av kalkylbladet `Variabler`, fullt bestämda skisser med namngivna mått som uttryck mot
@@ -182,6 +204,7 @@ t.ex. ritningsnummer, material och ytbehandling i noterna.
 - `scripts/dfm.py` + `scripts/granska.py` tillverkningsgranskning.
 - `scripts/fcapi.py` startar FreeCAD och kör jobb; `scripts/plat.py` utbredning och DXF; `scripts/pd.py`
   Part Design-hjälpare; `scripts/datastall.py`, `scripts/partdesign.py` och `scripts/ritning.py` är kommandona.
+- `scripts/kallor.py` profilmått och materialkvaliteter ur öppna källor på nätet, med cache och källangivelse.
 - `scripts/sammanstallning.py` (bygg + sammanställningsritning) och `scripts/stal.py` (profiltabeller,
   Konstruktion, hålgrupper, materiallista); `konstruktioner/*.py` konstruktionsskript.
 - `scripts/rendera_pdf.py` PDF till PNG för granskning; `scripts/installera_linux.sh` installation på Linux.

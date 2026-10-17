@@ -71,6 +71,29 @@ logga byter du `Foretag`-texten i `mallar/A3.svg` och `mallar/A2_tekla.svg` mot 
 mallens kommentar. I en molnsession kan variablerna läggas i miljöns inställningar så att de följer med
 varje session.
 
+## Profilmått och materialkvaliteter verifieras mot öppna källor
+
+`scripts/kallor.py` hämtar profilmått (IPE, HEA, HEB, HEM, UPE, VKR/RHS/SHS, KKR, rör, L) från
+[Steel_Section_Database](https://github.com/ulmewix/Steel_Section_Database) (EN 10365, EN 10219-2,
+EN 10210-2, MIT) och nominellt fy/fu för S-kvaliteter från
+[eurocodeapplied.com](https://eurocodeapplied.com/design/en1993/steel-design-properties) (EN 1993-1-1
+tab. 3.1: EN 10025-2…6, EN 10210-1, EN 10219-1). FreeCAD:s egen profiltabell och materialkort är reserv, och
+sist de inbyggda tabellerna. Svaren cachas i `~/.cache/freecad-styrning/kallor` i 30 dagar. Ritningen anger
+var måtten och materialet är verifierade, med datum, i noterna:
+
+```
+PROFILMÅTT ENL. EN 10365:2017 VERIFIERADE MOT GITHUB.COM/ULMEWIX/STEEL_SECTION_DATABASE 2026-10-17.
+S355J2 ENL. EN 10025-2: fy 355 MPa, fu 490 MPa (t ≤ 40 mm). VERIFIERAT MOT EUROCODEAPPLIED.COM (EN 1993-1-1 TAB. 3.1) 2026-10-17.
+```
+
+```bash
+python3 $S/scripts/kallor.py profil UPE140 "VKR100*6.3"     # mått, kg/m och källa
+python3 $S/scripts/kallor.py material S355J2 --t 12         # fy, fu, standard och källa
+python3 $S/scripts/kallor.py status                         # cache och källor
+```
+
+`FC_KALLOR=offline` stänger av nätet (cache och inbyggda tabeller), `--utan-kallor` tar bort noterna.
+
 ## Snabbstart från kommandoraden
 
 ```bash
@@ -105,6 +128,7 @@ CLAUDE.md                        – instruktioner till Claude Code för repot
   scripts/pd.py                  – Part Design-hjälpare (skisser, Pad, Pocket, Hole, Fillet, mönster)
   scripts/partdesign.py          – bygg / satt / las för Part Design-delar
   scripts/stal.py                – profiltabeller, Konstruktion, hålgrupper, gering, materiallista
+  scripts/kallor.py              – profilmått och materialkvaliteter ur öppna källor, cache, källangivelse
   scripts/sammanstallning.py     – bygg konstruktion + A2-sammanställningsritning
   scripts/plat.py, datastall.py  – SheetMetal, utbredning, DXF, exempeldel
   scripts/ritning.py             – A3-ritning för plåt och Part Design, DXF-utbredning

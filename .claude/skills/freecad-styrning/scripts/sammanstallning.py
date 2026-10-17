@@ -69,6 +69,8 @@ def args(argv=None):
     ap.add_argument("--skala-snitt", dest="skala_snitt", type=float, default=None)
     ap.add_argument("--hal", default="22", help="standardhål i ALLMÄNNA NOTERINGAR (mm)")
     ap.add_argument("--svets", default="3.0", help="standardsvets a-mått i ALLMÄNNA NOTERINGAR (mm)")
+    ap.add_argument("--utan-kallor", dest="utan_kallor", action="store_true",
+                    help="inga noter om var profilmåtten och materialkvaliteterna är verifierade (kallor.py)")
     ap.add_argument("--ut", default=None)
     a = ap.parse_args(argv)
     if a.lage == "bygg" and not a.ut_fil:
@@ -506,6 +508,28 @@ def _jobb():
         for r in rader:
             if r["fel"]:
                 logg("OBS: %s har delar med olika geometri: %s" % (r["pos"], ", ".join(r["fel"])))
+        # var profilmåtten (sparat vid bygget) och materialkvaliteterna (verifieras nu) kommer ifrån -> noter
+        kallrader = []
+        if not a.get("utan_kallor"):
+            import kallor
+            try:
+                kl = json.loads(getattr(g, "Kallor", "") or "[]")
+            except ValueError:
+                kl = []
+            tjock, varm = {}, {}
+            for r in rader:
+                t = kallor.tjocklek(r["profil"])
+                tjock[r["material"]] = max(tjock.get(r["material"], 0.0), t or 0.0) or None
+                varm[r["material"]] = varm.get(r["material"], False) or r["profil"].upper().startswith(("KKR", "KCKR"))
+            mat = {m: kallor.material(m, tjock[m], varm[m]) for m in tjock}
+            kallrader = kallor.noter(kl, mat, bredd=70)
+            for s_ in kallrader:
+                logg("Not:", s_)
+            for s_ in kallor.notiser():
+                logg("Källor OBS:", s_)
+            for s_ in kallor.fel():
+                logg("Källor FEL:", s_)
+            noter = list(noter) + kallrader
         alla = [o.Shape for o in ds]
         komp = Part.makeCompound(alla)
         huvud = doc.getObject(g.Huvuddel) if g.Huvuddel else None
@@ -885,6 +909,8 @@ def _jobb():
                 f.write("%s;%s;%s;%d;%s;%s;%s\n" % (r["pos"], r["profil"], r["material"], r["antal"], fmt(r["langd"]),
                                                   ("%.2f" % r["area"]).replace(".", ","), ("%.1f" % r["vikt"]).replace(".", ",")))
             f.write(";;;;TOTALT;%s;%s\n" % (("%.1f" % ta).replace(".", ","), ("%.1f" % tv).replace(".", ",")))
+            for s_ in kallrader:
+                f.write("KÄLLA;%s\n" % s_)
         doc.saveAs(bas + ".FCStd")
         logg("Sparat:", bas + ".FCStd")
         page.ViewObject.show()

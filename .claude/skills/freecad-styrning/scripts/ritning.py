@@ -36,6 +36,8 @@ def args(argv=None):
     ap.add_argument("--ritad-av", dest="ritad_av", default=os.environ.get("FC_RITAD_AV", ""), help="signatur i titelblocket (standard: miljövariabeln FC_RITAD_AV)")
     ap.add_argument("--foretag", default=os.environ.get("FC_FORETAG", ""), help="företagsnamn i titelblocket (standard: miljövariabeln FC_FORETAG)")
     ap.add_argument("--ytbehandling", default="Ytbehandling enligt beställning.")
+    ap.add_argument("--utan-kallor", dest="utan_kallor", action="store_true",
+                    help="ingen not om var materialkvaliteten är verifierad (kallor.py)")
     ap.add_argument("--v-oppning", dest="v_oppning", type=float, default=None, help="kantpressens V-öppning för granskningen (standard: minsta V >= 8 t)")
     return ap.parse_args(argv)
 
@@ -176,16 +178,31 @@ def _jobb():
         a.Rotation = rot
         return a
 
+    def materialrader(a, tjocklek=None):
+        """Material-raden i noterna och, om inte --utan-kallor, var kvaliteten är verifierad (kallor.py)."""
+        rader = ["Material: %s" % a["material"]]
+        if a.get("utan_kallor"):
+            return rader
+        import kallor
+        info = kallor.material(a["material"], tjocklek)
+        rader += kallor.bryt(kallor.text_material(info, a["material"], kort=True), 64)
+        for s_ in kallor.notiser():
+            logg("Källor OBS:", s_)
+        for s_ in kallor.fel():
+            logg("Källor FEL:", s_)
+        return rader
+
     def textblock(doc, page, rader, x, y, h=3.5, farg=GRA, radavstand=6.0):
-        """Flerradig not med vänsterkanten i x och första radens baslinje ungefär i y. En annotation per
-        block, så att raderna vänsterjusteras mot varandra (TechDraw placerar annotationens mitt)."""
+        """Flerradig not med vänsterkanten i x och SISTA radens baslinje ungefär i y; blocket växer uppåt så att
+        fler rader (t.ex. källorna för materialet) inte hamnar under ramen. En annotation per block, så att
+        raderna vänsterjusteras mot varandra (TechDraw placerar annotationens mitt)."""
         a = doc.addObject("TechDraw::DrawViewAnnotation", "Noter")
         page.addView(a)
         a.Text, a.TextSize, a.Font, a.TextColor = list(rader), h, "Century Gothic", farg
         a.LineSpace = int(round(radavstand / (h * 1.69) * 100))   # uppmätt: LineSpace 100 = 1,69 x textstorleken
         w = max(textbredd(r, h) for r in rader)
         a.X = x + w / 2
-        a.Y = y + h * 0.35 - (len(rader) - 1) * radavstand / 2
+        a.Y = y + h * 0.35 + (len(rader) - 1) * radavstand / 2
         return a
 
     def nytt_blad(doc, namn, f):
@@ -339,15 +356,15 @@ def _jobb():
         # noter (skalan på blad 2 behövs i texten)
         L, W = pd["utbredning"]
         n2 = valj_skala([(L, 375.0), (W, 180.0)], a.get("skala_ut"))
-        rader = ["Material: %s" % a["material"],
+        rader = materialrader(a, pd["tjocklek"]) + [
                  "Plåttjocklek %s mm, bockradie (inre) %s mm" % (fmt(pd["tjocklek"]), fmt(radie)),
                  "Utbredd plåt ca %.0f x %.0f mm, se blad 2" % pd["utbredning"],
                  "Vikt ca %s kg" % ("%.1f" % pd["massa"]).replace(".", ","),
                  "Mått i mm. Skala 1:%s (isometri 1:%s), blad 2 1:%s." % (fmt(n), fmt(ni), fmt(n2)),
                  a["ytbehandling"]]
         if hornr > 0:
-            rader.insert(2, "Hörnradier R%s (4 st)" % fmt(hornr))
-        textblock(doc, page1, rader, 20, 46)
+            rader.insert(next(i for i, r in enumerate(rader) if r.startswith("Plåttjocklek")) + 1, "Hörnradier R%s (4 st)" % fmt(hornr))
+        textblock(doc, page1, rader, 20, 14)
         doc.recompute()
 
         # ---------------- blad 2: utbredning
@@ -488,7 +505,7 @@ def _jobb():
                                "Bockradie inre %s mm. Bocknoter: riktning och vinkel vid varje bocklinje (NED streckad)." % fmt(radie),
                                "DXF för laser: %s, för bockning: %s" % (os.path.basename(bas + "_kontur.dxf"), os.path.basename(bas + "_utbredning.dxf")),
                                "Tillverkningsgranskning: %s, se %s" % (sam, os.path.basename(bas + "_granskning.txt"))],
-                  20, min(flat.papper(vu)[1] - 24, 70))
+                  20, min(flat.papper(vu)[1] - 24, 70) - 18)          # sista radens baslinje (fyra rader)
         doc.recompute()
         pump(1.0)
         return [page1, page2], dict(skala=n, skala_ut=n2, utbredning=pd["utbredning"], bockar=pd["bockar"], massa=pd["massa"], granskning=sam)
@@ -830,7 +847,7 @@ def _jobb():
                 d.X, d.Y = c.x * vy.s + ux * rp, c.y * vy.s + uy * rp
         # DXF för platta, noter
         pl = platta(s)
-        rader = ["Material: %s" % a["material"]]
+        rader = materialrader(a, pl[1] if pl else None)
         if pl:
             antal, (lx, ly) = kontur_dxf(pl[2], pl[0], bas + "_kontur.dxf")
             logg("DXF: %s %d entiteter, %.1f x %.1f mm" % (os.path.basename(bas + "_kontur.dxf"), antal, lx, ly))
@@ -845,7 +862,7 @@ def _jobb():
         rader += ["Vikt ca %s kg (stål)" % ("%.1f" % massa).replace(".", ","),
                   "Mått i mm. Skala %s%s. Projektionsmetod E." % (skaltext(n), " (isometri %s)" % skaltext(ni) if ni else ""),
                   a["ytbehandling"]]
-        textblock(doc, page, rader, 20, 46)
+        textblock(doc, page, rader, 20, 14)
         return [page], dict(skala=n, massa=massa, platta=bool(pl))
 
     def huvud(a):

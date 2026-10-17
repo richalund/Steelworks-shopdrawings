@@ -52,14 +52,55 @@ def densitet(material):
     return DENSITET["stal"]
 
 
-def tolka(profil):
-    """Profilnamn (Tekla-stil) -> dict med typ och mått. Okänt namn ger ValueError med exempel."""
+def tolka(profil, kallor=True):
+    """Profilnamn (Tekla-stil) -> dict med typ, mått och 'kalla' (var måtten kommer ifrån). Måtten hämtas i
+    första hand ur källorna i kallor.py (standardtabeller på nätet med cache, FreeCAD:s profiltabell), annars ur
+    de inbyggda tabellerna här. Plåt (PL), rundstång (D) och mått i namnet har ingen källa (kalla=None).
+    Okänt namn ger ValueError med exempel."""
     p = profil.strip().upper().replace(",", ".").replace("X", "*").replace(" ", "")
+    info = None
+    if kallor:
+        try:
+            import kallor as K
+            info = K.profil(p)
+        except Exception as e:                       # nätfel m.m. får inte stoppa bygget
+            info = None
+            _kallor_fel.append("%s: %s" % (p, e))
+    if info is not None:
+        if info["typ"].endswith("_LUTANDE"):
+            raise ValueError("%s har lutande flänsar (UPN/IPN) som tvärsnittsbyggaren inte stöder; använd UPE/IPE" % profil)
+        if info["typ"] in ("U", "I") and info.get("r") is None:
+            try:
+                info["r"] = _inbyggd(p)["r"]
+                info["kalla"]["standard"] += ", rotradie ur inbyggd tabell"
+            except ValueError:
+                info["r"] = info["tw"]
+                info["kalla"]["standard"] += ", rotradie antagen = tw"
+        if info["typ"] == "R" and info.get("ro") is None:
+            t = info["t"]
+            info["ro"] = 2.0 * t if t <= 6 else (2.5 * t if t <= 10 else 3.0 * t)
+            info["ri"] = max(info["ro"] - t, 0.0)
+            info["kalla"]["standard"] += ", radier enligt EN 10219-regel"
+        info["profil"] = p
+        return info
+    info = _inbyggd(p)
+    info["profil"] = p
+    info["kalla"] = None if info["typ"] in ("PL", "D") else dict(INBYGGD_KALLA, profil=p)
+    return info
+
+
+_kallor_fel = []
+INBYGGD_KALLA = dict(namn="inbyggd tabell", kort="stal.py (inbyggd tabell)", standard="EN 10365 / EN 10219 (tabellvärden)",
+                     lage="inbyggd", hamtad="")
+
+
+def _inbyggd(p):
+    """Inbyggda tabellerna och måtten i namnet (normaliserat namn p)."""
     for namn, tab in (("UPE", UPE), ("IPE", IPE), ("HEA", HEA), ("HEB", HEB)):
         m = re.fullmatch(namn + r"(\d+)", p)
         if m:
             if int(m.group(1)) not in tab:
-                raise ValueError("%s finns inte i tabellen (%s)" % (profil, ", ".join("%s%d" % (namn, k) for k in tab)))
+                raise ValueError("%s finns inte i tabellen (%s)" % (p, ", ".join("%s%d" % (namn, k) for k in tab)))
             h, b, tw, tf, r = tab[int(m.group(1))]
             return dict(typ="U" if namn == "UPE" else "I", h=h, b=b, tw=tw, tf=tf, r=r)
     m = re.fullmatch(r"(VKR|KKR|RHS|SHS|KVR)" + NUM + r"\*" + NUM + r"(?:\*" + NUM + r")?", p)
@@ -86,7 +127,7 @@ def tolka(profil):
         a1, a2, a3 = float(m.group(1)), float(m.group(2)), m.group(3)
         h, b, t = (a1, a2, float(a3)) if a3 else (a1, a1, a2)
         return dict(typ="L", h=h, b=b, t=t)
-    raise ValueError("Okänd profil '%s'. Exempel: UPE140, IPE100, HEA160, VKR100*6.3, VKR120*80*5, PL10*150, D20, RÖR48.3*4, L50*5" % profil)
+    raise ValueError("Okänd profil '%s'. Exempel: UPE140, IPE100, HEA160, VKR100*6.3, VKR120*80*5, PL10*150, D20, RÖR48.3*4, L50*5" % p)
 
 
 def bultdiameter(bult):
@@ -257,10 +298,25 @@ class Konstruktion:
         g = doc.addObject("App::DocumentObjectGroup", "Sammanstallning")
         g.Label = "Sammanställning %s" % marke
         for p, beskr in (("Marke", "sammanställningsmärke"), ("Namn", "benämning"), ("Huvuddel", "objektnamn för huvuddelen"),
-                         ("Ritning", "ritningens standardval (JSON)")):
+                         ("Ritning", "ritningens standardval (JSON)"), ("Kallor", "källor för profilmåtten (JSON-lista)")):
             g.addProperty("App::PropertyString", p, "Stal", beskr)
-        g.Marke, g.Namn, g.Ritning = marke, namn, "{}"
-        self.grupp, self.antal_halgrupper, self.baser = g, 0, {}
+        g.Marke, g.Namn, g.Ritning, g.Kallor = marke, namn, "{}", "[]"
+        self.grupp, self.antal_halgrupper, self.baser, self.kallor = g, 0, {}, []
+
+    def _notera_kalla(self, info):
+        """Sparar var profilens mått kommer ifrån i gruppens Kallor (för ritningens noter) och loggar en gång per profil."""
+        k = info.get("kalla")
+        if not k:
+            return
+        post = dict(profil=info.get("profil", ""), namn=k.get("namn", ""), kort=k.get("kort", ""), standard=k.get("standard", ""),
+                    hamtad=k.get("hamtad", ""), lage=k.get("lage", ""), url=k.get("url", ""))
+        if post in self.kallor:
+            return
+        self.kallor.append(post)
+        self.grupp.Kallor = json.dumps(self.kallor, ensure_ascii=False)
+        matt = ", ".join("%s=%g" % (x, info[x]) for x in ("h", "b", "tw", "tf", "r", "t", "ro", "ri", "d") if info.get(x) is not None)
+        self.logg("Profil %s: %s; %s [%s] %s%s" % (post["profil"], matt, post["kort"], post["standard"], post["lage"],
+                                                   " " + post["hamtad"] if post["hamtad"] else ""))
 
     def _del(self, pos):
         import pd
@@ -303,6 +359,7 @@ class Konstruktion:
         flänsar (L-profilens ena ben) pekar åt."""
         from FreeCAD import Vector as V
         info = tolka(profil)
+        self._notera_kalla(info)
         d = self._del(pos)
         a = V(*[d.uttryck(x)[1] for x in start])
         b = V(*[d.uttryck(x)[1] for x in slut])

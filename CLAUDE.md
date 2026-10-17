@@ -14,3 +14,7 @@ DXF-utbredning, sammanställningsritningar i Tekla-stil och STEP.
 - Företagsuppgifterna i titelblocket saknas som standard: fråga användaren om företagsnamn, adress
   och signatur första gången och skicka dem med `--foretag`, `--adress`, `--ritad-av` (eller sätt
   `FC_FORETAG`, `FC_ADRESS`, `FC_RITAD_AV`).
+- Profilmått och materialkvaliteter hämtas från öppna källor på nätet via `scripts/kallor.py` (cache i
+  `~/.cache/freecad-styrning/kallor`) och ritningen anger var de är verifierade. Hitta aldrig på mått: finns
+  profilen eller kvaliteten inte i någon källa, sök efter tabellen, säg till användaren och lägg in måtten
+  med källan i en kommentar.
