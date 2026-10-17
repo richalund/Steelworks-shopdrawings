@@ -1,0 +1,33 @@
+name: Skill-zip till claude.ai
+
+# Bygger freecad-styrning.zip av skillmappen vid varje push till main och lägger den som
+# nedladdning på releasen "latest", så att den kan laddas upp under Customize > Skills på claude.ai.
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".claude/skills/freecad-styrning/**"
+      - ".github/workflows/skill-zip.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  zip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Packa skillen
+        run: |
+          cd .claude/skills
+          rm -f ../../freecad-styrning.zip
+          zip -r -X ../../freecad-styrning.zip freecad-styrning -x '*/__pycache__/*' '*.pyc'
+          unzip -l ../../freecad-styrning.zip | tail -3
+      - name: Lägg zippen på releasen latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view latest >/dev/null 2>&1 || gh release create latest --title "Senaste skill-zip" \
+            --notes "freecad-styrning.zip byggs automatiskt från main. Ladda upp den under Customize > Skills på claude.ai för att använda skillen i alla repon och i molnet."
+          gh release upload latest freecad-styrning.zip --clobber

@@ -29,6 +29,27 @@ Två sätt, båda utan att du behöver kunna git eller Python:
 2. **På egen dator.** Öppna en tom mapp i Claude Code och klistra in prompten i `INSTALLATION.md`. Claude Code
    hämtar skillen, installerar FreeCAD och gör en testritning. Se `INSTALLATION.md`.
 
+## Registrera skillen så den finns i alla dina repon
+
+Vill du slippa ha skillen i varje repo finns två sätt att registrera den en gång:
+
+- **Lokalt, som plugin (alla projekt på datorn).** I Claude Code:
+
+  ```
+  /plugin install freecad-styrning --marketplace richalund/Steelworks-shopdrawings
+  ```
+
+  Välj "Install for you" så gäller den i alla mappar du öppnar, och anropas som `/freecad-styrning:freecad-styrning`.
+  Uppdatera med `/plugin update freecad-styrning@steelworks-shopdrawings`. FreeCAD, SheetMetal och
+  Python-paketen installeras som i `INSTALLATION.md`. Plugins laddas inte i molnsessioner.
+- **I ditt claude.ai-konto (molnet, telefonen och datorn).** Ladda ner `freecad-styrning.zip` från
+  https://github.com/richalund/Steelworks-shopdrawings/releases/latest och ladda upp den på claude.ai under
+  **Customize → Skills → + → Upload a skill**. Skillen följer då med i varje molnsession oavsett repo, och
+  synkas till Claude Code på datorn när du är inloggad med samma konto. I molnet installerar Claude FreeCAD
+  med `installera_linux.sh` på begäran (10–15 min), eftersom repots hook inte följer med.
+
+Egna skript och `foretag.json` lägger du i det projekt du jobbar i, som beskrivs i `egna/README.md`.
+
 ## Använda i molnet (claude.ai/code, dator eller mobilapp)
 
 Ingen FreeCAD-installation behövs på egen dator. Allt körs i Claude Codes molncontainer och resultatet
@@ -151,6 +172,8 @@ loggen löpande. Ett jobb tar 5–10 sekunder plus själva bygget.
 ```
 INSTALLATION.md                  – installera på egen dator med en prompt (instruktion som Claude Code följer)
 CLAUDE.md                        – instruktioner till Claude Code för repot
+.claude-plugin/                  – plugin- och marketplace-manifest (installera som plugin lokalt)
+.github/workflows/skill-zip.yml  – bygger freecad-styrning.zip till claude.ai vid push
 egna/                            – användarens egna konstruktioner, delar och företagsuppgifter
 .claude/settings.json            – SessionStart-hook som installerar FreeCAD i molnsessioner
 .claude/hooks/session-start.sh

@@ -1,0 +1,12 @@
+{
+  "name": "freecad-styrning",
+  "displayName": "Steelworks Shopdrawings (freecad-styrning)",
+  "version": "1.0.0",
+  "description": "Parametriska plåt- och stålkonstruktioner i FreeCAD från Python: tillverkningsritningar (TechDraw, PDF), DXF-utbredning, sammanställningar i Tekla-stil och STEP.",
+  "author": { "name": "Richard Lundgren", "url": "https://github.com/richalund" },
+  "homepage": "https://github.com/richalund/Steelworks-shopdrawings",
+  "repository": "https://github.com/richalund/Steelworks-shopdrawings",
+  "license": "MIT",
+  "keywords": ["freecad", "cad", "smide", "stål", "ritning", "techdraw", "sheetmetal", "dxf"],
+  "skills": ["./.claude/skills/"]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "steelworks-shopdrawings",
+  "owner": { "name": "Richard Lundgren", "url": "https://github.com/richalund" },
+  "metadata": {
+    "description": "Steelworks Shopdrawings: skillen freecad-styrning för FreeCAD-ritningar av smide och plåt"
+  },
+  "plugins": [
+    {
+      "name": "freecad-styrning",
+      "source": "./",
+      "description": "Parametriska plåt- och stålkonstruktioner i FreeCAD med tillverkningsritningar, DXF och sammanställningar i Tekla-stil.",
+      "category": "productivity",
+      "keywords": ["freecad", "cad", "smide", "ritning"]
+    }
+  ]
+}
