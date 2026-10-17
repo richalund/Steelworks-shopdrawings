@@ -19,6 +19,16 @@ att redigera vidare för hand. Språket i skill, skript och ritningar är svensk
 Skillen ligger i `.claude/skills/freecad-styrning/` så att den laddas automatiskt när repot öppnas i
 Claude Code, lokalt eller i molnet.
 
+## Kom igång
+
+Två sätt, båda utan att du behöver kunna git eller Python:
+
+1. **I molnet, ingen installation.** Koppla ditt GitHub-konto till Claude och starta en session på
+   https://claude.ai/code (eller i Claude-appen på telefonen) med repot `richalund/Steelworks-shopdrawings`.
+   Se nästa avsnitt.
+2. **På egen dator.** Öppna en tom mapp i Claude Code och klistra in prompten i `INSTALLATION.md`. Claude Code
+   hämtar skillen, installerar FreeCAD och gör en testritning. Se `INSTALLATION.md`.
+
 ## Använda i molnet (claude.ai/code, dator eller mobilapp)
 
 Ingen FreeCAD-installation behövs på egen dator. Allt körs i Claude Codes molncontainer och resultatet
@@ -46,7 +56,13 @@ Skillen är generisk och ska kunna uppdateras från det här repot. Eget materia
 I en fork följer `egna/` med mellan sessionerna, och skillen uppdateras genom att hämta in `main` från det här
 repot utan konflikter.
 
-## Använda lokalt (Windows, egen FreeCAD)
+## Använda lokalt (Windows, macOS, Linux)
+
+Enklast: öppna en tom mapp i Claude Code och klistra in prompten i `INSTALLATION.md`. Den innehåller också
+en steg-för-steg-instruktion som Claude Code följer: hämta repot, installera FreeCAD 1.x, SheetMetal och
+Python-paketen, göra en testritning och fråga efter företagsuppgifterna.
+
+För hand:
 
 ```bash
 git clone https://github.com/richalund/Steelworks-shopdrawings
@@ -55,13 +71,14 @@ git clone https://github.com/richalund/Steelworks-shopdrawings
 Öppna sedan mappen i Claude Code, så används skillen som projektskill. Vill du ha den i alla projekt:
 kopiera `.claude/skills/freecad-styrning` till `~/.claude/skills/freecad-styrning`.
 
-Förutsättningar (se `SKILL.md`):
+Förutsättningar (se `SKILL.md` och `INSTALLATION.md`):
 
-- FreeCAD 1.0.x (letas i `C:\Program Files\FreeCAD*`, annars miljövariabeln `FREECAD_BIN`)
-- SheetMetal-tillägget via FreeCADs tilläggshanterare
-- Python 3 med `pip install pymupdf` (`ezdxf` frivilligt)
-- Linux: `bash .claude/skills/freecad-styrning/scripts/installera_linux.sh` installerar FreeCAD 1.1.3,
-  SheetMetal, Xvfb och Python-paketen
+- FreeCAD 1.0.x eller senare (Windows: letas i `C:\Program Files\FreeCAD*`; macOS/Linux: `freecad` i PATH;
+  annars miljövariabeln `FREECAD_BIN`)
+- SheetMetal-tillägget 0.7.24 (tilläggshanteraren eller `Mod/SheetMetal`)
+- Python 3.10+ med `pip install pymupdf ezdxf`
+- Linux: `bash .claude/skills/freecad-styrning/scripts/installera_linux.sh` installerar allt (FreeCAD 1.1.3,
+  SheetMetal, Xvfb och Python-paketen)
 
 ## Företagsuppgifter i titelblocket
 
@@ -132,6 +149,7 @@ loggen löpande. Ett jobb tar 5–10 sekunder plus själva bygget.
 ## Innehåll
 
 ```
+INSTALLATION.md                  – installera på egen dator med en prompt (instruktion som Claude Code följer)
 CLAUDE.md                        – instruktioner till Claude Code för repot
 egna/                            – användarens egna konstruktioner, delar och företagsuppgifter
 .claude/settings.json            – SessionStart-hook som installerar FreeCAD i molnsessioner
