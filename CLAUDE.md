@@ -26,4 +26,5 @@ DXF-utbredning, sammanställningsritningar i Tekla-stil och STEP.
   "Eget material, och förbättringar av skillen" i SKILL.md: föreslå förbättringen för användaren, gör den
   generell (inga kunduppgifter, kundens särdrag som val), arbeta på en gren `forbattring/<namn>`, kör
   `python3 .claude/skills/freecad-styrning/scripts/testa.py` och öppna PR:en med `.github/pull_request_template.md`.
-  Användaren behöver inte kunna git: "skicka in förbättringen" räcker.
+  Användaren behöver inte kunna git: "skicka in förbättringen" räcker. Slå på auto-merge på PR:en. Roller
+  (bidragsgivare, granskare i `.github/CODEOWNERS`) och hur en PR granskas står i `BIDRA.md`.

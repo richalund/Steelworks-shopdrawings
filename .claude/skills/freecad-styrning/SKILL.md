@@ -93,9 +93,18 @@ löst något som fler har nytta av (en buggfix, ett nytt verktyg, en ny fälla, 
 4. Kör `python3 scripts/testa.py` (alla exempel byggs och ritas, OK/FEL per exempel) och granska PNG:erna i
    `ut/test/` för de exempel som berörs. Allt ska vara OK.
 5. Pusha grenen och öppna en pull request mot `main` i richalund/Steelworks-shopdrawings med mallen i
-   `.github/pull_request_template.md` (vad, varför, hur det testats, bilder). Har användaren inte skrivrätt:
-   forka repot och öppna PR:en från forken. Ge användaren länken.
+   `.github/pull_request_template.md` (vad, varför, hur det testats, bilder), och slå på auto-merge så att den
+   går in när en granskare godkänt och testerna ("Testa skillen" i GitHub Actions) är gröna. Har användaren
+   inte skrivrätt: säg att ägaren behöver bjuda in hen (BIDRA.md), eller forka repot och öppna PR:en från
+   forken. Ge användaren länken.
 Ändra inte skillen på `main` direkt och blanda inte in uppdragets filer (`egna/`, `ut/`) i PR:en.
+
+**Granska en pull request** (när användaren skriver t.ex. "granska PR 12"): läs beskrivningen och hela diffen,
+kontrollera att testerna i GitHub Actions är gröna (annars kör `scripts/testa.py` på PR:ens gren), titta på
+bilderna, och bedöm mot reglerna ovan: allmängiltigt, inga kunduppgifter, testat, dokumenterat, inga
+oavsiktliga ändringar i befintliga exempel. Skriv en kort granskning på svenska. Godkänn bara när användaren
+ber om det, när hen står i `.github/CODEOWNERS` och inte själv skickat in PR:en; annars "begär ändringar" eller
+kommentera. Roller och ägarens inställningar står i BIDRA.md i repots rot.
 I en molnsession utan fork försvinner allt eget när containern stängs; föreslå en egen fork eller en gren om
 användaren vill behålla sina skript.
 

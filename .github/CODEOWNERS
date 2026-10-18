@@ -1,0 +1,6 @@
+# Granskare: de som står här kan godkänna pull requests mot main utan att ägaren behöver bekräfta.
+# Med regeln "Require review from Code Owners" på main räcker ett godkännande från någon av dem
+# (men aldrig från den som skickat in PR:en). Lägg till en granskare med hens GitHub-användarnamn
+# på raden nedan, t.ex. "* @richalund @kollega1 @kollega2", eller be Claude: "lägg till X som granskare".
+# Se BIDRA.md.
+* @richalund

@@ -35,8 +35,8 @@ Du pratar med Claude på vanlig svenska; Claude sköter FreeCAD, filer och git.
    stegen"*, *"gör handledaren i rör 42"*. Filerna (PDF, DXF, STEP, FreeCAD) kan laddas ner från sessionen.
 5. **Blev något bättre?** Skriv *"skicka in förbättringen"*. Claude gör det allmängiltigt, testar det och
    skickar ett förslag (en *pull request*) till repot, som granskas innan det blir en del av skillen för alla.
-   För det behöver ditt GitHub-konto vara inbjudet till repot (be Richard), annars gör Claude en egen kopia
-   (fork) åt dig.
+   För det behöver ditt GitHub-konto vara inbjudet till repot (be Richard). Granskare kan sedan godkänna
+   förslaget, och det går in automatiskt när testerna är gröna. Se `BIDRA.md`.
 
 Vill du köra på egen dator i stället: öppna en tom mapp i Claude Code och klistra in prompten i
 `INSTALLATION.md`. Claude Code hämtar skillen, installerar FreeCAD och gör en testritning.
@@ -192,6 +192,9 @@ CLAUDE.md                        – instruktioner till Claude Code för repot
 .claude-plugin/                  – plugin- och marketplace-manifest (installera som plugin lokalt)
 .github/workflows/skill-zip.yml  – bygger freecad-styrning.zip till claude.ai vid push
 .github/pull_request_template.md – mall för bidrag till skillen
+.github/workflows/testa.yml      – kör testa.py på varje pull request (GitHub Actions)
+.github/CODEOWNERS               – granskarna som kan godkänna pull requests
+BIDRA.md                         – roller, hur man skickar in och granskar, ägarens inställningar
 egna/                            – användarens egna konstruktioner, delar och företagsuppgifter
 .claude/settings.json            – SessionStart-hook som installerar FreeCAD i molnsessioner
 .claude/hooks/session-start.sh
