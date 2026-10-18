@@ -382,16 +382,29 @@ def _jobb():
         """Ta bort ritningsobjekt från en tidigare körning. Ett blad tar med sig sina vyer, så gå på namn."""
         # Vyer först, sedan blad och mallar, och låt TechDraws bakgrundsberäkning bli klar innan:
         # att ta bort ett blad vars vyer fortfarande räknas kraschar FreeCAD (sett i 1.x på Linux).
+        # Ordning: mått, bubblor och texter, detaljvyer, snitt, vyer, blad, mallar (en basvy före sina detaljer
+        # eller ett blad med vyer som räknas kraschar FreeCAD ibland).
         td = [o for o in doc.Objects if o.TypeId.startswith("TechDraw::")]
-        ordning = {"TechDraw::DrawPage": 1, "TechDraw::DrawSVGTemplate": 2}
+        ordning = {"TechDraw::DrawViewDetail": 1, "TechDraw::DrawViewSection": 2, "TechDraw::DrawViewPart": 3,
+                   "TechDraw::DrawPage": 4, "TechDraw::DrawSVGTemplate": 5}
+        for p_ in [o for o in td if o.TypeId == "TechDraw::DrawPage"]:
+            try:
+                p_.KeepUpdated = False
+            except Exception:
+                pass
         namn = [o.Name for o in sorted(td, key=lambda o: ordning.get(o.TypeId, 0))]
         if namn and fcapi.har_gui():
             fcapi.pump(1.0)
-        borta = 0
+        borta, forra = 0, None
         for n in namn:
-            if doc.getObject(n) is not None:
-                doc.removeObject(n)
-                borta += 1
+            o = doc.getObject(n)
+            if o is None:
+                continue
+            if forra is not None and ordning.get(o.TypeId, 0) != forra and fcapi.har_gui():
+                fcapi.pump(0.3)
+            forra = ordning.get(o.TypeId, 0)
+            doc.removeObject(n)
+            borta += 1
         doc.recompute()
         return borta
 
@@ -570,6 +583,7 @@ def _jobb():
         s_ = v.Scale
         ek = kanter(v)
         n = 0
+        nivaer = {}                                   # flera mått åt samma håll staplas 5 mm isär
         for j, m in enumerate(matt):
             typ, varde, lage = m.get("typ", "x"), float(m["varde"]), m.get("lage", "over")
             kand = []
@@ -593,7 +607,9 @@ def _jobb():
                       "vanster": lambda k_: k_[1].x + k_[2].x, "hoger": lambda k_: -(k_[1].x + k_[2].x)}[lage]
             i, p_, q_ = sorted(kand, key=nyckel)[0]
             mx, my = (p_.x + q_.x) / 2 * s_, (p_.y + q_.y) / 2 * s_
-            off = {"over": (0, 5), "under": (0, -5), "vanster": (-6, 0), "hoger": (6, 0)}[lage]
+            steg_ = nivaer.get(lage, 0)
+            nivaer[lage] = steg_ + 1
+            off = {"over": (0, 5 + 5 * steg_), "under": (0, -5 - 5 * steg_), "vanster": (-6 - 6 * steg_, 0), "hoger": (6 + 6 * steg_, 0)}[lage]
             d = doc.addObject("TechDraw::DrawViewDimension", "DetaljMatt%d_%d" % (nr, j))
             d.Type = {"x": "DistanceX", "y": "DistanceY", "r": "Radius", "d": "Diameter"}[typ]
             d.MeasureType = "Projected"
@@ -632,16 +648,21 @@ def _jobb():
                     vyer[k_] = vd["vy"].v
             if vd["snitt"]:
                 vyer[vd["snitt"]["namn"]] = vd["vy"].v
-        # ---- delvyer i vänsterkolumnen
-        y = 395.0
+        # ---- delvyer i vänsterkolumnen (under rutan PLACERING I STOMNÄT)
+        y = 372.0
         skalor = set()
         for i, dv_ in enumerate(delvyer):
             kallor = [delar_[n_] for n_ in dv_.get("kallor", []) if n_ in delar_] or list(ds)
             n_ = V(*dv_["normal"]).normalize()
             xr = V(*dv_["xriktning"]) if dv_.get("xriktning") else (V(0, 0, 1).cross(n_).normalize() if abs(n_.z) < 0.9 else V(1, 0, 0))
-            bb = projicera(Part.makeCompound([o.Shape for o in kallor]), n_, xr)
+            # en feature (t.ex. Pad utan snäckan) mäts med sin kropp: featurens Shape kan sakna kroppens placering
+            kroppar_ = [o.getParentGeoFeatureGroup() if o.TypeId.startswith("PartDesign::") and o.TypeId != "PartDesign::Body"
+                        and o.getParentGeoFeatureGroup() is not None else o for o in kallor]
+            yr_ = n_.cross(xr)                         # hörnen, inte lådan: sneda delar ger annars för stor vy
+            pts_ = [q.Point for o in kroppar_ for q in o.Shape.Vertexes] or [V()]
+            bb = (min(q.dot(xr) for q in pts_), max(q.dot(xr) for q in pts_), min(q.dot(yr_) for q in pts_), max(q.dot(yr_) for q in pts_))
             w_, h_ = bb[1] - bb[0], bb[3] - bb[2]
-            sk = dv_.get("skala") or next((k_ for k_ in SKALOR if w_ / k_ <= 110 and h_ / k_ <= 290), SKALOR[-1])
+            sk = dv_.get("skala") or next((k_ for k_ in SKALOR if w_ / k_ <= 110 and h_ / k_ <= 270), SKALOR[-1])
             skalor.add(sk)
             namn = "Delvy%s" % dv_.get("namn", str(i + 1))
             v = doc.addObject("TechDraw::DrawViewPart", namn)

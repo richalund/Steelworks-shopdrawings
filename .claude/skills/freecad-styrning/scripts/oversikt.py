@@ -67,7 +67,7 @@ def _jobb(a):
     doc = App.openDocument(a["fil"])
     # ta bort bladet från en tidigare körning: vyer först, sedan blad och mall (annars kraschar FreeCAD)
     gamla = [o for o in doc.Objects if o.Name.startswith(pref)]
-    ordning = {"TechDraw::DrawPage": 1, "TechDraw::DrawSVGTemplate": 2}
+    ordning = {"TechDraw::DrawViewPart": 1, "TechDraw::DrawPage": 2, "TechDraw::DrawSVGTemplate": 3}
     if gamla:
         pump(1.0)
     for n in [o.Name for o in sorted(gamla, key=lambda o: ordning.get(o.TypeId, 0))]:

@@ -1,6 +1,6 @@
 ---
 name: freecad-styrning
-description: Styr FreeCAD 1.x (licensfritt, LGPL) från Python för att bygga och ändra parametriska plåt- och smidesdelar med SheetMetal-tillägget eller Part Design (kropp, skisser, Pad/Pocket/Hole/Revolution/Fillet/mönster) och ett variabelblad, läsa av mått, massa och utbredning, exportera STEP och bild, och ta fram tillverkningsritningar med titelblock (TechDraw, PDF) samt DXF-utbredning till laser och bockning, och sammanställningsritningar för stålkonstruktioner i Tekla-stil (A2, positionsbubblor, snitt, materiallista). Använd när användaren nämner FreeCAD, en .FCStd-fil, vill rita en del i Part Design (fotplatta, konsol, fläns, hylsa, bearbetad detalj), vill ta fram varianter av en plåtprodukt (dataställ, fotplåtar, stativ) med ritning och DXF på en dator utan SolidWorks-licens, eller vill rita en stålkonstruktion som i Tekla (balkongram, pelare med fotplåt).
+description: Styr FreeCAD 1.x (licensfritt) från Python: parametriska plåt- och smidesdelar (SheetMetal, Part Design, variabelblad), stålkonstruktioner och räcken i Tekla-stil (positionsbubblor, snitt, materiallista, detaljblad), tillverkningsritningar (TechDraw, PDF), DXF-utbredning till laser och kantpress, STEP, 3D-bilder och översikts-/planritningar till offerter. Använd när användaren nämner FreeCAD eller en .FCStd-fil, vill rita en del (fotplatta, konsol, fläns, hylsa), en plåtprodukt med utbredning, en stålkonstruktion (balkongram, pelare), ett räcke, en grind eller en trappa (även från kundens foton och mail), eller vill ha ritning och DXF utan SolidWorks-licens.
 ---
 
 # FreeCAD-styrning
@@ -69,20 +69,35 @@ efter "Material:". Inga nycklar eller konton behövs.
   eller standardens tabell, säg till användaren vad som inte kunde verifieras och lägg in måtten i
   konstruktionsskriptet eller tabellen i `stal.py` med källan i en kommentar.
 
-## Skillen ändras inte – eget material ligger utanför
-Skillen installeras från Steelworks-shopdrawings och ska gå att uppdatera därifrån. Ändra därför inte filerna i
-`.claude/skills/freecad-styrning/`. Allt som görs för användaren läggs utanför skillen:
-- nya konstruktionsskript i `egna/konstruktioner/`, nya delskript i `egna/delar/` (i repots rot; lokalt i
-  användarens projektmapp). Skripten tar vilken sökväg som helst: `sammanstallning.py bygg egna/konstruktioner/x.py`.
-- hjälpfunktioner som skillen saknar skrivs i det egna skriptet, inte i skillens filer. Delar som `k.balk`,
-  `k.plat` och `k.skiva` inte täcker byggs med `k.egen(pos, "TEXT", bygg, mitt=, rot=, material=)`, där
-  `bygg(d)` ritar kroppen med Part Design-API:t i `scripts/pd.py` (skisser, Pad, Pocket, Hole, Fillet, mönster).
-  Det är regel, inte undantag: varje ritning har sina egna utmaningar, och de löses i det skriptet.
+## Eget material, och förbättringar av skillen
+Skillen installeras från Steelworks-shopdrawings och ska gå att uppdatera därifrån. Det som görs för ett
+uppdrag läggs därför utanför skillen:
+- konstruktionsskript i `egna/konstruktioner/`, delskript i `egna/delar/`, ritskript för översikter i
+  `egna/ritningar/` (i repots rot; lokalt i användarens projektmapp). Skripten tar vilken sökväg som helst:
+  `sammanstallning.py bygg egna/konstruktioner/x.py`.
+- det som är unikt för uppdraget (kundens mått, förebildens stil, noter) skrivs i det egna skriptet. Delar som
+  `k.balk`, `k.plat` och `k.skiva` inte täcker byggs med `k.egen(pos, "TEXT", bygg, mitt=, rot=, material=)`,
+  där `bygg(d)` ritar kroppen med Part Design-API:t i `scripts/pd.py`.
 - företagsuppgifter i `egna/foretag.json` (eller konfigmappen), genererade filer i `ut/`.
-Saknas något i skillen som inte går att lösa i det egna skriptet: säg det till användaren och föreslå att det
-rapporteras som ett ärende på github.com/richalund/Steelworks-shopdrawings, i stället för att ändra skillen lokalt.
-I en molnsession utan fork försvinner allt eget när containern stängs; föreslå en egen fork om användaren vill
-behålla sina skript.
+
+**Skillen förbättras genom bidrag (pull request), aldrig genom att ändra den i smyg.** När ett uppdrag har
+löst något som fler har nytta av (en buggfix, ett nytt verktyg, en ny fälla, en ritningskonvention) gör du så här:
+1. Säg till användaren i en mening vad som borde in i skillen och varför, och fråga om du ska skicka in det.
+   Användare utan datavana säger bara "ja" eller "skicka in förbättringen"; de ska inte behöva kunna git.
+2. Gör förbättringen **generell**: inget kundnamn, inga projektmått, och kundens särdrag (t.ex. en snäcka) blir
+   ett val med ett neutralt standardvärde, inte standard. Flytta in hjälpfunktioner från det egna skriptet
+   och låt det egna skriptet använda skillens version.
+3. Arbeta på en egen gren från `main` (`git checkout -b forbattring/<kort-namn> origin/main`). Uppdatera
+   SKILL.md, `references/` (nya fällor i `fallor.md`, konventioner i `smidesritningar.md`) och lägg gärna till
+   ett exempel i `delar/` eller `konstruktioner/`.
+4. Kör `python3 scripts/testa.py` (alla exempel byggs och ritas, OK/FEL per exempel) och granska PNG:erna i
+   `ut/test/` för de exempel som berörs. Allt ska vara OK.
+5. Pusha grenen och öppna en pull request mot `main` i richalund/Steelworks-shopdrawings med mallen i
+   `.github/pull_request_template.md` (vad, varför, hur det testats, bilder). Har användaren inte skrivrätt:
+   forka repot och öppna PR:en från forken. Ge användaren länken.
+Ändra inte skillen på `main` direkt och blanda inte in uppdragets filer (`egna/`, `ut/`) i PR:en.
+I en molnsession utan fork försvinner allt eget när containern stängs; föreslå en egen fork eller en gren om
+användaren vill behålla sina skript.
 
 ## Arbetssätt
 **Regel: rita alltid med FreeCADs egna verktyg så att användaren kan redigera vidare.**
@@ -167,7 +182,8 @@ egenskaperna Pos/Profil/Material. Koordinater och längder får vara uttryck mot
 `"Djup - 32.5"`, även hålens lägen): då följer delar och hål med när användaren ändrar en variabel i FreeCAD.
 Antal delar (t.ex. `Bjalkar`) kräver ombyggnad. Profiler: UPE, IPE, HEA, HEB (tabell), VKR/KKR/RHS a*t eller
 h*b*t, PL t*b, D, RÖR d*t, L (utan radier). Mönster: `konstruktioner/balkongram.py` (gerad UPE-ram, IPE100 med
-ändplåtar bultade mot påsvetsade plåtar, däckplåt), `konstruktioner/pelare.py` (VKR med fot- och toppplåt).
+ändplåtar bultade mot påsvetsade plåtar, däckplåt), `konstruktioner/pelare.py` (VKR med fot- och toppplåt),
+`konstruktioner/trappracke.py` (räcke på rak trappa med scripts/racke.py, detaljblad).
 ```
 python scripts/sammanstallning.py bygg konstruktioner/balkongram.py "<mapp>\B1.FCStd" [--var Langd=2400] --png --step
 python scripts/sammanstallning.py ritning "<mapp>\B1.FCStd" --uppdrag 2026-001 --objekt "KV EXEMPEL 1" "Byggbolaget AB" "Exempelgatan 1, Stockholm"
@@ -192,6 +208,26 @@ python scripts/sammanstallning.py ritning "<mapp>\B1.FCStd" --uppdrag 2026-001 -
 - Noterna skrivs som de står (versaler som i Tekla, men `pl/3` och `a4` med gemener). Bultar, svetssymboler
   och mer än en revisionsrad ritas inte – skriv dem i noterna.
 
+- **Bubblor intill delen** (standard): varje positionsbubbla läggs bredvid delen med en kort fylld pil, där den
+  inte krockar med mått, andra bubblor, snittmarkeringar, noter eller andra vyer. Får den ingen plats hamnar
+  den i raden under vyn. `--bubblor rad` (eller `RITNING["bubblor"] = "rad"`) ger raden under vyn för alla.
+- **Detaljblad (blad 2)**: `RITNING["detaljer"]` och `RITNING["delvyer"]` ger ett andra blad i samma FCStd med
+  förstoringar och vyer längs sneda delar; bladen numreras `<märke>.1` och `<märke>.2` och PDF:en får båda.
+  En detalj är `dict(vy="fram"|"plan"|"A"|"E", punkt=(x, y, z), radie=75, rubrik="STOLPE MOT HANDLEDARE",
+  text=["...", "..."], matt=[dict(typ="x"|"y"|"r"|"d", varde=40, lage="over"|"under"|"vanster"|"hoger")],
+  skala=None)`: en cirkel kring modellpunkten i basvyn (D1, D2 … syns på blad 1), skalan väljs så att cirkeln
+  blir högst ca 105 mm (oftast 1:2), och måtten sätts på kanter med rätt längd och riktning (x vågrät, y
+  lodrät, r radie, d diameter) i detaljen. En delvy är `dict(namn="E", normal=(dx, dy, dz), kallor=[objektnamn],
+  text=[...], skala=None)`: utvalda delar (eller features, t.ex. en Pad utan snäckan) sedda längs `normal`, i
+  stället för TechDraws snitt med fri normal som ger fel geometri. Detaljer kan ha en delvy som bas (`vy="E"`).
+- **Omgivning**: `k.referens(namn, lada=(x0, x1, y0, y1, z0, z1), farg=, transparens=)` (eller `bygg=` som
+  `k.egen`) ritar trappsteg, väggar, bjälklag och mark som referenskroppar i gruppen Omgivning: de syns i
+  modellen, 3D-bilderna och översikten men inte i materiallistan eller sammanställningsritningen.
+- `k.gera(o, a, b, riktning=)`: kapplanet går genom punkterna a, b och tvärsnittets höjdriktning; med
+  `riktning` = tvärsnittets bredd kapas t.ex. ett liggande plattstål lodrätt. Ett kap som inte skär bort något
+  ger fel (oftast fel punkter eller en del som slutar innan planet: bygg den förlängd och kapa).
+- Fyrkantstång heter `FS20` (FKT20), plattstång `FL40*10` eller `PL10*40`, rundstång `D12`.
+
 **Stångkonstruktioner (exempel: vinställ, galler, räcken).** Rundjärn som `k.balk(pos, "D10", start, slut)`,
 vinkeljärn som `"L30*30*3"`/`"L30*20*3"` (h = benet längs `w x oppning`, b = benet längs `oppning`; vänd
 start/slut om benen hamnar fel), inköps- och beslagsdetaljer som `k.plat`, geringade ramar med `k.gera`.
@@ -200,6 +236,55 @@ fackhöjd i Variabler flyttar alla hyllplan, hyllor och dörrar utan ombyggnad. 
 hämta geometrin ur en egen regelmotor eller en orderfil och köra bygg + ritning i ett svep. Riktvärde från ett
 vinställ 6 x 360, djup 520: 204 kroppar, 258 skisser, 98,9 kg, bygg 45 s, ritning ca 70 s. Höga objekt:
 `--vyer fram,hoger --skala 20` (vyerna staplas på höjden; med planvyn krävs 1:25 på A2).
+
+## Räcken och trappräcken (scripts/racke.py)
+Ett räcke byggs i ett konstruktionsskript med `racke.bygg(k, linje=, stolpar=, handledare_x=, ...)` och ritas
+med `sammanstallning.py` (framvy, snitt A genom en spjäla, delvy E längs handledaren och detaljer på blad 2 via
+`racke.ritval`). Exempel: `konstruktioner/trappracke.py` (rak trappa med podest, VKR-stolpar på fotplåt,
+rörhandledare, enkla följare, rundstångsspjälor). Läs räckesavsnittet i `references/smidesritningar.md`.
+- `linje` = framkantslinjen (stegnosar och plana ytor) som polylinje (x, z); handledarens överkant ligger
+  `hojd` lodrätt över den, x längs räcket uppför, räckesplanet y = 0. `racke.rak_trappa(k, steg, steghojd,
+  stegdjup, bredd, podest, knack_in)` ger linjen, ytan och stegmitt för en rak trappa och ritar stegen som
+  referenskroppar. `knack_in` flyttar handledarens knäck in på podesten så att den hamnar mitt över en stolpe.
+- `racke.fordela([ändar och knäckar], lage=stegmitt, max_cc=1300)` ger stolplägen med jämn delning.
+- Utförandet är val, inget är kundspecifikt: `handledare` (`"FL40*10"`, `dict(profil="FL40*10", rundad=True,
+  sida=6)`, `"RÖR42.4*2.6"`, `"VKR40*4"`), `start="rak"|"snacka"` (smidd snäcka bara när kunden vill ha det),
+  `foljare`/`underliggare` (`None`, `dict(typ="enkel", profil="FL30*8")` liggande, `dict(typ="dubbel",
+  profil="PL5*20")` två på högkant om spjälorna), `spjalor=dict(profil="FS12"|"D12", fri=100)`,
+  `stolpe=dict(profil="FS20", fot="ingjutning", djup=100, hal="Ø40")` eller `dict(profil="VKR40*4",
+  fot="fotplat", plat="PL8*100", bult="M10", cc=60)`.
+- Geometrin räknas ut: handledaren delas och geras i knäckarna, stolptopparna kapas i handledarens lutning (en
+  knäckstolpe i båda), följarna får lodräta ändar mot stolparna och bockas/geras i knäckar mellan stolpar,
+  spjälorna kapas parallellt och fördelas med fri öppning under `fri`. Ett plant fack mäter underliggaren från
+  ytan. `extern=(i,)` hoppar över en stolpe som hör till ett anslutande räcke (gemensam hörnstolpe).
+- `ursprung`, `ex`, `ey`, `prefix` placerar räcket i en större modell (översikt med flera räcken och trappan).
+- `racke.noter(info)` ger utförandenoterna (höjd, stolpar, handledare, följare, spjälor, svets); lägg till
+  uppdragets egna rader (underlag, antaganden, ytbehandling).
+
+## Från foton till offertunderlag
+När en kund skickar foton och några mått (mail, chatt) på ett räcke, en grind eller en trappa:
+1. Läs underlaget och bilagorna (fallor.md: Gmail-bilagor). Beskriv kort hur du tolkar fotona (lopp, vilplan,
+   antal steg, förebildens profiler) innan du modellerar, och fråga bara om det som avgör utförandet.
+2. Rita omgivningen som referenskroppar (`k.referens`, `racke.rak_trappa`) med antagna mått, och skriv i noterna
+   att måtten är antagna ur foton och kontrollmäts på plats.
+3. Bygg varje räcke/grind som en egen sammanställning (R/1, R/2, G/1) i `egna/konstruktioner/`, gemensamma mått
+   i en egen modul (`egna/<uppdrag>.py`) som alla skript och översikten importerar.
+4. Gör en översikt (alla delar på plats + omgivningen) för 3D-bilderna (`rendera.py`) och planritningen
+   (`oversikt.py`), och visa PNG:erna för användaren efter varje steg.
+
+## 3D-bilder och översiktsritning
+- `python3 scripts/rendera.py <modell.FCStd> [--vyer iso,iso2,bak,fram,sida,plan] [--vy namn:dx,dy,dz]
+  [--utan-omgivning]` sparar `<modell>_3d_<vy>.png` (2000 x 1400, vit bakgrund, modellens färger).
+- `python3 scripts/oversikt.py <modell.FCStd> <ritskript.py> [--uppdrag ...] [--objekt ...]` ritar en A2-
+  översikt (plan, fasad, montage, GA) med Tekla-titelblocket. Ritskriptet har `NUMMER`, `SKALA`, `OBJEKT` och
+  `rita(r)`: `vy = r.vy(namn, riktning, x, lage=(px, py))`, `vy.kedja(punkter, "x"|"y", avstand, fran=)`,
+  `vy.matt(a, b, ...)`, `vy.bubbla("R/1", punkt, dx, dy)`, `vy.text(...)`, `vy.niva("+780 VILPLAN", punkt)`,
+  `r.text(...)`, `r.noter([...])`. Se docstringen i oversikt.py. Ger `<ritskript>.pdf/.png` i modellens mapp.
+
+## Testa skillen
+`python3 scripts/testa.py` bygger och ritar alla exempel i `delar/`, `konstruktioner/` och dataställen och
+skriver OK/FEL per exempel (skisser, features, krockar, PDF/PNG); `--snabb` bara bygger, `--bara namn,namn`
+väljer exempel. Kör det efter varje ändring i skillen och innan en pull request, och granska bilderna i `ut/test/`.
 
 ## Tillverkningsgranskning (plåt)
 `scripts/dfm.py` granskar utbredningen mot tumregler för kantpress och laser och anger regel, uppmätt värde
@@ -243,11 +328,13 @@ t.ex. ritningsnummer, material och ytbehandling i noterna.
 - `scripts/foretag.py` företagsuppgifter och logga till titelblocket (foretag.json).
 - `scripts/sammanstallning.py` (bygg + sammanställningsritning) och `scripts/stal.py` (profiltabeller,
   Konstruktion, hålgrupper, materiallista); `konstruktioner/*.py` konstruktionsskript.
+- `scripts/racke.py` räcken och trappräcken; `scripts/rendera.py` 3D-bilder; `scripts/oversikt.py`
+  översikts- och planritningar med ritskript; `scripts/testa.py` testar alla exempel.
 - `scripts/rendera_pdf.py` PDF till PNG för granskning; `scripts/installera_linux.sh` installation på Linux.
 - `delar/*.py` delskript för Part Design; `mallar/A3.svg` (enkelt titelblock) och `mallar/A2_tekla.svg`
   (Tekla-titelblock med stomnät, etapp och revisionsrad).
 - `references/smidesritningar.md` ritningskonventionerna; `references/partdesign.md` API:t;
-  `references/fallor.md` kända fällor i FreeCAD 1.0.1.
+  `references/fallor.md` kända fällor i FreeCAD 1.0.1 och 1.1.3.
 
 ## Begränsningar
 - Modell och ritning ligger i samma .FCStd (ingen separat ritningsfil). Variablerna i kalkylbladet `Variabler`.

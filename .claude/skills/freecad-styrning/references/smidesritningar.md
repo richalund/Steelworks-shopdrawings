@@ -86,6 +86,28 @@ och hålangivelserna enligt det här dokumentet (se SKILL.md). Företag, adress 
 mot en `<image>`. Det som inte görs automatiskt: bultar och svetssymboler ritas inte (skriv dem i noterna),
 bara en revisionsrad, varje positionsnummer får en bubbla (Tekla upprepar dem och skriver `3x pl/2 NS`).
 
+## Räcken och trappräcken
+Uttaget ur räckesritningarna ovan och ett offertuppdrag på en entrétrappa (2026-10). Måtten är vanliga
+utgångsvärden, inte regelverket: kontrollera alltid mot gällande regler (BBR, avsnittet om skydd mot fall) och
+beställarens krav, och skriv i noterna vad som är antaget.
+- Höjd: handledarens överkant **900** lodrätt över stegframkant (nos) i trappor; högre räcken där fallhöjden
+  är större (balkong, loftgång) enligt reglerna. Mät lodrätt, även på plana partier.
+- **Fri öppning < 100 mm** mellan spjälor och mellan räckets nederkant och steg/plan yta (en sfär Ø100 ska inte
+  gå igenom). Kontrollera även springan under underliggaren på podest/vilplan, där linjen mot stegnosarna inte
+  längre gäller.
+- Stolpar: **c/c högst ca 1300** (räknas på handledarens styvhet och infästningen), en stolpe i varje sektionsände
+  och **en gemensam stolpe i innerhörn** där två räcken möts. Handledarens knäck (trappa → plant) läggs **mitt
+  över en stolpe**, minst ca 60 mm in från stenkanten; mellanstolpar på stegmitt.
+- Infästning: ingjutning 100 mm i kärnborrat hål (Ø40 för FS20) i sten, kemankare M10–M12 genom fotplåt
+  (PL8*100 med 4 hål) i betong, eller sidomontage. Skriv infästningen i noterna och på översikten.
+- Följare under handledaren och underliggare nedtill: plattstång liggande (FL30*8) eller två plattstål på högkant
+  (2 st PL5*20, ett på var sida om spjälorna). Spjälor FS12, D12 eller plattstång; prefix `l` för följare/liggare,
+  `sp` för spjälor, `st` för stolpar, `hl` för handledare.
+- Handledaren: plattstång (gärna med rundad översida), rör Ø42,4 eller ek. Ändarna avslutas raka (proppade),
+  nedböjda eller med smidd snäcka – ta med det kunden visat, men gör inte snäcka till standard.
+- Ritningar för ett räcksuppdrag: en sammanställning per räcke (R/1, R/2 …) med detaljblad (.1, .2), en
+  planritning/GA (`R-101`) med alla räcken märkta, stolparnas c/c och nivåer, och 3D-bilder till offerten.
+
 ## Kontrollfrågor när en smidesritning granskas
 1. Har varje del ett positionsnummer som finns i materiallistan, och stämmer antal och längd?
 2. Finns totalmått, måttkedjor som summerar och mått till alla hål från samma referens?

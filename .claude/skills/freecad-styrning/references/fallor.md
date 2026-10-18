@@ -207,3 +207,52 @@ allt i globala koordinater: kroppens placering är noll, skissernas lägen och P
   konfiguration finns men inte den egna. Under xvfb blockerar den jobbet tills timeout utan logg.
   installera_linux.sh skapar därför `~/.config/FreeCAD/v1-1`. Samma dialog kan dyka upp på Windows efter
   en uppgradering – starta FreeCAD en gång för hand och svara på den.
+
+## FreeCAD 1.1.3 på Linux: räcken, detaljblad och översikter (2026-10-18)
+- **Symmetrisk Pocket "genom allt" skär ibland ingenting.** En FS20-stolpe med en geringsskiss i änden gav
+  volymen oförändrad med `Type = ThroughAll`, `SideType = Symmetric`; "One side" skar halva, `Length` symmetrisk
+  skar allt. Andra kroppar med samma uppställning skar rätt, så felet är inte förutsägbart. `pd.ficka` (och
+  därmed `k.hal` och `k.gera`) kontrollerar nu volymen och gör om en sådan ficka till symmetrisk längd
+  2 × kroppens diagonal + 10. En ficka som ändå inte skär något ger RuntimeError i stället för att tyst bli fel.
+- **Ett kap tar bara bort det som ligger utanför planet.** Ett snett plattstål på högkant som kapas lodrätt
+  precis i sin ände blir bara kapat på övre halvan (nedre halvan når aldrig planet). Bygg delen förlängd med
+  (h/2)·|tan v| + några mm och kapa sedan (racke.py gör så för följare och handledare).
+- `k.gera` skär i ett plan som innehåller tvärsnittets höjdriktning (`upp`). För ett liggande plattstål som ska
+  kapas lodrätt behövs bredden i planet: `k.gera(o, a, b, riktning=tvärs)` (skissen läggs då i YZ).
+- **TechDraws snitt med fri normal** (`DrawViewSection` med en sned `SectionNormal`, t.ex. vinkelrätt mot en
+  sned handledare) gav fel geometri. Använd en vanlig `DrawViewPart` som tittar längs delen med bara de delar
+  som ska synas som Source (delvyer på blad 2, `RITNING["delvyer"]`). En Pad-feature kan vara Source för att
+  slippa en snäcka i änden; featurens Shape ska då mätas med kroppen (`getParentGeoFeatureGroup()`).
+- Vyns storlek för en delvy ska räknas på hörnen (`Shape.Vertexes`), inte på lådan: sneda delar ger en
+  axelparallell låda som är mycket större än det som syns, och skalan blev 1:10 i stället för 1:5.
+- **`DrawViewDetail`**: `AnchorPoint` är i basvyns centrerade, oskalade koordinater (samma som `Start` på en
+  kosmetisk linje genom punkten). Detaljvyerna räknas i bakgrunden: skapa alla, `recompute`, och vänta in
+  `getVisibleEdges()` för var och en (upp till 30 s) innan måtten sätts och bladet exporteras; annars blir en
+  detalj tom i PDF:en. Kanterna (`getEdgeByIndex`) är oskalade relativt detaljens mitt. En cirkel som ses
+  nästan rakt framifrån kan komma som `Ellipse` med lika halvaxlar.
+- `DrawViewAnnotation` har typsnittet som egenskap på objektet (`t.Font`), inte i ViewObject.
+- `DrawViewBalloon`: `OriginX/Y` och `X/Y` är oskalade modellmått relativt vyns mitt. `EndType` väljs ur
+  `getEnumerationsOfProperty("EndType")` ("Filled arrow" i 1.1), `EndTypeScale` 0,6 ger en kort pil.
+- TechDraw-inställningar (färger, typsnitt, pilar) gäller bara jobbet de sätts i: sätt dem i varje jobb som
+  ritar (`stall_in()`), annars blir ytor svarta och texter i standardtypsnittet.
+- **Ytdetekteringen** (`TechDraw/General/HandleFaces`) hittade falska ytor i en framvy med rör och VKR (stora
+  vita fält mellan handledaren och vyns kant). `sammanstallning.py` stänger av den; bladet blir enhetligt.
+- **Att ta bort ritningsobjekt kraschar ibland FreeCAD** (segfault utan logg) när en fil med detaljblad ritas om.
+  Ta bort i ordningen mått/bubblor/texter, detaljvyer, snitt, vyer, blad, mallar, med `KeepUpdated = False` på
+  bladen och en kort `pump()` mellan grupperna (`rensa()`); tre omritningar i rad gick sedan utan krasch.
+- **3D-bilder**: `ActiveView.setViewDirection` gav samma bild från alla håll. Sätt kamerans rotation med
+  `setCameraOrientation(Rotation(matris))` och stäng av animeringen (`setAnimationEnabled(False)`), annars
+  sparas bilden mitt i övergången. Är ett ritningsblad aktivt saknar ActiveView metoden: hämta 3D-vyn med
+  `gd.mdiViewsOfType("Gui::View3DInventor")` (rendera.py).
+- Synlighet för positionsbubblor: en rundstång eller ett rör har en enda cylinderyta, och ytans tyngdpunkt
+  ligger på axeln (utanför ytan). Välj bland punkter spridda över ytan den vars normal pekar mot betraktaren,
+  annars får runda delar ingen bubbla.
+- Skissmått som heter `h` eller `t` fungerar, men går inte att använda i uttryck (`Constraints.t` tolkas som
+  enheten ton). Döp mått som ska användas i uttryck till något längre (`Sida`, `Tjocklek`).
+- `Quantity` från FreeCAD (t.ex. `ballong.OriginX`) går inte att räkna med tal direkt: använd `.Value`.
+- Lambdas i en loop binder variabeln sent: spara talen i en dict eller som standardargument
+  (`lambda x, z0=z0: ...`), annars får alla detaljer sista värdet.
+
+## Underlag från kunden
+- Bilagor i Gmail-trådar går inte alltid att hämta som bilaga via connectorn: hämta meddelandet i RAW-format,
+  spara JSON:en och packa upp den med Pythons `email`-modul till egna filer.

@@ -38,7 +38,8 @@ Hämta https://github.com/richalund/Steelworks-shopdrawings till den aktuella ma
 - Saknas `git`: ladda ner https://github.com/richalund/Steelworks-shopdrawings/archive/refs/heads/main.zip, packa
   upp och flytta innehållet i `Steelworks-shopdrawings-main/` till mappen.
 Mappen blir användarens projektmapp: Claude Code laddar skillen från `.claude/skills/` när mappen är öppen.
-Egna konstruktioner och delar läggs i `egna/`, genererade filer i `ut/`. Ändra aldrig skillens filer.
+Egna konstruktioner och delar läggs i `egna/`, genererade filer i `ut/`. Skillens filer ändras bara genom en
+pull request (se SKILL.md, "Eget material, och förbättringar av skillen").
 
 ### 2. FreeCAD 1.x
 Kontrollera om FreeCAD 1.0 eller senare finns:
