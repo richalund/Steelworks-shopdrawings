@@ -61,8 +61,8 @@ Spara svaren med `foretag.py satt` och fortsätt. Fråga inte igen i samma sessi
 kommando (`--foretag`, `--adress`, `--ritad-av`, `--handlaggare`, `--ansvarig`, `--logga`); miljövariablerna
 `FC_FORETAG`, `FC_ADRESS` (rader åtskilda med `|`), `FC_RITAD_AV`, `FC_HANDLAGGARE`, `FC_ANSVARIG`, `FC_LOGGA`, `FC_LAND` går
 före filen. Filen `foretag.json` söks i `FC_FORETAG_FIL`, `egna/`, arbetsmappen och `~/.config/freecad-styrning/`.
-I en molnsession försvinner den med containern om den inte ligger i en egen gren eller fork; föreslå
-miljövariablerna i molnmiljöns inställningar. Loggan läggs i en kopia av mallen i utmappen (`_A3_logga.svg`,
+I en molnsession försvinner den med containern; föreslå miljövariablerna i molnmiljöns inställningar (eller
+filen i ett eget privat repo). Loggan läggs i en kopia av mallen i utmappen (`_A3_logga.svg`,
 `_A2_logga.svg`).
 
 ## Källor för profilmått och materialkvaliteter
@@ -93,6 +93,8 @@ uppdrag läggs därför utanför skillen:
   skillens byggare inte täcker byggs med `k.egen(pos, "TEXT", bygg, mitt=, rot=, material=)`, där `bygg(d)` ritar
   kroppen med Part Design-API:t i `scripts/pd.py`.
 - företagsuppgifter i `egna/foretag.json` (eller konfigmappen), genererade filer i `ut/`.
+- själva uppdraget (ritningar, modeller, egna skript) lämnas till användaren i chatten (se "Filerna till
+  användaren"); det committas aldrig i ett publikt repo.
 
 **Skillen förbättras genom bidrag (pull request), aldrig genom att ändra den i smyg.** När ett uppdrag har
 löst något som fler har nytta av (en buggfix, ett nytt verktyg, en ny fälla, en ritningskonvention) gör du så här:
@@ -143,7 +145,8 @@ geometri (Block-villkor) i en skiss.
    `references/smidesritningar.md`.
 5. **Leverera** FCStd, PDF, DXF och STEP i `ut/` bredvid varandra, och vid offert mängdunderlaget och
    beställningspaketet. Skriv aldrig över kundens eller användarens originalfil. När användaren är nöjd: fråga om
-   underlaget ska skickas till en tillverkare (se "Leverans till en tillverkare").
+   underlaget ska skickas till en tillverkare (se "Leverans till en tillverkare"), och lägg upp filerna i
+   chatten (se "Filerna till användaren").
 
 ## Part Design (solida delar: plattor, konsoler, flänsar, hylsor)
 Läs `references/partdesign.md` (API:t i `scripts/pd.py`) innan ett nytt delskript skrivs. Ett delskript i `delar/`
@@ -169,7 +172,8 @@ Modellen byggs med ett konstruktionsskript (API i `scripts/stal.py`, se `referen
 `REGLER`, och `bygg(k, v)` med bl.a. `k.balk`, `k.plat`, `k.hal`, `k.gera`, `k.skiva`, `k.egen`, `k.referens`,
 `k.bockad`, `k.trag`, `k.glas`, `k.inkop`, `k.rorelse` och `k.utseende`. Varje del blir en Part Design-kropp (eller
 SheetMetal-del) med egenskaperna Pos/Profil/Material. Koordinater och längder får vara uttryck mot Variabler.
-Mönster: `konstruktioner/balkongram.py`, `pelare.py`, `soffbord.py`, `trappracke.py`, `grind.py`.
+Mönster: `konstruktioner/balkongram.py`, `pelare.py`, `soffbord.py`, `trappracke.py`, `grind.py`, `handdukstork.py`
+(rör med gerade knän, fiskmunskapade pinnar, väggfästen i snitt).
 ```
 python3 scripts/sammanstallning.py bygg konstruktioner/balkongram.py ut/B1.FCStd [--var Langd=2400] --png --step
 python3 scripts/sammanstallning.py ritning ut/B1.FCStd --uppdrag 2026-001 --objekt "KV EXEMPEL 1" "Byggbolaget AB" "Exempelgatan 1"
@@ -183,6 +187,9 @@ python3 scripts/sammanstallning.py ritning ut/B1.FCStd --uppdrag 2026-001 --obje
   NOTERINGAR, noterna och titelblocket. `RITNING["detaljer"]`/`["delvyer"]` ger detaljblad (blad 2). Ger
   `<modell>.pdf`, `<modell>.png` (och `_detaljer.png`) och `_materiallista.csv`.
 - Snitt `A:x=300:-` = planet x = 300, blicken mot -x. Lägg snittet genom en hålrad för att få hålens lägen.
+- Måttkedjorna går till hål av sig själva. Upprepade delar utan hål (pinnar, spjälor, regler, steg) får en kedja
+  till delarnas mitt med `RITNING["kedjor"] = [dict(pos="pi/1", vy="fram")]` (`vy` och `axel="x"|"y"` valfria):
+  t.ex. 177.5-138-138-...-101.5 i framvyn.
 - Utskriften säger vilka positioner som inte syns (ingen bubbla) och hålgrupper som inte syns som cirklar: lägg till
   ett snitt eller en vy (`--vyer fram,plan,vanster`).
 - Noterna skrivs som de står (versaler, men `pl/3` och `a4` med gemener). Bultar, svetssymboler och mer än en
@@ -300,10 +307,27 @@ När användaren säger sig vara nöjd med ritningarna (eller ber om offert):
 4. Paket över 20 MB går inte med vanlig mail: föreslå en delningslänk (Drive, Dropbox) i mailet i stället.
 
 ## Filerna till användaren
-I Claude Code kan användaren ladda ner filerna i `ut/` direkt ur sessionen. I agenter där bara det som
-committas syns (Codex, Copilot, Cursor): kopiera det användaren ska ha (PDF, PNG, zip, .eml) till
-`leverans/<uppdrag>/` i repot, committa det på uppdragets gren och ge länken till grenen eller PR:en. Lägg aldrig
-leveranser på `main` och aldrig i en förbättrings-PR för skillen.
+Lägg upp filerna i chatten när en ritning är klar, så att användaren kan spara dem i telefonen, dela dem som mail
+eller lägga dem i valfri molntjänst. Skillen förutsätter ingen viss lagring.
+1. **Få filer** (en ritning): lägg upp PDF:en och PNG:erna direkt (agentens verktyg för att skicka eller bifoga
+   filer).
+2. **Många filer** (flera ritningar, 3D, modeller, DXF, STEP, materiallistor):
+   `python3 scripts/paket.py samla <pdf:er i bladordning> <övriga filer eller ut-mappen> --namn "<uppdrag>"
+   --skript egna/konstruktioner/<x>.py ...` ger `<uppdrag> ritningar.pdf` (alla blad i en fil) och
+   `<uppdrag> underlag.zip` (ritningar/, 3d/, modeller/, dxf/, materiallistor/, skript/, LASMIG.md). Lägg upp
+   båda.
+3. **För stora för chatten:** lägg upp dem som nedladdningsbara filer (eller en länk till filen) och säg vad som
+   finns i dem. Har användaren sagt var jobbets filer ska ligga, skriv det med i meddelandet.
+4. Har användaren bett om det och har agenten en koppling till hens lagring (en molntjänst, ett eget privat
+   repo): lägg filerna där också och säg var. Annars bara chatten.
+
+Uppdrag committas aldrig i ett publikt repo: inte i Steelworks-shopdrawings, inte på en gren och inte i en fork
+(en fork av ett publikt repo är också publik). Kunduppgifter (namn, adress, telefon) committas aldrig. I agenter
+där bara det som committas syns (Codex, Copilot, Cursor) och repot är användarens eget **privata** repo: kopiera
+PDF:en och zip-filen till `leverans/<uppdrag>/`, committa på uppdragets gren och ge länken. Är repot publikt:
+committa inga leveranser och säg att agenten behöver ett privat repo (en importerad kopia, se infosidan
+`docs/index.html`, "Andra kodagenter"). Lägg aldrig leveranser på `main` och aldrig i en förbättrings-PR för
+skillen.
 
 ## 3D-bilder, export och översiktsritning
 - `python3 scripts/rendera.py <modell.FCStd> [--vyer iso,iso2,bak,fram,sida,plan] [--vy namn:dx,dy,dz]

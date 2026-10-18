@@ -22,8 +22,11 @@ Material; samma positionsnummer på flera delar = samma position (de ska vara li
 | `k.referens(namn, lada=(x0,x1,y0,y1,z0,z1) \| bygg=, farg=, transparens=)` | omgivning (inte i materiallistan) |
 | `k.rorelse(namn, delar, axel=(punkt, riktning), fran=, till=, gangjarn=[...])` | rörlig del för rorelse.py |
 | `k.utseende({"g/": "patinerad", "st/": "svart"})` | utseende i 3D-bilder och glb |
-| `k.ritning(**val)` | ritningens val (annars skriptets RITNING) |
+| `k.ritning(**val)` | ritningens val (annars skriptets RITNING): vyer, snitt, dolda, detaljer, delvyer, kedjor, noter, noter_blad, bubblor, sprak |
 
+- `kedjor=[dict(pos="pi/1", vy="fram", axel="y")]` i ritningens val: måttkedja från vyns kant till varje dels mitt
+  (bounding box) för positionen, i vyerna där delarnas mitt skiljer sig; `vy` = fram, plan ..., snittets bokstav.
+  Används för pinnar, spjälor och regler som saknar hål (hålens kedjor kommer av sig själva).
 - `k.bockad`: punkterna är plåtens ena sida; materialet ligger till vänster om profilens riktning (moturs profil =
   yttermått). Inre radien standard = t. Profiltext `PL<t> BOCKAD`, längd = utdragslängden.
 - `k.trag`: yttermått langd x bredd x kant; `mitt` = bottens undersida i mitten; kanterna bockas uppåt längs delens
@@ -65,6 +68,7 @@ hål. Pad (relief), Pocket med djup (gravyr) eller "genom" (genombrytning).
 | `komponenter.py visa/lagg-till/ta-bort` | register över inköpta komponenter med datablad och källa | `egna/komponenter.json` |
 | `regler.py <modell>` | produktregler och verkstadsgränser | rad i loggen, not på ritningen |
 | `paket.py skapa <modell>` / `kontrollera <zip>` / `skicka <zip> [--till]` | beställningspaket / mottagarens kontroll / mail till tillverkaren (skickas inte) | `_bestallning.zip`, `_mail.eml` |
+| `paket.py samla <pdf:er> <filer/mapp> --namn <uppdrag> --skript <x.py>` | filerna till chatten: alla blad i en PDF, resten i en zip med LASMIG | `<uppdrag> ritningar.pdf`, `<uppdrag> underlag.zip` |
 | `rorelse.py <modell> [--oppen v --ut fil]` | krock genom öppningen, tyngdpunkt, gångjärnslast | rad i loggen, öppen kopia |
 | `hallfasthet.py balk/fem` | balköverslag / FEM med CalculiX | rad i loggen, `_fem.FCStd` |
 | `kallor.py profil/material/motsvarighet` | profilmått, fy/fu, motsvarande kvaliteter | utskrift |

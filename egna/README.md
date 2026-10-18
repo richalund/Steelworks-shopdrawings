@@ -34,4 +34,7 @@ def bygg(k, v):
 `rot` är kroppens x-, y- och z-riktning i konstruktionen (här står plattan på högkant). Hjälpfunktioner som
 används i flera egna skript läggs i en egen modul i `egna/`, t.ex. `egna/hjalp.py`, och importeras därifrån.
 
-`foretag.json` är ignorerad av git. I en privat fork kan raden tas bort ur `.gitignore` så att uppgifterna följer med.
+`foretag.json` och uppdragens skript (`konstruktioner/`, `delar/`, `ritningar/`) är ignorerade av git. Ett
+uppdrag lämnas i chatten som en PDF och en zip (SKILL.md, "Filerna till användaren"), inte i repot. Verkstadens egna
+filer (`foretag.json`, `verkstad.json`, `komponenter.json`) kan committas i ett eget privat repo (en importerad
+kopia, inte en fork: en fork av ett publikt repo är publik).

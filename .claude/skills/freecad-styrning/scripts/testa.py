@@ -7,7 +7,7 @@ Varje exempel byggs med sitt kommando (partdesign.py, datastall.py, sammanstalln
 sammanstallning.py ritning) och kontrolleras: skisserna fullt bestämda, inga features med fel, inga krockar,
 regelkontrollen utan FEL, PDF och PNG skapade. Sammanställningarna får dessutom 3D-bild (rendera.py),
 mängdunderlag (mangder.py) och DXF (dxf.py); exempel med k.rorelse rörelsekontroll (rorelse.py); grinden även
-export (export.py), beställningspaket och leveransmail (paket.py skapa/kontrollera/skicka); trappräcket balkkontroll och konsolen FEM
+export (export.py), beställningspaket, leveransmail och filerna till chatten (paket.py skapa/kontrollera/skicka/samla); trappräcket balkkontroll och konsolen FEM
 (hallfasthet.py), noteringarna på eget blad och projektets noteringsritning (sammanstallning.py noteringar);
 balkongramens PDF läses av underlag.py. --snabb hoppar över allt utom bygget.
 
@@ -59,7 +59,9 @@ def fall(ut):
             rita += [[s("export.py"), m, "--format", "glb,ifc,step"],
                      [s("paket.py"), "skapa", m, "--skript", skript],
                      [s("paket.py"), "kontrollera", f(namn + "_bestallning.zip"), "--ut", f("paketkontroll")],
-                     [s("paket.py"), "skicka", f(namn + "_bestallning.zip"), "--avsandare", "Test"]]
+                     [s("paket.py"), "skicka", f(namn + "_bestallning.zip"), "--avsandare", "Test"],
+                     [s("paket.py"), "samla", f(namn + ".pdf"), m, f(namn + ".step"), f(namn + "_3d_iso.png"),
+                      f(namn + "_mangder.csv"), "--namn", namn, "--skript", skript, "--ut", f("samlat")]]
         if namn == "trappracke":
             rita.append([s("hallfasthet.py"), "balk", m, "--pos", "hl/1", "--q", "0.5", "--spann", "860", "--riktning", "sida"])
             # noteringarna på eget blad (kopia, så att bladet som jämförs med referensen är det vanliga) och
