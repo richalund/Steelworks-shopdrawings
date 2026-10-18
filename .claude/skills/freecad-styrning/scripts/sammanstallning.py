@@ -1107,21 +1107,53 @@ def _jobb():
             y -= vd["h"] / n + vd["botten"] + 4
         xr0 = X0 + bv + 22
         ns = None
+        ylagst = Y0                                      # lägsta snittets underkant (isometrin läggs under)
         if snitt_v:
-            yr1 = max(92.0, ML_Y + mh + 6)                 # snitten slutar ovanför materiallistan
-            ns = a.get("skala_snitt") or next((k for k in SKALOR if min(n, 5) <= k <= n * 1.0001 and kolumn(snitt_v, k)[0] <= 568 - xr0 and kolumn(snitt_v, k)[1] <= Y0 - yr1), None)
+            def golv(x0_, x1_):
+                """Hur långt ner ett snitt mellan x0_ och x1_ får gå: ovanför noterna och materiallistan där de ligger."""
+                g = 92.0
+                if nsvg and x0_ < X0 + nw + 4 and x1_ > X0:
+                    g = max(g, 26.0 + nh_ + 6)
+                if x1_ > ML_X - 4:
+                    g = max(g, ML_Y + mh + 6)
+                return g
+
+            def packa(k):
+                """Snitten uppifrån och ner i kolumner från xr0; en ny kolumn till höger när nästa snitt inte ryms
+                ovanför noterna/materiallistan. Ger [(kolumnens x, [vd ...])] eller None om det inte ryms."""
+                kol, x, y, rad, bk = [], xr0, Y0, [], 0.0
+                for vd in snitt_v:
+                    b_ = vd["vanster"] + vd["w"] / k
+                    h_ = vd["topp"] + vd["h"] / k + vd["botten"]
+                    if rad and y - h_ < golv(x, x + max(bk, b_)):
+                        kol.append((x, rad))
+                        x, y, rad, bk = x + bk + 10, Y0, [], 0.0
+                    if x + b_ > 568 or y - h_ < golv(x, x + max(bk, b_)):
+                        return None
+                    rad.append(vd)
+                    bk = max(bk, b_)
+                    y -= h_ + 4
+                kol.append((x, rad))
+                return kol
+            ns = a.get("skala_snitt") or next((k for k in SKALOR if min(n, 5) <= k <= n * 1.0001 and packa(k)), None)
             if ns is None:
-                ns = next((k for k in SKALOR if kolumn(snitt_v, k)[0] <= 568 - xr0 and kolumn(snitt_v, k)[1] <= Y0 - yr1), SKALOR[-1])
-            vls = max(vd["vanster"] for vd in snitt_v)
-            y = Y0
-            for vd in snitt_v:
-                vd["n"] = ns
-                y -= vd["topp"]
-                vd["pos"] = (xr0 + vls + vd["w"] / ns / 2, y - vd["h"] / ns / 2)
-                y -= vd["h"] / ns + vd["botten"] + 4
-            ylagst = y
-        else:
-            ylagst = Y0
+                ns = next((k for k in SKALOR if packa(k)), SKALOR[-1])
+            kol = packa(ns)
+            if not kol:
+                logg("OBS: snitten ryms inte i skala 1:%s ovanför noterna och materiallistan: välj mindre skala (--skala-snitt) "
+                     "eller färre snitt" % fmt(ns))
+                kol = [(xr0, snitt_v)]
+            if len(kol) > 1:
+                logg("Snitten i %d kolumner" % len(kol))
+            for x, rad in kol:
+                vls = max(vd["vanster"] for vd in rad)
+                y = Y0
+                for vd in rad:
+                    vd["n"] = ns
+                    y -= vd["topp"]
+                    vd["pos"] = (x + vls + vd["w"] / ns / 2, y - vd["h"] / ns / 2)
+                    y -= vd["h"] / ns + vd["botten"] + 4
+                ylagst = min(ylagst, y)
         logg("Skala huvudvyer %s, snitt %s" % (skaltext(n), skaltext(ns) if ns else "-"))
 
         # ---- blad, mall, vyer

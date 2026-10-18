@@ -173,7 +173,7 @@ Modellen byggs med ett konstruktionsskript (API i `scripts/stal.py`, se `referen
 `k.bockad`, `k.trag`, `k.glas`, `k.inkop`, `k.rorelse` och `k.utseende`. Varje del blir en Part Design-kropp (eller
 SheetMetal-del) med egenskaperna Pos/Profil/Material. Koordinater och längder får vara uttryck mot Variabler.
 Mönster: `konstruktioner/balkongram.py`, `pelare.py`, `soffbord.py`, `trappracke.py`, `grind.py`, `handdukstork.py`
-(rör med gerade knän, fiskmunskapade pinnar, väggfästen i snitt).
+(rör med gerade knän, fiskmunskapade pinnar, väggfästen i snitt), `skap.py` (plåtskåp på en stomme av VKR).
 ```
 python3 scripts/sammanstallning.py bygg konstruktioner/balkongram.py ut/B1.FCStd [--var Langd=2400] --png --step
 python3 scripts/sammanstallning.py ritning ut/B1.FCStd --uppdrag 2026-001 --objekt "KV EXEMPEL 1" "Byggbolaget AB" "Exempelgatan 1"
@@ -187,6 +187,9 @@ python3 scripts/sammanstallning.py ritning ut/B1.FCStd --uppdrag 2026-001 --obje
   NOTERINGAR, noterna och titelblocket. `RITNING["detaljer"]`/`["delvyer"]` ger detaljblad (blad 2). Ger
   `<modell>.pdf`, `<modell>.png` (och `_detaljer.png`) och `_materiallista.csv`.
 - Snitt `A:x=300:-` = planet x = 300, blicken mot -x. Lägg snittet genom en hålrad för att få hålens lägen.
+  Ett vågrätt snitt (`C:z=645:-`, blicken nedåt) visar inredning och beslag i plan. Snitten läggs uppifrån och ner
+  till höger om huvudvyerna och fortsätter i en ny kolumn när nästa snitt inte ryms ovanför noterna och
+  materiallistan.
 - Måttkedjorna går till hål av sig själva. Upprepade delar utan hål (pinnar, spjälor, regler, steg) får en kedja
   till delarnas mitt med `RITNING["kedjor"] = [dict(pos="pi/1", vy="fram")]` (`vy` och `axel="x"|"y"` valfria):
   t.ex. 177.5-138-138-...-101.5 i framvyn.
@@ -211,7 +214,8 @@ python3 scripts/sammanstallning.py ritning ut/B1.FCStd --uppdrag 2026-001 --obje
 ## Plåt, beklädnad, glas och beslag i en sammanställning
 - `k.bockad(pos, t, punkter, langd, mitt=, rot=, radie=)`: kantvikt plåt ur en profil (L, U, Z, hatt, kantkappa).
 - `k.trag(pos, t, langd, bredd, kant, mitt=, rot=, sidor=)`: plåttråg med uppbockade kanter och hörnurtag –
-  beklädnad av blad, luckor och pelare, fyllningar, täckplåtar.
+  beklädnad av blad, luckor och pelare, fyllningar, täckplåtar, och skåp: lock, gavlar, mellanväggar, hyllor,
+  fronter och lådor (exempel `konstruktioner/skap.py`: plåtskåp på en stomme av VKR, beslag som utrymmesmodeller).
 - `k.glas(pos, horn1, horn2, normal=, t=, glipa=, list_profil=)`: glasruta i en öppning, med glaslister.
 - `k.inkop(pos, komponent="id", mitt=, rot=)`: inköpt detalj (gångjärn, lås, handtag, stängare, motor) som
   utrymmesmodell med databladets mått och vikt ur komponentregistret (se "Komponenter" nedan). Utan register:
