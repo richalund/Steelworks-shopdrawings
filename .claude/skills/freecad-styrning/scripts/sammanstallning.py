@@ -44,9 +44,9 @@ ISO = ((-1, -1, 1), (1, -1, 0))   # framifrån vänster, ovanifrån
 
 def args(argv=None):
     ap = argparse.ArgumentParser()
-    ap.add_argument("lage", choices=["bygg", "ritning"])
-    ap.add_argument("fil", help="bygg: konstruktionsskriptet; ritning: modellens .FCStd")
-    ap.add_argument("ut_fil", nargs="?", help="bygg: .FCStd att skapa")
+    ap.add_argument("lage", choices=["bygg", "ritning", "noteringar"])
+    ap.add_argument("fil", help="bygg: konstruktionsskriptet; ritning: modellens .FCStd; noteringar: noter.py (NOTER) eller .json")
+    ap.add_argument("ut_fil", nargs="?", help="bygg och noteringar: .FCStd att skapa")
     ap.add_argument("--var", action="append", default=[], metavar="NAMN=VÄRDE")
     ap.add_argument("--png", action="store_true")
     ap.add_argument("--step", action="store_true")
@@ -67,6 +67,12 @@ def args(argv=None):
     ap.add_argument("--etapp", default="1")
     ap.add_argument("--antal", default="1", help="antal att tillverka")
     ap.add_argument("--not", dest="noter", action="append", default=None, help="not (versaler); ersätter modellens noter")
+    ap.add_argument("--noter-blad", dest="noter_blad", action="store_true",
+                    help="noteringarna på ett eget blad (annars bara när de inte ryms på blad 1)")
+    ap.add_argument("--noter-ref", dest="noter_ref", default=None,
+                    help="projektets gemensamma noteringsritning, t.ex. N-01: statusraden GEMENSAMMA NOTERINGAR SE RITNING N-01")
+    ap.add_argument("--nummer", default=None, help="noteringar: ritningsnummer (standard N-01)")
+    ap.add_argument("--rubrik", default=None, help="noteringar: rubrik överst på bladet")
     ap.add_argument("--snitt", action="append", default=None, help="A:x=300:- (ersätter modellens snitt)")
     ap.add_argument("--vyer", default=None, help="t.ex. fram,plan")
     ap.add_argument("--skala", type=float, default=None)
@@ -81,8 +87,8 @@ def args(argv=None):
                     help="inga noter om var profilmåtten och materialkvaliteterna är verifierade (kallor.py)")
     ap.add_argument("--ut", default=None)
     a = ap.parse_args(argv)
-    if a.lage == "bygg" and not a.ut_fil:
-        ap.error("bygg kräver konstruktionsskript och ut-fil")
+    if a.lage in ("bygg", "noteringar") and not a.ut_fil:
+        ap.error("%s kräver indatafil och ut-fil" % a.lage)
     return a
 
 
@@ -159,10 +165,38 @@ def materiallista_svg(rader, marke, antal, hal, svets, T=None):
     return svg(W, H, e), W, H, ta, tv
 
 
-def noter_svg(noter, h=4.0, rad=6.0):
-    w = 225.0
-    H = rad * len(noter) + 1.5
-    return svg(w, H, [s_txt(0, h * 0.85 + rad * i, s, h) for i, s in enumerate(noter)]), w, H
+NOT_H = 3.5                       # noternas texthöjd (mm); rubrikerna i fetstil
+NOT_RAD = {"status": 5.6, "rubrik": 5.2, "not": 4.7, "forts": 4.7, "luft": 2.2}       # radhöjd per radtyp (mm)
+NOT_SPALT, NOT_LUCKA = 148.0, 10.0                       # spaltbredd och mellanrum på blad 1 (x 50–356)
+NOT_MAX = 150.0                   # högre än så på blad 1: noterna får ett eget blad (NOTERINGAR)
+
+
+def not_tecken(bredd, h=NOT_H):
+    """Tecken per rad i en spalt (noternas versaler i Arial Narrow är i snitt ~0,49 h breda, uppmätt; 0,52 med marginal)."""
+    return int(bredd / (0.52 * h))
+
+
+def noter_svg(spalter, bredd=NOT_SPALT, lucka=NOT_LUCKA, h=NOT_H):
+    """Noterna i spalter (noter.spalter): rubriker i fetstil, varje not med ett tankstreck och indragna
+    fortsättningsrader. Returnerar (svg, bredd, höjd)."""
+    e, H = [], 0.0
+    for k, spalt in enumerate(spalter):
+        while spalt and spalt[-1][0] == "luft":
+            spalt = spalt[:-1]
+        x0, y = k * (bredd + lucka), 0.0
+        for typ, t in spalt:
+            y += NOT_RAD[typ]
+            if typ == "luft":
+                continue
+            if typ in ("rubrik", "status"):
+                e.append(s_txt(x0, y - 1.1, t, h + (0.3 if typ == "status" else 0)).replace('fill="#000"', 'fill="#000" font-weight="bold"'))
+            elif typ == "not":
+                e += [s_txt(x0, y - 1.1, "–", h), s_txt(x0 + 3.2, y - 1.1, t, h)]
+            else:
+                e.append(s_txt(x0 + 3.2, y - 1.1, t, h))
+        H = max(H, y)
+    w = len(spalter) * bredd + (len(spalter) - 1) * lucka
+    return svg(w, H + 1.0, e), w, H + 1.0
 
 
 def rubrik_svg(titel, skala):
@@ -182,6 +216,7 @@ def _jobb():
     from FreeCAD import Vector as V
     from PySide import QtGui
     import fcapi, stal, foretag, sprak
+    import noter as noter_mod
     from fcapi import logg, pump
 
     skillmapp = os.path.dirname(fcapi.jobb()["skriptmapp"])
@@ -639,6 +674,53 @@ def _jobb():
             n += 1
         return n
 
+    def titelfalt(a, nummer, skala, systemlinje):
+        """Titelblockets och revisionsradens fält (mallar/A2.svg)."""
+        rev = [s_.strip() for s_ in a["rev"].split("|")] if a.get("rev") else []
+        if len(rev) == 4:
+            rev = [rev[0], ""] + rev[1:]
+        rev = (rev + [""] * 5)[:5]
+        obj = (a.get("objekt") or []) + ["", "", ""]
+        adr = list(a.get("adress") or []) + ["", "", ""]
+        return dict(Foretag=a.get("foretag") or "", Adress1=adr[0], Adress2=adr[1], Adress3=adr[2],
+                    Uppdrag=a.get("uppdrag", ""), RitadAv=a.get("ritad_av", ""),
+                    Datum=a.get("datum") or os.environ.get("FC_DATUM") or time.strftime("%Y-%m-%d"),
+                    Handlaggare=a.get("handlaggare", ""), Ansvarig=a.get("ansvarig", ""), Objekt1=obj[0], Objekt2=obj[1], Objekt3=obj[2],
+                    Skala=skala, Nummer=nummer, Bet=a.get("bet", ""),
+                    RevBet=rev[0], RevAnt=rev[1], RevText=rev[2], RevDatum=rev[3], RevSign=rev[4],
+                    StomnatNummer=nummer, Systemlinje=systemlinje, Etapp=a.get("etapp", "1"), Antal=a.get("antal", "1"))
+
+    def nytt_blad(doc, tpl1, namn, label):
+        """Ett blad till i samma FCStd med samma mall (titelblocket kopieras från blad 1)."""
+        t_ = doc.addObject("TechDraw::DrawSVGTemplate", "Mall" + namn)
+        t_.Template = tpl1.Template
+        b_ = doc.addObject("TechDraw::DrawPage", namn)
+        b_.Label = label
+        b_.Template = t_
+        t_.EditableTexts = dict(tpl1.EditableTexts)
+        doc.recompute()
+        b_.ViewObject.show()
+        pump(0.5)
+        return b_, t_
+
+    def fyll_noter(doc, blad, grupper, T, titel):
+        """Noteringarna på ett eget blad: rubrik överst och tre spalter à 170 mm (den högra slutar ovanför
+        titelblocket)."""
+        bredd, xs, topp, botten = 170.0, (42.0, 222.0, 402.0), 383.0, (22.0, 22.0, 82.0)
+        spalter_ = noter_mod.spalter(grupper, 3, not_tecken(bredd), T)
+        sv_, w_, h_ = noter_svg([[("status", titel)]], 300.0, h=4.7)      # rubriken till höger om PLACERING I STOMNÄT
+        symbol(doc, blad, "NoterRubrik", sv_, 110.0, 398.0, w_, h_)
+        for k_, (sp_, x_) in enumerate(zip(spalter_, xs)):
+            if not sp_:
+                continue
+            sv_, w_, h_ = noter_svg([sp_], bredd)
+            if h_ > topp - botten[k_]:
+                logg("OBS: noteringarna ryms inte på bladet (spalt %d är %.0f mm, plats %.0f): korta noterna eller dela upp "
+                     "dem på en gemensam noteringsritning (läge noteringar)" % (k_ + 1, h_, topp - botten[k_]))
+            symbol(doc, blad, "NoterSpalt%d" % (k_ + 1), sv_, x_, topp, w_, h_)
+        doc.recompute()
+        pump(1.0)
+
     def detaljblad(doc, page1, tpl1, marke, vdef, ds, detaljer, delvyer, T):
         """Blad 2 i samma FCStd: delvyer (utvalda delar sedda längs en riktning, t.ex. längs en sned balk där
         TechDraws snitt ger fel) till vänster och detaljer (förstoringar, DrawViewDetail) i ett rutnät, med text
@@ -741,7 +823,7 @@ def _jobb():
                     nm += detaljmatt(doc, blad2, dv, i + 1, d["matt"])
                 except Exception as e:
                     logg("OBS: mått i D%d: %s" % (i + 1, e))
-        text(doc, blad2, "DetaljRubrik", [T("DETALJER %s – DETALJERNAS LÄGEN D1 ... VISAS I BLAD %s.1", marke, marke)], 230, 402, 3.5)
+        text(doc, blad2, "DetaljRubrik", [T("DETALJER %s – DETALJERNAS LÄGEN D1 ... VISAS I BLAD %s.1", marke, marke)], 230, 396, 3.5)
         et2["Skala"] = "  ".join(skaltext(k_) for k_ in sorted(skalor))
         tpl1.EditableTexts = et1
         tpl2.EditableTexts = et2
@@ -792,30 +874,40 @@ def _jobb():
                 tjock[r["material"]] = max(tjock.get(r["material"], 0.0), t or 0.0)      # 0 = okänd (egen profiltext)
                 varm[r["material"]] = varm.get(r["material"], False) or r["profil"].upper().startswith(("KKR", "KCKR"))
             mat = {m: kallor.material(m, tjock[m] or None, varm[m]) for m in tjock}
-            kallrader = kallor.noter(kl, mat, bredd=70)
+            kallrader = kallor.noter(kl, mat, bredd=10000)            # en not per mening; brytningen görs vid ritningen
             for s_ in kallrader:
                 logg("Not:", s_)
             for s_ in kallor.notiser():
                 logg("Källor OBS:", s_)
             for s_ in kallor.fel():
                 logg("Källor FEL:", s_)
-            noter = list(noter) + kallrader
         inkopta = {}                                  # inköpta komponenter ur registret: leverantör och källa i noterna
         for o in ds:
             if getattr(o, "Inkopstext", "") and o.Pos not in inkopta:
                 url = (getattr(o, "Kalla", "") or "").split()
                 kort = url[0].split("//")[-1].split("/")[0] if url else ""
                 inkopta[o.Pos] = "INKÖP %s: %s%s" % (o.Pos, o.Inkopstext.upper(), (", MÅTT ENL. DATABLAD %s %s" % (kort.upper(), url[1] if len(url) > 1 else "")) if kort else "")
-        if inkopta:
-            import kallor
-            noter = list(noter) + [r_ for t_ in inkopta.values() for r_ in kallor.bryt(t_, 70)]
+        kontroll = []
         try:                                          # regelkontrollen från bygget (scripts/regler.py) som not
-            import regler, kallor
+            import regler
             rk = regler.not_text(json.loads(getattr(g, "Regelkontroll", "") or "null"), T)
             if rk:
-                noter = list(noter) + kallor.bryt(rk, 70)
+                kontroll = [rk]
         except ValueError:
             pass
+        # noterna grupperade under rubriker (noter.py); för många för blad 1, eller noter_blad: eget blad
+        grupper = noter_mod.gruppera(noter, kallor=kallrader, inkop=list(inkopta.values()), kontroll=kontroll)
+        ref = a.get("noter_ref") or cfg.get("noter_ref")
+        if ref:                                       # projektets gemensamma noteringsritning (läge noteringar)
+            grupper = noter_mod.lagg_till_status(grupper, T("GEMENSAMMA NOTERINGAR SE RITNING %s", ref))
+        # två varianter: alla noter i två spalter på blad 1, eller bara statusraderna och en hänvisning till ett
+        # eget blad NOTERINGAR. Valet görs när skalan bestäms (eget blad om noterna annars tvingar fram en mindre
+        # skala, är högre än NOT_MAX eller om noter_blad/--noter-blad är satt).
+        hela = noter_svg(noter_mod.spalter(grupper, 2, not_tecken(NOT_SPALT), T)) if grupper else (None, 0.0, 0.0)
+        kort_ = noter_mod.lagg_till_status([gr for gr in grupper if gr[0] == "STATUS"],
+                                           T("ALLMÄNNA NOTERINGAR SE BLAD %s", "%s.%d" % (marke, 3 if (detaljer or delvyer) else 2)), sist=True)
+        kort = noter_svg(noter_mod.spalter(kort_, 1, not_tecken(2 * NOT_SPALT + NOT_LUCKA), T), 2 * NOT_SPALT + NOT_LUCKA) if grupper else hela
+        tvinga = bool(grupper) and bool(a.get("noter_blad") or cfg.get("noter_blad"))
         alla = [o.Shape for o in ds]
         komp = Part.makeCompound(alla)
         huvud = doc.getObject(g.Huvuddel) if g.Huvuddel else None
@@ -960,7 +1052,6 @@ def _jobb():
         snitt_v = [vd for vd in vdef if vd["snitt"]]
         # noterna nere till vänster (underkant y = 26) och materiallistan bestämmer hur långt ner vyerna får gå
         ml, mw, mh, ta, tv = materiallista_svg(rader, marke, a["antal"], a["hal"], a["svets"], T)
-        nsvg, nw, nh_ = noter_svg(noter) if noter else (None, 0.0, 0.0)
         Y0, X0 = 392.0, 50.0
 
         def kolumn(lst, n):
@@ -968,14 +1059,24 @@ def _jobb():
             bredd = max(vd["vanster"] for vd in lst) + max(vd["w"] for vd in lst) / n
             return bredd, hojd
         ML_X, ML_Y = 574.0 - mw, 68.0                   # materiallistan: högerkant mot titelrutan, ovanför revisionstabellen
-        def y_min(bredd):
-            y1 = max(26.0 + nh_ + 6, 60.0)
+        def y_min(bredd, nh=None):
+            y1 = max(26.0 + (nh_ if nh is None else nh) + 6, 60.0)
             return max(y1, ML_Y + mh + 6) if X0 + bredd > ML_X - 4 else y1
 
-        def ryms(k):
+        def ryms(k, nh=None):
             b, h = kolumn(huvud_v, k)
-            return b <= 330 and h <= Y0 - y_min(b)
-        n = a.get("skala") or next((k for k in SKALOR if ryms(k)), SKALOR[-1])
+            return b <= 330 and h <= Y0 - y_min(b, nh)
+
+        def skala_med(nh):
+            return a.get("skala") or next((k for k in SKALOR if ryms(k, nh)), SKALOR[-1])
+        eget_noterblad = tvinga or (bool(grupper) and (hela[2] > NOT_MAX or skala_med(hela[2]) > skala_med(kort[2])))
+        nsvg, nw, nh_ = kort if eget_noterblad else hela
+        if eget_noterblad:
+            logg("Noteringar: %d noter på eget blad (%s)" % (sum(len(l_) for _, l_ in grupper), "noter_blad" if tvinga else
+                 "för höga för blad 1" if hela[2] > NOT_MAX else "annars skala 1:%s i stället för 1:%s" % (fmt(skala_med(hela[2])), fmt(skala_med(kort[2])))))
+        elif grupper:
+            logg("Noteringar: %s" % ", ".join("%s %d" % (r_, len(l_)) for r_, l_ in grupper))
+        n = skala_med(nh_)
         if not ryms(n):
             logg("OBS: huvudvyerna ryms inte i skala 1:%s med noterna och materiallistan (%.0f x %.0f mm, plats %.0f x %.0f): "
                  "välj mindre skala, färre noter eller färre vyer" % (fmt(n), kolumn(huvud_v, n)[0], kolumn(huvud_v, n)[1], 330, Y0 - y_min(kolumn(huvud_v, n)[0])))
@@ -1115,7 +1216,7 @@ def _jobb():
             logg("OBS: positioner som inte syns i någon vy (ingen bubbla): %s" % ", ".join(saknas))
         # ---- hinder för bubblorna: materiallista, noter, titelblock, andra vyer, snittmarkeringar och -rubriker
         hinder += [(ML_X, ML_Y, ML_X + mw, ML_Y + mh), (360.0, 0.0, 594.0, 75.0)]
-        if noter:
+        if nsvg:
             hinder.append((X0, 26.0, X0 + nw, 26.0 + nh_))
         if iso:
             hinder.append((iso.v.X.Value - wi / ni / 2, iso.v.Y.Value - hi / ni / 2 - 14, iso.v.X.Value + wi / ni / 2, iso.v.Y.Value + hi / ni / 2))
@@ -1245,30 +1346,29 @@ def _jobb():
 
         # ---- materiallista, noter, titelblock
         symbol(doc, page, "Materiallista", ml, ML_X, ML_Y + mh, mw, mh)
-        if noter:
+        if nsvg:
             symbol(doc, page, "Noter", nsvg, X0, 26.0 + nh_, nw, nh_)
         skalor = sorted({n} | ({ns} if ns else set()))          # huvudvyer och snitt (inte isometrin)
-        rev = [s.strip() for s in a["rev"].split("|")] if a.get("rev") else []
-        if len(rev) == 4:
-            rev = [rev[0], ""] + rev[1:]
-        rev = (rev + [""] * 5)[:5]
-        obj = (a.get("objekt") or []) + ["", "", ""]
-        adr = list(a.get("adress") or []) + ["", "", ""]
-        falt = dict(Foretag=a.get("foretag") or "", Adress1=adr[0], Adress2=adr[1], Adress3=adr[2],
-                    Uppdrag=a["uppdrag"], RitadAv=a["ritad_av"], Datum=a.get("datum") or os.environ.get("FC_DATUM") or time.strftime("%Y-%m-%d"),
-                    Handlaggare=a["handlaggare"], Ansvarig=a["ansvarig"], Objekt1=obj[0], Objekt2=obj[1], Objekt3=obj[2],
-                    Skala="  ".join(skaltext(k) for k in skalor), Nummer=marke, Bet=a["bet"],
-                    RevBet=rev[0], RevAnt=rev[1], RevText=rev[2], RevDatum=rev[3], RevSign=rev[4],
-                    StomnatNummer=marke, Systemlinje=a.get("stomnat") or cfg.get("stomnat", ""),
-                    Etapp=a["etapp"], Antal=a["antal"])
         et = tpl.EditableTexts
-        et.update(falt)
+        et.update(titelfalt(a, marke, "  ".join(skaltext(k) for k in skalor), a.get("stomnat") or cfg.get("stomnat", "")))
         tpl.EditableTexts = et
         doc.recompute()
         pump(1.0)
-        blad = [page]
+        blad, namn_ = [page], [""]
         if detaljer or delvyer:
             blad.append(detaljblad(doc, page, tpl, marke, vdef, ds, detaljer, delvyer, T))
+            namn_.append("detaljer")
+        if eget_noterblad:
+            et1 = dict(tpl.EditableTexts)
+            et1["Nummer"] = marke + ".1"
+            tpl.EditableTexts = et1
+            nb_, ntpl = nytt_blad(doc, tpl, "Noteringsblad", "Noteringar")
+            et_n = dict(et1)
+            et_n["Nummer"], et_n["Skala"] = "%s.%d" % (marke, len(blad) + 1), "-"
+            ntpl.EditableTexts = et_n
+            fyll_noter(doc, nb_, grupper, T, T("ALLMÄNNA NOTERINGAR %s", marke))
+            blad.append(nb_)
+            namn_.append("noteringar")
 
         # ---- kontroll och export
         fel = [o.Name for o in doc.Objects if "Invalid" in o.State or "Error" in o.State]
@@ -1292,9 +1392,46 @@ def _jobb():
             tmp = "%s_tmp%d.pdf" % (bas, j + 1)
             TechDrawGui.exportPageAsPdf(p_, tmp)
             sidor.append(tmp)
-        return dict(sidor=sidor, bas=bas, skala=n, skala_snitt=ns, skala_iso=ni, matt=nm, bubblor=nb, hal=nh, vikt=tv)
+        return dict(sidor=sidor, namn=namn_, bas=bas, skala=n, skala_snitt=ns, skala_iso=ni, matt=nm, bubblor=nb, hal=nh, vikt=tv)
 
-    fcapi.kor_jobb(lambda a: bygg(a) if a["lage"] == "bygg" else ritning(a))
+    # ------------------------------------------------------------------ noteringsritning för ett projekt
+    def noteringsritning(a):
+        """Eget A2-blad med projektets gemensamma noteringar (läge noteringar), utan modell."""
+        stall_in()
+        fil = os.path.abspath(a["fil"])
+        if fil.endswith(".json"):
+            with open(fil, encoding="utf-8") as f_:
+                inn = json.load(f_)
+        else:
+            m_ = runpy.run_path(fil)
+            inn = m_.get("NOTER", [])
+        lang = a.get("sprak") or "sv"
+        T = sprak.oversattare(lang)
+        ut = os.path.abspath(a["ut_fil"])
+        os.makedirs(os.path.dirname(ut), exist_ok=True)
+        bas = os.path.splitext(ut)[0]
+        doc = App.newDocument("Noteringar")
+        page = doc.addObject("TechDraw::DrawPage", "Noteringsblad")
+        tpl = doc.addObject("TechDraw::DrawSVGTemplate", "Mall")
+        tpl.Template = sprak.mallfil(foretag.mall_med_logga(MALL, a.get("logga"), os.path.dirname(ut)), lang, os.path.dirname(ut))
+        page.Template = tpl
+        et = tpl.EditableTexts
+        nummer = a.get("nummer") or "N-01"
+        et.update(titelfalt(a, nummer, "-", ""))
+        tpl.EditableTexts = et
+        doc.recompute()
+        page.ViewObject.show()
+        pump(0.5)
+        grupper = noter_mod.gruppera(inn)
+        fyll_noter(doc, page, grupper, T, a.get("rubrik") or T("GEMENSAMMA NOTERINGAR %s", nummer))
+        doc.saveAs(ut)
+        logg("Noteringsritning %s: %s" % (nummer, ", ".join("%s %d" % (r_, len(l_)) for r_, l_ in grupper)))
+        import TechDrawGui
+        tmp = bas + "_tmp1.pdf"
+        TechDrawGui.exportPageAsPdf(page, tmp)
+        return dict(sidor=[tmp], namn=[""], bas=bas)
+
+    fcapi.kor_jobb(lambda a: bygg(a) if a["lage"] == "bygg" else noteringsritning(a) if a["lage"] == "noteringar" else ritning(a))
 
 
 def _efterbehandla(r):
@@ -1309,7 +1446,8 @@ def _efterbehandla(r):
     for i, s in enumerate(r["sidor"]):
         with pymupdf.open(s) as d:
             ny.insert_pdf(d)
-            png = bas + (".png" if i == 0 else "_detaljer.png" if i == 1 else "_blad%d.png" % (i + 1))
+            nm_ = (r.get("namn") or [])[i] if i < len(r.get("namn") or []) else "blad%d" % (i + 1)
+            png = bas + ("_" + nm_ if nm_ else "") + ".png"
             d[0].get_pixmap(dpi=110).save(png)
             pngs.append(os.path.basename(png))
         os.remove(s)
@@ -1320,7 +1458,8 @@ def _efterbehandla(r):
         pdf = bas + "_" + time.strftime("%H%M%S") + ".pdf"
         print("OBS: PDF:en är öppen i ett annat program - sparar som %s" % os.path.basename(pdf))
     ny.save(pdf)
-    print("PDF: %s (%d blad)  PNG: %s  CSV: %s" % (pdf, len(r["sidor"]), ", ".join(pngs), os.path.basename(bas + "_materiallista.csv")))
+    csv = bas + "_materiallista.csv"
+    print("PDF: %s (%d blad)  PNG: %s%s" % (pdf, len(r["sidor"]), ", ".join(pngs), "  CSV: " + os.path.basename(csv) if os.path.exists(csv) else ""))
 
 
 if __name__ == "__fcjobb__":
@@ -1336,5 +1475,5 @@ elif __name__ == "__main__":
     if a.ut_fil:
         a.ut_fil = os.path.abspath(a.ut_fil)
     r = fcapi.kor(__file__, vars(a))
-    if a.lage == "ritning":
+    if a.lage in ("ritning", "noteringar"):
         _efterbehandla(r)

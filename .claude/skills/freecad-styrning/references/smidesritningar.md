@@ -55,7 +55,13 @@ Ovanför listan **ALLMÄNNA NOTERINGAR**: `ALLA HÅL ÄR 22 mm OM EJ ANNAT ANGES
 - Ytbehandling i not: `PULVERLACK MATT SVART RAL 9005`, `YTBEHANDLING ENLIGT BESTÄLLNING`.
 
 ## Noter (versaler, under eller bredvid vyerna)
-Ordning: status → underlag → material/ytbehandling → nivåer → svets/bult → avvikelser/antaganden.
+Noterna grupperas under rubriker i fetstil, i två spalter under vyerna (`scripts/noter.py`): status överst utan
+rubrik, sedan UNDERLAG OCH ANTAGANDEN, UTFÖRANDE, MONTAGE OCH INFÄSTNING, SVETS, YTBEHANDLING, MATERIAL OCH KÄLLOR,
+INKÖPTA KOMPONENTER och KONTROLL. Den som bara vill se status, svets eller ytbehandling hittar det direkt. Ryms
+noterna inte på blad 1 hamnar de på ett eget blad NOTERINGAR (`<märke>.2/.3`) och blad 1 får statusraden och
+`ALLMÄNNA NOTERINGAR SE BLAD R/1.3`. I ett projekt med många ritningar läggs de gemensamma noterna (underlag,
+svets, ytbehandling, montage) på en egen noteringsritning (`N-01`) och varje ritning har bara sina egna noter och
+`GEMENSAMMA NOTERINGAR SE RITNING N-01`.
 - Status: `PRELIMINÄR RITNING – KOMPLETTERAR FÖRSLAGSSKISS A-01 (OFFERT <uppdragsnr>)`,
   `PRELIMINÄR – EJ FÖR TILLVERKNING FÖRRÄN K33:32 ÄR MÄRKT BYGGHANDLING`,
   `EJ FÖR TILLVERKNING FÖRRÄN MÅTT OCH UTFÖRANDE ÄR GODKÄNDA`.

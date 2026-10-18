@@ -15,7 +15,8 @@ https://richalund.github.io/Steelworks-shopdrawings/
   (solfjäder, sicksack, egna SVG-motiv, text och monogram). Beslag, lås och glas söks upp hos leverantörer i ditt
   land och ritas med måtten ur deras datablad.
 - **Ritningar:** sammanställningsritningar (A2) med positionsbubblor, snitt, måttkedjor, hålangivelser,
-  materiallista och detaljblad, A3-ritningar för enstaka delar, plan- och översiktsritningar – på svenska,
+  materiallista, noteringar grupperade under rubriker (eget blad eller gemensam noteringsritning vid behov) och
+  detaljblad, A3-ritningar för enstaka delar, plan- och översiktsritningar – på svenska,
   engelska eller kinesiska.
 - **Till verkstaden:** DXF per plåtposition (kontur för laser, utbredning med bocklinjer för kantpressen), STEP,
   tillverkningsgranskning av plåt, regelkontroll mot verkstadens gränser.
@@ -40,6 +41,8 @@ Cursor, se infosidan ovan eller [AGENTS.md](AGENTS.md).
 2. **Koppla GitHub:** logga in på https://claude.ai/connect-github med samma konton.
 3. **Starta:** öppna Claude-appen på telefonen, gå till fliken **Code**, välj repot
    `richalund/Steelworks-shopdrawings` och starta en ny session.
+   Repot är publikt: ingen inbjudan eller fork behövs för att rita. En färdig startprompt att kopiera finns på
+   infosidan, liksom en prompt som installerar skillen i ett eget repo.
 4. **Beskriv vad du vill ha** och bifoga gärna foton, mått eller en ritning, t.ex. *"Här är tre foton på ett
    trappräcke jag vill offerera. Trappan har 6 steg, ca 1,2 m bred. Rita räcket och gör ritning och 3D-bilder."*
    Första gången frågar Claude efter företagsnamn, adress och signatur till titelblocket, och FreeCAD installeras

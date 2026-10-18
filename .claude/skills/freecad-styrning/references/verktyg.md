@@ -36,6 +36,13 @@ Material; samma positionsnummer på flera delar = samma position (de ska vara li
 Skriptets valfria `REGLER = [dict(villkor="600 <= Bredd <= 1500", text="...", niva="FEL"|"VARNING"), ...]` med
 variablerna och VIKT, LANGD, BREDD, HOJD, DELAR, POSITIONER kontrolleras vid varje bygge (regler.py).
 
+## noter.py (noteringarna på A2-ritningarna)
+`gruppera(noter, kallor=, inkop=, kontroll=)` -> `[(rubrik, [noter])]` i fast ordning (STATUS, UNDERLAG OCH
+ANTAGANDEN, UTFÖRANDE, MONTAGE OCH INFÄSTNING, SVETS, YTBEHANDLING, MATERIAL OCH KÄLLOR, INKÖPTA KOMPONENTER,
+KONTROLL); `noter` är en lista (rubrik ur prefix `"SVETS: ..."` eller nyckelord) eller en dict {rubrik: [rader]}
+(egna rubriker hamnar efter UTFÖRANDE). `spalter(grupper, antal, tecken)` fördelar raderna på spalter med hela
+rubriker, `lagg_till_status(grupper, text)` lägger till en statusrad. Rubrikerna översätts med sprak.py.
+
 ## ornament.py (i en pd-skiss)
 `svg(sk, fil, bredd=|hojd=, mitt=)`, `text(sk, s, hojd, font=, mitt=, sparning=)`,
 `solfjader(sk, r_inre, r_yttre, antal, fran=0, till=180, andel=0.5, mitt=)`, `sicksack(sk, langd, hojd, antal, bredd, mitt=)`,
@@ -47,7 +54,8 @@ hål. Pad (relief), Pocket med djup (gravyr) eller "genom" (genombrytning).
 | Kommando | Gör | Ger |
 |---|---|---|
 | `underlag.py las <filer>` / `zoom <fil> --ruta x0,y0,x1,y1` | läser PDF (vektor/scannad), bilder, DXF | översikt, rutor, text, underlag.md |
-| `sammanstallning.py bygg/ritning` | bygger, kontrollerar, A2-ritning (`--sprak sv\|en\|zh`) | FCStd, PDF, PNG, CSV |
+| `sammanstallning.py bygg/ritning` | bygger, kontrollerar, A2-ritning (`--sprak sv\|en\|zh`, `--noter-blad`, `--noter-ref N-01`) | FCStd, PDF, PNG, CSV |
+| `sammanstallning.py noteringar <noter.py\|json> <ut.FCStd> --nummer N-01` | projektets gemensamma noteringsritning | FCStd, PDF, PNG |
 | `ritning.py <del.FCStd>` | A3-ritning för en del (`--sprak`) | PDF, PNG, DXF |
 | `oversikt.py <modell> <ritskript>` | översikt/plan | PDF, PNG |
 | `rendera.py <modell>` | 3D-bilder med utseende | `_3d_<vy>.png` |
