@@ -61,8 +61,8 @@ Spara svaren med `foretag.py satt` och fortsätt. Fråga inte igen i samma sessi
 kommando (`--foretag`, `--adress`, `--ritad-av`, `--handlaggare`, `--ansvarig`, `--logga`); miljövariablerna
 `FC_FORETAG`, `FC_ADRESS` (rader åtskilda med `|`), `FC_RITAD_AV`, `FC_HANDLAGGARE`, `FC_ANSVARIG`, `FC_LOGGA`, `FC_LAND` går
 före filen. Filen `foretag.json` söks i `FC_FORETAG_FIL`, `egna/`, arbetsmappen och `~/.config/freecad-styrning/`.
-I en molnsession försvinner den med containern om den inte ligger i en egen gren eller fork; föreslå
-miljövariablerna i molnmiljöns inställningar. Loggan läggs i en kopia av mallen i utmappen (`_A3_logga.svg`,
+I en molnsession försvinner den med containern; föreslå miljövariablerna i molnmiljöns inställningar (eller
+filen i ett eget privat repo). Loggan läggs i en kopia av mallen i utmappen (`_A3_logga.svg`,
 `_A2_logga.svg`).
 
 ## Källor för profilmått och materialkvaliteter
@@ -93,6 +93,8 @@ uppdrag läggs därför utanför skillen:
   skillens byggare inte täcker byggs med `k.egen(pos, "TEXT", bygg, mitt=, rot=, material=)`, där `bygg(d)` ritar
   kroppen med Part Design-API:t i `scripts/pd.py`.
 - företagsuppgifter i `egna/foretag.json` (eller konfigmappen), genererade filer i `ut/`.
+- själva uppdraget (underlag, egna skript, ritningar, modeller) sparas i uppdragets projektmapp, inte i git
+  (se "Spara uppdraget i projektmappen").
 
 **Skillen förbättras genom bidrag (pull request), aldrig genom att ändra den i smyg.** När ett uppdrag har
 löst något som fler har nytta av (en buggfix, ett nytt verktyg, en ny fälla, en ritningskonvention) gör du så här:
@@ -143,7 +145,8 @@ geometri (Block-villkor) i en skiss.
    `references/smidesritningar.md`.
 5. **Leverera** FCStd, PDF, DXF och STEP i `ut/` bredvid varandra, och vid offert mängdunderlaget och
    beställningspaketet. Skriv aldrig över kundens eller användarens originalfil. När användaren är nöjd: fråga om
-   underlaget ska skickas till en tillverkare (se "Leverans till en tillverkare").
+   underlaget ska skickas till en tillverkare (se "Leverans till en tillverkare"), och spara uppdraget i
+   projektmappen (se "Spara uppdraget i projektmappen").
 
 ## Part Design (solida delar: plattor, konsoler, flänsar, hylsor)
 Läs `references/partdesign.md` (API:t i `scripts/pd.py`) innan ett nytt delskript skrivs. Ett delskript i `delar/`
@@ -299,11 +302,30 @@ När användaren säger sig vara nöjd med ritningarna (eller ber om offert):
    .eml-filen och zip:en att skicka själv (se "Filerna till användaren"). Skicka aldrig något utan ett tydligt ja.
 4. Paket över 20 MB går inte med vanlig mail: föreslå en delningslänk (Drive, Dropbox) i mailet i stället.
 
+## Spara uppdraget i projektmappen
+Varje uppdrag sparas i sin projektmapp (där offert, korrespondens och underlag för jobbet redan ligger), inte i
+git: inte på en gren, inte i en fork och aldrig i Steelworks-shopdrawings, som är publikt (en fork av ett publikt
+repo är också publik). Sessionen och containern är tillfälliga; projektmappen är det som finns kvar.
+1. **Hitta mappen.** Är Google Drive (eller annan fillagring) kopplad: sök på uppdragsnummer, kundens namn eller
+   adress. Följ mappens struktur (t.ex. en undermapp för CAD eller FreeCAD) och lägg en ny mapp
+   `Tillverkningsritningar <datum>` där. Hittas ingen mapp, eller flera: fråga användaren.
+2. **Lägg dit** ritningarna som en PDF med alla blad, 3D-bilderna, modellerna (FCStd, STEP), DXF,
+   mängdunderlaget, de egna skripten (det uppdraget använt ur `egna/`) och en `LASMIG.md`: vad som ritats, vad
+   som är antaget, skillens version (`VERSION`) och kommandona för att bygga om ritningarna.
+3. **Stora filer:** kan kopplingen bara ta filinnehållet i anropet (binärfiler på flera MB går då inte), ladda upp
+   textfilerna (skript, `LASMIG.md`, CSV) och ge användaren PDF:en och en zip med resten, och säg exakt vilken
+   mapp de ska läggas i. Kontrollera storleken på det som laddats upp.
+4. **Utan koppling:** ge användaren PDF:en och zip:en och säg att de hör hemma i jobbets projektmapp.
+Tas jobbet upp igen i en ny session: hämta skripten ur projektmappen till `egna/` och bygg om med samma kommandon.
+Kunduppgifter (namn, adress, telefon) committas aldrig, varken i skillen, i `egna/` eller i `leverans/`.
+
 ## Filerna till användaren
 I Claude Code kan användaren ladda ner filerna i `ut/` direkt ur sessionen. I agenter där bara det som
-committas syns (Codex, Copilot, Cursor): kopiera det användaren ska ha (PDF, PNG, zip, .eml) till
-`leverans/<uppdrag>/` i repot, committa det på uppdragets gren och ge länken till grenen eller PR:en. Lägg aldrig
-leveranser på `main` och aldrig i en förbättrings-PR för skillen.
+committas syns (Codex, Copilot, Cursor) och repot är användarens eget **privata** repo: kopiera det användaren
+ska ha (PDF, PNG, zip, .eml) till `leverans/<uppdrag>/`, committa det på uppdragets gren och ge länken till
+grenen eller PR:en. Är repot publikt: committa inga leveranser; säg att agenten behöver ett privat repo (en
+importerad kopia, se infosidan `docs/index.html`, "Andra kodagenter"). Lägg aldrig leveranser på `main` och aldrig i en förbättrings-PR för skillen.
+Spara sedan uppdraget i projektmappen enligt avsnittet ovan.
 
 ## 3D-bilder, export och översiktsritning
 - `python3 scripts/rendera.py <modell.FCStd> [--vyer iso,iso2,bak,fram,sida,plan] [--vy namn:dx,dy,dz]

@@ -20,6 +20,9 @@ in förbättringar (se BIDRA.md).
    du kan skriva direkt, Claude väntar in installationen.
 3. Svara på frågorna om företagsnamn och signatur till titelblocket (en gång per session).
 4. Titta på bilderna Claude visar och be om ändringar. Ladda ner filerna när du är nöjd.
+5. Jobbet sparas i sin projektmapp: är Google Drive kopplad letar Claude upp jobbets mapp (säg gärna
+   uppdragsnumret) och lägger skript och ritningar där. Filer som är för stora för kopplingen får du med besked
+   om vilken mapp de ska ligga i. Inget av jobbet sparas i repot, som är publikt.
 
 Starta en ny session för varje nytt jobb. Då blir det snabbare och billigare än att fortsätta i en lång session.
 

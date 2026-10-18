@@ -8,4 +8,6 @@
 - Frågorna till användaren (företagsuppgifter, leverans) ställs med AskUserQuestion-formuläret.
 - Visa PNG:erna med Read och skicka filerna till användaren med verktyget för att skicka filer om det finns;
   användaren kan också ladda ner dem ur sessionen, så `leverans/` behövs inte i Claude Code.
+- Projektmappen: är Google Drive kopplad, spara uppdraget i jobbets mapp där (SKILL.md, "Spara uppdraget i
+  projektmappen"); binärfiler som inte går att ladda upp skickas till användaren med besked om vilken mapp.
 - Leveransmailet: är Gmail kopplat, lägg ett utkast med paketet som bilaga och skicka bara på uttryckligt ja.
