@@ -18,9 +18,10 @@ Användarens guide: `ANVANDA.md`. Bidrag: `BIDRA.md`.
   sudo. Claude Code kör den från SessionStart-hooken, Copilot från `.github/workflows/copilot-setup-steps.yml`,
   Cursor från `.cursor/environment.json`, och i Codex anges den som miljöns installationsskript. Finns inte
   `freecad` i någon av mapparna när du ska rita: kör skriptet själv och vänta.
-- Nätet ska tillåta micro.mamba.pm, github.com, objects.githubusercontent.com, conda.anaconda.org,
-  cdn.jsdelivr.net, data.jsdelivr.com, pypi.org, files.pythonhosted.org och Ubuntus paketarkiv under installationen,
-  och raw.githubusercontent.com och eurocodeapplied.com för källorna. Komponenter söks upp med webbsök.
+- Nätet: installationen behöver github.com med release-assets/objects.githubusercontent.com, conda.anaconda.org,
+  pypi.org, files.pythonhosted.org och Ubuntus paketarkiv (allt ingår i Claude Codes standardnät "Trusted"; i andra
+  agenter ska de vara tillåtna), med micro.mamba.pm och cdn.jsdelivr.net/data.jsdelivr.com som reserv. Källorna:
+  raw.githubusercontent.com och eurocodeapplied.com. Komponenter söks upp med webbsök.
 - Kör skripten med system-`python3`, inte FreeCADs Python i `/opt/freecad/bin`.
 
 ## Regler
