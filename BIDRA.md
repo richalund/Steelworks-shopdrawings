@@ -18,7 +18,8 @@ Ingen kan godkänna sin egen PR. När en granskare godkänt och testerna är gr�
 (auto-merge), utan att ägaren behöver bekräfta.
 
 ## Så skickar en bidragsgivare in en förbättring
-1. Starta en session på https://claude.ai/code med repot `richalund/Steelworks-shopdrawings` och rita som vanligt.
+1. Starta en session med repot `richalund/Steelworks-shopdrawings` och rita som vanligt (Claude Code på
+   https://claude.ai/code, eller Codex, Copilot eller Cursor enligt infosidan; alla kan öppna en PR).
 2. Skriv "skicka in förbättringen" (eller "det här borde finnas i skillen"). Claude
    - flyttar det allmängiltiga från uppdragets skript in i skillen, utan kunduppgifter och med kundens
      särdrag som val i stället för standard,

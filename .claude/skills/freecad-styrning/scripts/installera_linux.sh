@@ -12,10 +12,22 @@
 # FREECAD_BIN=<prefix>/bin när skripten körs.
 set -euo pipefail
 
-PREFIX="${FREECAD_PREFIX:-/opt/freecad}"
+# Fungerar i Claude Code, Codex, Copilot (GitHub Actions), Jules och Cursor: som root eller med sudo. Utan
+# skrivrätt i /opt (och utan sudo) hamnar allt i ~/.local/opt; fcapi.py och export.py letar på båda ställena.
+if [ "$(id -u)" = "0" ]; then SUDO=""; elif command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then SUDO="sudo"; else SUDO="ingen"; fi
+OPT=/opt
+if [ ! -w /opt ]; then
+  if [ "$SUDO" = "sudo" ]; then sudo mkdir -p /opt/freecad /opt/micromamba /opt/freecad-extra && sudo chown -R "$(id -u):$(id -g)" /opt/freecad /opt/micromamba /opt/freecad-extra
+  else OPT="$HOME/.local/opt"; mkdir -p "$OPT"; fi
+fi
+apt_installera() {   # paket...
+  [ "$SUDO" = "ingen" ] && { echo "OBS: kan inte installera $* (varken root eller sudo)" >&2; return 1; }
+  $SUDO apt-get update -qq >/dev/null && $SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$@" >/dev/null
+}
+PREFIX="${FREECAD_PREFIX:-$OPT/freecad}"
 FREECAD_VERSION="1.1.3"
 SHEETMETAL_TAG="V0.7.24-beta"
-MAMBA_DIR="${MAMBA_DIR:-/opt/micromamba}"
+MAMBA_DIR="${MAMBA_DIR:-$OPT/micromamba}"
 export MAMBA_ROOT_PREFIX="$MAMBA_DIR/root"
 
 steg() { echo "== $*"; }
@@ -70,7 +82,12 @@ if command -v xvfb-run >/dev/null 2>&1; then
   steg "Xvfb finns redan"
 else
   steg "Installerar Xvfb"
-  apt-get update -qq >/dev/null && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq xvfb >/dev/null
+  apt_installera xvfb
+fi
+# bibliotek som FreeCADs GUI behöver i en ren Ubuntu-bild (finns oftast redan)
+if ! ldconfig -p 2>/dev/null | grep -q "libxcb-cursor.so"; then
+  steg "Installerar X- och OpenGL-bibliotek"
+  apt_installera libgl1 libegl1 libxkbcommon-x11-0 libxcb-cursor0 libfontconfig1 libdbus-1-3 || true
 fi
 
 # 4. System-Python: PyMuPDF (PDF-blad, PNG), ezdxf (DXF) och Pillow (bilder, underlag.py, testa.py)
@@ -83,7 +100,7 @@ fi
 
 # 5. ifcopenshell (IFC-export) i en egen mapp: conda-paketet kräver en annan OCCT än FreeCAD 1.1.3, pip-hjulet
 #    har sin egen och läggs utanför FreeCADs miljö (export.py lägger mappen i sys.path)
-EXTRA="${FREECAD_EXTRA:-/opt/freecad-extra}"
+EXTRA="${FREECAD_EXTRA:-$OPT/freecad-extra}"
 if [ -d "$EXTRA/ifcopenshell" ]; then
   steg "ifcopenshell finns redan"
 else
@@ -97,7 +114,7 @@ if fc-list :lang=zh 2>/dev/null | grep -q .; then
   steg "Typsnitt med kinesiska tecken finns redan"
 else
   steg "Installerar typsnittet WenQuanYi Zen Hei"
-  (apt-get update -qq >/dev/null && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq fonts-wqy-zenhei >/dev/null) || \
+  apt_installera fonts-wqy-zenhei || \
     echo "OBS: typsnittet kunde inte installeras (kinesiska ritningar visar rutor)" >&2
 fi
 

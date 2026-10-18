@@ -1,0 +1,3 @@
+{
+  "install": "bash .claude/skills/freecad-styrning/scripts/installera_linux.sh"
+}

@@ -1,0 +1,39 @@
+name: Copilot Setup Steps
+
+# Förbereder miljön för GitHub Copilot coding agent: FreeCAD, SheetMetal, Xvfb och Python-paketen installeras
+# innan agenten startar (brandväggen gäller inte de här stegen). Jobbet måste heta copilot-setup-steps.
+# Körs också för hand (Actions → Copilot Setup Steps → Run workflow) och när filen ändras, så att den testas.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Förbered (Xvfb, typsnitt, skrivrätt i /opt)
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq xvfb libgl1 libegl1 libxkbcommon-x11-0 libxcb-cursor0 libfontconfig1 libdbus-1-3 fonts-wqy-zenhei
+          sudo chown "$USER" /opt
+      - name: FreeCAD från cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            /opt/freecad
+            /opt/freecad-extra
+          key: freecad-1.1.3-${{ hashFiles('.claude/skills/freecad-styrning/scripts/installera_linux.sh') }}
+      - name: Installera FreeCAD, SheetMetal och Python-paket
+        run: bash .claude/skills/freecad-styrning/scripts/installera_linux.sh

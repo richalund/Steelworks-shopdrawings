@@ -1,7 +1,9 @@
 # Använda skillen (utan att bidra)
 
 För dig som vill rita och offerera smide med skillen och inte behöver ändra den. Du behöver inte kunna git,
-programmering eller FreeCAD. Du skriver till Claude som till en ritare, och Claude gör resten.
+programmering eller FreeCAD. Du skriver till agenten som till en ritare, och den gör resten. Här beskrivs Claude
+Code; installation i Codex, Copilot och Cursor och tips om abonnemanget står på infosidan
+https://richalund.github.io/Steelworks-shopdrawings/.
 
 ## Det här behöver du
 - Ett abonnemang på Claude, Pro eller Max (https://claude.ai). Claude Code ingår i båda.
@@ -38,8 +40,8 @@ Du kan börja med bara en mening, med foton, eller med en ritning.
   *"gör ritningen på engelska"*, *"visa grinden öppen 90 grader"*.
 - **Kontroller:** *"Slår grinden i något när den öppnas?"*, *"Hur stor blir lasten på gångjärnen?"*,
   *"Klarar handledaren 0,5 kN/m?"* (överslag; bärande konstruktioner dimensioneras av en konstruktör).
-- **Till verkstaden och kalkylen:** *"Gör DXF till lasern"*, *"Gör prisunderlag för 3 st"*, *"Gör ett
-  beställningspaket"*, *"Exportera till IFC till arkitekten"*, *"Gör en 3D-fil kunden kan öppna i mobilen"* (glTF).
+- **Till verkstaden och tillverkaren:** *"Gör DXF till lasern"*, *"Gör mängdunderlag för 3 st"*, *"Gör ett
+  beställningspaket"*, *"Skicka underlaget för offert"*, *"Exportera till IFC till arkitekten"*, *"Gör en 3D-fil kunden kan öppna i mobilen"* (glTF).
 
 ## Det här får du
 | Fil | Till |
@@ -49,9 +51,22 @@ Du kan börja med bara en mening, med foton, eller med en ritning.
 | `_kontur.dxf`, `_utbredning.dxf` | laser och kantpress |
 | `.step`, `.ifc`, `.glb` | CAD, arkitektens modell, 3D i webbläsaren |
 | `_3d_iso.png` m.fl. | 3D-bilder till offerten |
-| `_kalkyl.csv` | prisunderlag (och pris om verkstaden lagt in sina priser) |
-| `_bestallning.zip` | allt ovan i ett paket, för beställning |
+| `_mangder.csv` | mängdunderlag (vikt, ytor, kap, hål, laser, bock, svets, inköpta komponenter) |
+| `_bestallning.zip` | allt ovan i ett paket, för offert och beställning |
+| `_mail.eml` | mailet till tillverkaren med paketet som bilaga (osänt, öppnas i mailprogrammet) |
 | `.FCStd` | modellen och ritningen, går att öppna och ändra i FreeCAD |
+
+## Skicka underlaget för offert
+Be om ändringar tills du är nöjd med ritningarna och 3D-bilderna: det är det underlaget som prissätts. Säg sedan
+att du är nöjd. Claude frågar om underlaget ska skickas till en tillverkare, med anbud@smide.com förifylld; du kan
+ange vilken adress som helst eller låta bli. Claude gör ett färdigt mail med beställningspaketet som bilaga
+(ett utkast i Gmail om det är kopplat, annars en mailfil du skickar själv) och skickar aldrig något utan att du
+sagt till. Tillverkaren kontrollerar konstruktionen och återkommer med pris; skillen sätter inga priser.
+
+## Beslag, lås och glas
+Gångjärn, lås, handtag, stängare och glas ritas med måtten ur en riktig produkts datablad. Claude söker upp en
+vanlig produkt hos leverantörer i ditt land (fråga om landet ställs första gången), säger vilken den valt och
+skriver den i materiallistan. Har du en egen produkt: säg vilken, eller skicka länken.
 
 ## Bra att veta
 - **Mått hittas inte på.** Claude frågar, eller skriver tydligt vad som är antaget. Kontrollera alltid måtten på
@@ -60,7 +75,7 @@ Du kan börja med bara en mening, med foton, eller med en ritning.
   miljövariabler i molnmiljöns inställningar.
 - **Användningsgränser:** abonnemanget har en gräns per fem timmar och per vecka, som delas med vanlig chatt. En
   ritning i en ny session tar en liten del; en lång session med många ändringar tar mer. Blir det stopp: vänta
-  tills gränsen återställs, eller uppgradera.
+  tills gränsen återställs, eller uppgradera. Tips för att räcka längre (modellval m.m.) står på infosidan.
 - **Ansvar:** ritningarna är underlag. Den som tillverkar och säljer ansvarar för att produkten är rätt
   dimensionerad och uppfyller kraven (t.ex. räckeshöjd, spjälavstånd, CE-märkning).
 - **Blir något fel eller saknas något?** Säg det till Claude. Har du blivit inbjuden kan du skriva *"skicka in

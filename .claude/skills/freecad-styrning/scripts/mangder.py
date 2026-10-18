@@ -1,6 +1,7 @@
-"""Prisunderlag ur modellen: mängder per del och totalt, och ett pris om verkstadens priser finns.
+"""Mängdunderlag ur modellen: mängder per del och totalt, som underlag för tillverkarens kalkyl. Inga priser:
+prissättningen görs av tillverkaren med ett eget verktyg, utanför skillen.
 
-  python3 kalkyl.py <modell.FCStd> [--priser egna/priser.json] [--yta pulverlack] [--antal 1] [--ut <mapp>]
+  python3 mangder.py <modell.FCStd> [--antal 1] [--ut <mapp>]
 
 Mängderna räknas ur geometrin (FreeCAD), för en sammanställning (delar med positionsnummer) eller en enstaka
 del (Part Design, SheetMetal):
@@ -9,66 +10,16 @@ del (Part Design, SheetMetal):
   - kap: raka kap (två per stång/profil) och geringar (sneda kap, Pocket "Gering")
   - hål per diameter (hålgrupperna), borrade i profiler och skurna i plåt
   - laser: skärlängd (m) och antal håltagningar (insticksställen) för plåtar (PL med bredd >= 100) och
-    bockade delar
+    bockade delar (utbredningens kontur)
   - bockningar i bockade delar (SheetMetal)
   - svets: uppskattad längd (m) = kontaktkanterna mellan delar som rör varandra (yttre konturen av varje
     kontaktyta). Uppskattning: verkligt svetsomfång bestäms av konstruktören.
-Ger `<modell>_kalkyl.csv` (öppnas i Excel) och `<modell>_kalkyl.json` (till beställningspaketet, paket.py).
-
-**Priser** läses från `--priser`, FC_PRISER_FIL, `egna/priser.json` eller `~/.config/freecad-styrning/priser.json`
-(mall: `mallar/priser.json`, alla priser 0 tills verkstaden fyllt i dem). Priserna hör till verkstaden och ligger
-aldrig i skillen. Utan priser blir det bara mängder.
+  - inköpta detaljer (k.inkop) med antal
+Ger `<modell>_mangder.csv` (öppnas i Excel) och `<modell>_mangder.json` (till beställningspaketet, paket.py).
 """
 import os, sys, json, argparse
 
 SKILL = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-
-def prisfil(fil=None):
-    for f in (fil, os.environ.get("FC_PRISER_FIL"), os.path.join(os.getcwd(), "egna", "priser.json"),
-              os.path.join(os.path.expanduser("~"), ".config", "freecad-styrning", "priser.json")):
-        if f and os.path.exists(f):
-            return f
-    return None
-
-
-def _materialpris(priser, material):
-    tab = priser.get("material_kr_per_kg", {})
-    m = (material or "").upper().replace(" ", "")
-    bast = max((k for k in tab if not k.startswith("_") and k != "standard" and m.startswith(k.upper().replace(" ", ""))),
-               key=len, default=None)
-    return float(tab[bast] if bast else tab.get("standard", 0) or 0)
-
-
-def pris(mangder, priser, yta=None, antal=1):
-    """Pris ur mängderna och prislistan: rader (text, mängd, enhet, á-pris, summa) och totalsumma."""
-    rader = []
-
-    def rad(text, mangd, enhet, apris):
-        if mangd and apris:
-            rader.append((text, mangd, enhet, apris, mangd * apris))
-    for mat, kg in sorted(mangder["vikt_per_material"].items()):
-        rad("Material %s" % mat, kg * antal, "kg", _materialpris(priser, mat))
-    ytor = priser.get("yta_kr_per_m2", {})
-    ytnamn = yta or priser.get("yta_standard")
-    if ytnamn:
-        rad("Ytbehandling %s" % ytnamn, mangder["yta_m2"] * antal, "m2", float(ytor.get(ytnamn, 0) or 0))
-    for nyckel, text, enhet in (("kap", "Kap", "st"), ("geringar", "Geringskap", "st"), ("hal", "Hål", "st"),
-                                ("laser_m", "Laserskärning", "m"), ("instick", "Håltagningar laser", "st"),
-                                ("bockningar", "Bockningar", "st"), ("svets_m", "Svets (uppskattad)", "m"),
-                                ("delar", "Hantering per del", "st")):
-        rad(text, mangder[nyckel] * antal, enhet, float(priser.get({"kap": "kap_kr_st", "geringar": "gering_kr_st", "hal": "hal_kr_st",
-                                                                     "laser_m": "laser_kr_per_m", "instick": "instick_kr_st",
-                                                                     "bockningar": "bock_kr_st", "svets_m": "svets_kr_per_m",
-                                                                     "delar": "del_kr_st"}[nyckel], 0) or 0))
-    if priser.get("start_kr"):
-        rader.append(("Startkostnad per order", 1, "st", float(priser["start_kr"]), float(priser["start_kr"])))
-    summa = sum(r[4] for r in rader)
-    pa = float(priser.get("paslag_procent", 0) or 0)
-    if pa:
-        rader.append(("Påslag %g %%" % pa, summa, "kr", pa / 100.0, summa * pa / 100.0))
-        summa *= 1 + pa / 100.0
-    return rader, summa
 
 
 # ---------------------------------------------------------------- inne i FreeCAD
@@ -116,7 +67,7 @@ def mangder(doc, logg=print):
     halper, inkop = {}, []
     for o in ds:
         if hasattr(o, "Vikt") and getattr(o, "Material", "") == "INKÖP":     # inköpt detalj (k.inkop)
-            inkop.append(dict(pos=o.Pos, text=o.Profil, vikt=float(o.Vikt or 0)))
+            inkop.append(dict(pos=o.Pos, text=o.Profil, vikt=float(o.Vikt or 0), kalla=getattr(o, "Kalla", "")))
             tot["delar"] -= 1
             continue
         mat = getattr(o, "Material", "") or "Stål"
@@ -152,7 +103,7 @@ def mangder(doc, logg=print):
                     utb = P.utbred(s, P.rotyta(s, f.normalAt(0, 0)))
                     f, bock = utb["face2d"], len(utb["bockar2d"])
                 except Exception as e:
-                    logg("OBS: %s kunde inte bredas ut för prisunderlaget (%s)" % (o.Label, e))
+                    logg("OBS: %s kunde inte bredas ut för mängdunderlaget (%s)" % (o.Label, e))
                     bock = sum(1 for f_ in s.Faces if f_.Surface.TypeId == "Part::GeomCylinder") // 2
             if f is not None:
                 laser = sum(w.Length for w in f.Wires) / 1000.0
@@ -220,21 +171,15 @@ def _efterbehandla(m, a):
     utmapp = os.path.abspath(a["ut"]) if a.get("ut") else os.path.dirname(a["fil"])
     os.makedirs(utmapp, exist_ok=True)
     bas = os.path.join(utmapp, os.path.splitext(os.path.basename(a["fil"]))[0])
-    fil = prisfil(a.get("priser"))
-    priser = {}
-    if fil:
-        with open(fil, encoding="utf-8") as f:
-            priser = json.load(f)
     antal = int(a.get("antal") or 1)
-    prisrader, summa = pris(m, priser, a.get("yta"), antal) if priser else ([], 0.0)
-    m.update(antal=antal, prisfil=fil, prisrader=prisrader, summa_kr=summa)
+    m.update(antal=antal)
     for k in ("ok", "dialoger"):
         m.pop(k, None)
-    with open(bas + "_kalkyl.json", "w", encoding="utf-8") as f:
+    with open(bas + "_mangder.json", "w", encoding="utf-8") as f:
         json.dump(m, f, ensure_ascii=False, indent=1)
     tal = lambda x, d=2: ("%.*f" % (d, x)).replace(".", ",")
-    with open(bas + "_kalkyl.csv", "w", encoding="utf-8-sig") as f:
-        f.write("PRISUNDERLAG;%s;antal %d\n\n" % (os.path.basename(a["fil"]), antal))
+    with open(bas + "_mangder.csv", "w", encoding="utf-8-sig") as f:
+        f.write("MÄNGDUNDERLAG;%s;antal %d\n\n" % (os.path.basename(a["fil"]), antal))
         f.write("DEL;POS;PROFIL;MATERIAL;LÄNGD mm;VIKT kg;YTA m2;KAP;GERINGAR;HÅL;LASER m;HÅLTAGNINGAR;BOCKNINGAR\n")
         for d in m["per_del"]:
             f.write("%s;%s;%s;%s;%s;%s;%s;%d;%d;%d;%s;%d;%d\n" % (d["namn"], d["pos"], d["profil"], d["material"], tal(d["langd"], 0),
@@ -249,21 +194,14 @@ def _efterbehandla(m, a):
         for d, n in m["hal_per_diameter"].items():
             f.write("HÅL Ø%s;%d st\n" % (d, n))
         if m.get("inkop"):
-            f.write("\nINKÖP;POS;ANTAL\n")
+            f.write("\nINKÖP;POS;ANTAL;KÄLLA\n")
             per = {}
             for x in m["inkop"]:
-                per.setdefault((x["text"], x["pos"]), 0)
-                per[(x["text"], x["pos"])] += 1
-            for (text, pos), n in sorted(per.items()):
-                f.write("%s;%s;%d\n" % (text, pos, n * antal))
-        if prisrader:
-            f.write("\nPRIS (%s);MÄNGD;ENHET;Á-PRIS;SUMMA kr\n" % os.path.basename(fil))
-            for text, mangd, enhet, apris, s in prisrader:
-                f.write("%s;%s;%s;%s;%s\n" % (text, tal(mangd), enhet, tal(apris), tal(s, 0)))
-            f.write("SUMMA;;;;%s\n" % tal(summa, 0))
-    print("Prisunderlag: %s, %s%s" % (bas + "_kalkyl.csv", os.path.basename(bas + "_kalkyl.json"),
-                                      "; pris %s kr för %d st (%s)" % (tal(summa, 0), antal, os.path.basename(fil)) if prisrader
-                                      else "; inga priser (fyll i egna/priser.json efter mallar/priser.json)"))
+                k_ = (x["text"], x["pos"], x.get("kalla", ""))
+                per[k_] = per.get(k_, 0) + 1
+            for (text, pos, kalla), n in sorted(per.items()):
+                f.write("%s;%s;%d;%s\n" % (text, pos, n * antal, kalla))
+    print("Mängdunderlag: %s, %s" % (bas + "_mangder.csv", os.path.basename(bas + "_mangder.json")))
     return m
 
 
@@ -276,8 +214,6 @@ elif __name__ == "__main__":
     import fcapi
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("fil")
-    ap.add_argument("--priser", default=None)
-    ap.add_argument("--yta", default=None, help="ytbehandling (nyckel i priser.json yta_kr_per_m2), t.ex. pulverlack")
     ap.add_argument("--antal", type=int, default=1)
     ap.add_argument("--ut", default=None)
     a = vars(ap.parse_args())

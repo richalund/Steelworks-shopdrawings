@@ -18,7 +18,7 @@ Material; samma positionsnummer på flera delar = samma position (de ska vara li
 | `k.bockad(pos, t, punkter, langd, mitt=, rot=, radie=, sida="vanster")` | kantvikt plåt (SheetMetal) ur en öppen profil |
 | `k.trag(pos, t, langd, bredd, kant, mitt=, rot=, sidor=("-x","+x","-y","+y"))` | plåttråg, uppbockade kanter, hörnurtag |
 | `k.glas(pos, horn1, horn2, normal=, t=8, glipa=5, djup=0, list_profil=, list_pos=)` | glasruta i en öppning (+ lister) |
-| `k.inkop(pos, text, lada=(x,y,z) \| cylinder=(d,l), mitt=, rot=, vikt=)` | inköpt detalj som utrymmesmodell |
+| `k.inkop(pos, komponent="id" \| text, lada=(x,y,z) \| cylinder=(d,l), mitt=, rot=, vikt=)` | inköpt komponent som utrymmesmodell |
 | `k.referens(namn, lada=(x0,x1,y0,y1,z0,z1) \| bygg=, farg=, transparens=)` | omgivning (inte i materiallistan) |
 | `k.rorelse(namn, delar, axel=(punkt, riktning), fran=, till=, gangjarn=[...])` | rörlig del för rorelse.py |
 | `k.utseende({"g/": "patinerad", "st/": "svart"})` | utseende i 3D-bilder och glb |
@@ -29,8 +29,9 @@ Material; samma positionsnummer på flera delar = samma position (de ska vara li
 - `k.trag`: yttermått langd x bredd x kant; `mitt` = bottens undersida i mitten; kanterna bockas uppåt längs delens
   +z. Justeras efter bygget så att yttermåtten stämmer (OBS-rad i loggen om inte).
 - `k.glas`: rutan = öppningen minus glipan, centrerad i öppningens plan (+ `djup` längs normalen); vikt 2500 kg/m3.
-- `k.inkop`: mått och vikt ur leverantörens datablad. Material "INKÖP"; räknas inte i kap, yta eller laser men i
-  vikten, krockar och rörelsen; listas under INKÖP i prisunderlaget.
+- `k.inkop`: mått och vikt ur leverantörens datablad, helst via komponentregistret (`komponent="id"`, se
+  komponenter.py). Material "INKÖP"; räknas inte i kap, yta eller laser men i vikten, krockar och rörelsen; listas
+  under INKÖP i mängdunderlaget med benämning, tillverkare och artikelnummer, källan i ritningens noter.
 
 Skriptets valfria `REGLER = [dict(villkor="600 <= Bredd <= 1500", text="...", niva="FEL"|"VARNING"), ...]` med
 variablerna och VIKT, LANGD, BREDD, HOJD, DELAR, POSITIONER kontrolleras vid varje bygge (regler.py).
@@ -52,9 +53,10 @@ hål. Pad (relief), Pocket med djup (gravyr) eller "genom" (genombrytning).
 | `rendera.py <modell>` | 3D-bilder med utseende | `_3d_<vy>.png` |
 | `export.py <modell> --format glb,ifc,step,stl` | export | .glb .ifc .step .stl |
 | `dxf.py <modell>` | DXF per plåtposition | `_<pos>_kontur.dxf`, `_utbredning.dxf` |
-| `kalkyl.py <modell> [--priser] [--antal] [--yta]` | mängder och pris | `_kalkyl.csv/.json` |
+| `mangder.py <modell> [--antal]` | mängdunderlag (inga priser) | `_mangder.csv/.json` |
+| `komponenter.py visa/lagg-till/ta-bort` | register över inköpta komponenter med datablad och källa | `egna/komponenter.json` |
 | `regler.py <modell>` | produktregler och verkstadsgränser | rad i loggen, not på ritningen |
-| `paket.py skapa <modell>` / `kontrollera <zip>` | beställningspaket / mottagarens kontroll | `_bestallning.zip` |
+| `paket.py skapa <modell>` / `kontrollera <zip>` / `skicka <zip> [--till]` | beställningspaket / mottagarens kontroll / mail till tillverkaren (skickas inte) | `_bestallning.zip`, `_mail.eml` |
 | `rorelse.py <modell> [--oppen v --ut fil]` | krock genom öppningen, tyngdpunkt, gångjärnslast | rad i loggen, öppen kopia |
 | `hallfasthet.py balk/fem` | balköverslag / FEM med CalculiX | rad i loggen, `_fem.FCStd` |
 | `kallor.py profil/material/motsvarighet` | profilmått, fy/fu, motsvarande kvaliteter | utskrift |
@@ -64,11 +66,12 @@ hål. Pad (relief), Pocket med djup (gravyr) eller "genom" (genombrytning).
 - `egna/foretag.json`: titelblockets uppgifter och logga (foretag.py).
 - `egna/verkstad.json`: lagerlängd, största längd, plåtformat, lyft, förzinkningsbad, transport, hål mot tjocklek
   (mall `mallar/verkstad.json`).
-- `egna/priser.json`: kr/kg per material, kr/m2 ytbehandling, kap, gering, hål, laser, håltagning, bock, svets,
-  per del, start och påslag (mall `mallar/priser.json`).
+- `egna/komponenter.json`: inköpta komponenter med databladets mått, vikt, last och källa (komponenter.py).
+- `egna/leverans.json`: förifylld mottagare för `paket.py skicka` (mall `mallar/leverans.json`, anbud@smide.com).
+- Priser finns inte i skillen eller i `egna/`: tillverkaren prissätter mängdunderlaget med ett eget verktyg.
 - `egna/ornament/`: egna SVG-motiv och typsnitt (kontrollera licensen).
 
 ## Miljövariabler
 `FREECAD_BIN`, `FC_TIMEOUT`, `FC_FELSOK` (fcapi); `FC_FORETAG*`, `FC_LOGGA` (foretag); `FC_KALLOR`,
-`FC_KALLOR_CACHE`, `FC_KALLOR_DAGAR` (kallor); `FC_VERKSTAD_FIL`, `FC_PRISER_FIL`; `FC_DATUM` och `FC_SKILLVERSION`
+`FC_KALLOR_CACHE`, `FC_KALLOR_DAGAR` (kallor); `FC_LAND` (foretag, komponenter); `FC_VERKSTAD_FIL`, `FC_KOMPONENT_FIL`; `FC_DATUM` och `FC_SKILLVERSION`
 (låser datum och version, används av testa.py).

@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verkstadsritningar för smide</title>
+<meta name="description" content="Steelworks Shopdrawings: tillverkningsritningar för smide och plåt med en kodagent och FreeCAD. Så kommer du igång från mobilen.">
+<style>
+:root {
+  --bg: #f7f6f3; --yta: #ffffff; --text: #1d1d1b; --dampad: #5c5b57; --linje: #dddbd5;
+  --accent: #8a5a12; --accent-bg: #f4ead9; --kod: #efede8;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161614; --yta: #1f1f1c; --text: #ecebe6; --dampad: #a9a79f; --linje: #383733;
+    --accent: #e0a64a; --accent-bg: #2c2418; --kod: #2a2a26;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161614; --yta: #1f1f1c; --text: #ecebe6; --dampad: #a9a79f; --linje: #383733;
+  --accent: #e0a64a; --accent-bg: #2c2418; --kod: #2a2a26;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 17px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+main { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 1.75rem; line-height: 1.2; margin: 8px 0 4px; }
+h2 { font-size: 1.3rem; margin: 40px 0 8px; padding-top: 8px; border-top: 1px solid var(--linje); }
+h3 { font-size: 1.05rem; margin: 20px 0 6px; }
+p, li { color: var(--text); }
+.under { color: var(--dampad); margin-top: 0; }
+a { color: var(--accent); }
+code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.88em; }
+code { background: var(--kod); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+pre { background: var(--kod); padding: 10px 12px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+.ruta { background: var(--accent-bg); border-radius: 8px; padding: 12px 16px; margin: 16px 0; }
+.ruta p { margin: 4px 0; }
+details { background: var(--yta); border: 1px solid var(--linje); border-radius: 8px; margin: 12px 0; }
+summary { cursor: pointer; padding: 14px 16px; font-weight: 600; list-style: none; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; float: right; color: var(--dampad); font-weight: 400; }
+details[open] summary::after { content: "–"; }
+summary small { display: block; font-weight: 400; color: var(--dampad); }
+details > div { padding: 0 16px 12px; }
+ol, ul { padding-left: 1.3em; }
+li { margin: 4px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.95em; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--linje); vertical-align: top; }
+.tabell { overflow-x: auto; }
+footer { color: var(--dampad); font-size: 0.9em; margin-top: 48px; }
+</style>
+</head>
+<body>
+<main>
+
+<p class="under">Steelworks Shopdrawings (SW)</p>
+<h1>Verkstadsritningar för smide</h1>
+<p>En öppen skill som låter en kodagent rita smide och plåt i FreeCAD åt dig: du beskriver vad du vill ha på vanlig
+svenska, med en mening, några foton eller en befintlig ritning, och får tillbaka klassiska tillverkningsritningar,
+DXF till laser och kantpress, 3D-bilder och ett mängdunderlag. Allt körs i molnet, så telefonen räcker.</p>
+
+<div class="ruta">
+  <p><strong>Vi testar fortfarande.</strong> Skillen används på riktiga jobb och blir bättre för varje
+  förslag. Blir något fel, saknas något, eller har du en idé: säg det till den som bjöd in dig, skriv ett
+  <a href="https://github.com/richalund/Steelworks-shopdrawings/issues">ärende på GitHub</a>, eller skriv
+  <em>"skicka in förbättringen"</em> i din session om du är inbjuden som bidragsgivare.</p>
+</div>
+
+<h2>Vad den kan</h2>
+<ul>
+  <li><strong>Underlag av alla slag:</strong> en textbeskrivning, kundens foton och mail, arkitektens PDF, en gammal
+    eller scannad ritning, en DXF.</li>
+  <li><strong>Konstruktioner:</strong> plattor, konsoler, bockad plåt med utbredning, balkar, ramar, pelare, räcken och
+    trappräcken, grindar och dörrar, beklädnad, glas, beslag och ornament.</li>
+  <li><strong>Ritningar:</strong> A2-sammanställningar med positioner, snitt, mått och materiallista, A3 för enstaka
+    delar, planritningar – på svenska, engelska eller kinesiska.</li>
+  <li><strong>Till verkstaden:</strong> DXF, STEP, tillverkningsgranskning av plåt, krock- och rörelsekontroll för
+    grindar och dörrar, hållfasthetsöverslag.</li>
+  <li><strong>Beslag, lås och glas</strong> söks upp hos leverantörer i ditt land och ritas med måtten ur deras
+    datablad.</li>
+  <li><strong>När du är nöjd</strong> frågar agenten om underlaget ska mailas till en tillverkare för offert. Du väljer
+    själv mottagare, och inget skickas utan att du säger till.</li>
+</ul>
+<p>Mått hittas aldrig på: agenten frågar, eller skriver tydligt på ritningen vad som är antaget. Ritningarna är
+underlag; den som tillverkar ansvarar för dimensionering och krav.</p>
+
+<h2>Kom igång från mobilen</h2>
+<p>Du behöver ett <strong>gratis GitHub-konto</strong> (<a href="https://github.com/signup">github.com/signup</a>)
+och ett betalt abonnemang på en av kodagenterna nedan. Repot är
+<a href="https://github.com/richalund/Steelworks-shopdrawings"><code>richalund/Steelworks-shopdrawings</code></a>.
+Första gången i en ny miljö installeras FreeCAD, vilket tar 10–15 minuter; sedan går det på sekunder.</p>
+<p>Claude Code är det vi testar mest, och det enda där du laddar ner filerna direkt ur sessionen. I de andra
+agenterna lämnas filerna som en gren eller en pull request på GitHub, så där behöver du en egen kopia av repot
+(en <em>fork</em>) om du inte är inbjuden som bidragsgivare: öppna repot på GitHub, tryck <strong>Fork</strong> →
+<strong>Create fork</strong>, och välj sedan din fork i stället för originalet i stegen nedan.</p>
+<p class="under">Menyerna byter ibland namn mellan versioner av apparna; leta efter motsvarande ord om något inte
+stämmer exakt, och säg gärna till så att vi rättar sidan.</p>
+
+<details open>
+  <summary>1. Claude Code <small>Claude-appen (iOS, Android) · Claude Pro eller Max</small></summary>
+  <div>
+  <ol>
+    <li>Skaffa <strong>Claude Pro</strong> (eller Max) på <a href="https://claude.ai">claude.ai</a> och installera
+      Claude-appen.</li>
+    <li>Koppla GitHub: öppna <a href="https://claude.ai/connect-github">claude.ai/connect-github</a> i telefonens
+      webbläsare, logga in med samma konton och godkänn.</li>
+    <li>I appen: öppna <strong>Code</strong>, välj repot <code>richalund/Steelworks-shopdrawings</code> och starta en
+      ny session.</li>
+    <li><strong>Nätet (en gång):</strong> standardmiljön släpper inte igenom alla installationsadresser. Tryck på
+      molnmiljöns meny i sessionens titelrad → <strong>Edit</strong> → <strong>Network access</strong>. Välj
+      <strong>Limited</strong> (i äldre appar <strong>Custom</strong>), låt <em>Allow package managers</em> vara
+      ikryssad och lägg till domänerna i rutan nedan under <strong>Allowed domains</strong>. Spara. (Alternativet
+      <strong>Full</strong> fungerar också.)</li>
+    <li>Skriv vad du vill ha. Installationen startar av sig själv i bakgrunden (repots SessionStart-hook), och Claude
+      väntar in den innan första ritningen.</li>
+  </ol>
+  <p>Byt modell med modellväljaren i sessionen eller kommandot <code>/model</code>; se kvottipsen nedan.</p>
+  </div>
+</details>
+
+<details>
+  <summary>2. OpenAI Codex <small>ChatGPT-appen · ChatGPT Plus eller högre</small></summary>
+  <div>
+  <p>Miljön skapas en gång i webbläsaren (fungerar i telefonens webbläsare i datorläge), sedan körs allt från
+  appen.</p>
+  <ol>
+    <li>Gå till <a href="https://chatgpt.com/codex">chatgpt.com/codex</a> och koppla GitHub när du blir ombedd
+      (ge åtkomst till repot eller din fork).</li>
+    <li><strong>Settings</strong> → <strong>Environments</strong> → <strong>Create environment</strong>. Välj repot.</li>
+    <li>Under <strong>Setup script</strong>, skriv:
+      <pre>bash .claude/skills/freecad-styrning/scripts/installera_linux.sh</pre></li>
+    <li>Under <strong>Agent internet access</strong>: slå på, välj <em>Common dependencies</em> som grund och lägg
+      till domänerna i rutan nedan (eller tillåt allt). Spara/publicera miljön.</li>
+    <li>I ChatGPT-appen: öppna <strong>Codex</strong>, välj miljön och skriv uppgiften, t.ex. <em>"Läs AGENTS.md och
+      rita en grind 1000 bred och 1100 hög …"</em>.</li>
+    <li>När Codex är klar: be den lägga filerna i <code>leverans/</code> och skapa en pull request, och öppna PDF:erna
+      från PR:en i GitHub-appen.</li>
+  </ol>
+  <p>Codex läser <code>AGENTS.md</code> och hittar skillen i <code>.agents/skills/</code>. Miljön sparas en tid efter
+  installationen, så nästa uppgift startar snabbare.</p>
+  </div>
+</details>
+
+<details>
+  <summary>3. GitHub Copilot <small>GitHub-appen · Copilot Pro eller Pro+</small></summary>
+  <div>
+  <ol>
+    <li>Skaffa <strong>Copilot Pro</strong> (eller Pro+) under
+      <a href="https://github.com/settings/copilot">github.com/settings/copilot</a>.</li>
+    <li>Installera <strong>GitHub</strong>-appen och logga in.</li>
+    <li>Tryck på <strong>Copilot</strong>-ikonen → <strong>New session</strong> (eller agentfliken), välj repot eller din
+      fork och skriv uppgiften.</li>
+    <li>Installationen sköts av filen <code>.github/workflows/copilot-setup-steps.yml</code> i repot: FreeCAD
+      installeras innan agenten börjar (och ligger i cache till nästa gång). Inget att ställa in.</li>
+    <li>Copilot arbetar i en pull request. Be den lägga PDF:er och bilder i <code>leverans/</code>, och öppna dem från
+      PR:en.</li>
+  </ol>
+  <p>Copilots brandvägg gäller under själva arbetet. Behöver agenten nå källorna för profilmått
+  (<code>eurocodeapplied.com</code>) eller leverantörers webbplatser: lägg till dem i repots
+  <strong>Settings</strong> → <strong>Copilot</strong> → <strong>Coding agent</strong> → brandväggens tillåtna lista
+  (görs i webbläsaren, av den som äger repot eller forken). En session får högst en knapp timme.</p>
+  </div>
+</details>
+
+<details>
+  <summary>4. Cursor <small>Cursor-appen (iOS) eller cursor.com/agents · betalt Cursor-abonnemang</small></summary>
+  <div>
+  <ol>
+    <li>Skaffa ett betalt Cursor-abonnemang med molnagenter (cloud/background agents) på
+      <a href="https://cursor.com/pricing">cursor.com</a>.</li>
+    <li>Öppna Cursor-appen på iPhone, eller <a href="https://cursor.com/agents">cursor.com/agents</a> i telefonens
+      webbläsare (lägg den på hemskärmen på Android).</li>
+    <li>Koppla GitHub när du blir ombedd och välj repot eller din fork.</li>
+    <li>Starta en ny agent och skriv uppgiften. Installationen körs av sig själv från
+      <code>.cursor/environment.json</code> i repot.</li>
+    <li>Cursor lämnar resultatet på en gren eller i en pull request. Be den lägga PDF:er och bilder i
+      <code>leverans/</code>.</li>
+  </ol>
+  <p>Cursor läser <code>AGENTS.md</code>. Börja gärna uppgiften med <em>"Följ AGENTS.md"</em>.</p>
+  </div>
+</details>
+
+<h3>Domäner som ska vara tillåtna</h3>
+<pre>micro.mamba.pm
+github.com
+objects.githubusercontent.com
+raw.githubusercontent.com
+conda.anaconda.org
+cdn.jsdelivr.net
+data.jsdelivr.com
+pypi.org
+files.pythonhosted.org
+eurocodeapplied.com</pre>
+<p class="under">De första används av installationen; <code>raw.githubusercontent.com</code> och
+<code>eurocodeapplied.com</code> är källorna för profilmått och materialvärden. För beslag och glas söker agenten
+på leverantörers webbplatser.</p>
+
+<h2>Så räcker abonnemanget längre</h2>
+<p>Alla agenterna har en gräns för hur mycket du kan använda dem per timmar och vecka. En ritning i en ny session tar
+en liten del av gränsen; långa sessioner, stora bilder och den dyraste modellen tar mest.</p>
+<ul>
+  <li><strong>En ny session per jobb.</strong> Varje meddelande skickar med hela sessionens historik, så en lång
+    session blir dyrare för varje ändring. Börja om för nästa grind.</li>
+  <li><strong>Välj modell efter uppgiften.</strong> Den mest avancerade modellen behövs sällan: skripten gör det tunga
+    arbetet och modellen styr dem.</li>
+  <li><strong>Samla ändringarna</strong> i ett meddelande: <em>"1200 bred, handledare i rör 42, lägg till ett
+    snitt"</em> i stället för tre.</li>
+  <li><strong>Färre och mindre bilder.</strong> Skicka de två–tre foton som visar det viktiga, beskärda om det går.
+    En scannad ritning: säg vilken sida och vilket räcke det gäller.</li>
+  <li><strong>Ge måtten du har</strong> direkt. Det sparar frågor och omtag.</li>
+  <li><strong>Se förbrukningen:</strong> i Claude under <em>Inställningar → Användning</em> (eller
+    <code>/usage</code> i sessionen); de andra har motsvarande sida i sina inställningar.</li>
+</ul>
+
+<h3>Vilken modell? (Claude)</h3>
+<div class="tabell">
+<table>
+  <tr><th>Modell</th><th>Ungefärlig kostnad mot gränsen</th><th>Passar till</th></tr>
+  <tr><td>Fable 5.1</td><td>ca 2,5 × Opus</td><td>Behövs normalt inte för ritningar.</td></tr>
+  <tr><td><strong>Opus 5.5</strong></td><td>1 (jämförelse)</td><td>Rekommenderas: nya konstruktioner, foton och
+    scannade ritningar.</td></tr>
+  <tr><td>Sonnet 5.5</td><td>ca 0,5 × Opus</td><td>Ändringar i en befintlig ritning, enklare delar. Prova gärna även
+    för nya jobb.</td></tr>
+  <tr><td>Haiku 5.5</td><td>ca 0,03 × Opus</td><td>Inte testad. Troligen för svag för att skriva nya konstruktioner,
+    men kan räcka för enkla ändringar som <em>"gör grinden 1200 bred"</em>.</td></tr>
+</table>
+</div>
+<p>Kostnaderna är räknade på modellernas listpriser per ord; hur abonnemangets gräns räknas kan skilja sig något. Ett
+bra sätt är att börja med Opus för första ritningen och byta till Sonnet för ändringarna. Testar du Sonnet eller Haiku
+på ett helt jobb: berätta hur det gick, så skriver vi in det här.</p>
+<p>I de andra agenterna gäller samma princip: välj en mellanmodell i stället för den största, och starta en ny
+uppgift per jobb.</p>
+
+<h2>Tips för ett bra resultat</h2>
+<ul>
+  <li>Börja enkelt: <em>"Rita en grind 1000 bred och 1100 hög med ram i VKR40 och stolpar VKR80 som gjuts ner."</em></li>
+  <li>Titta på bilderna och be om ändringar som till en ritare: <em>"stolparna ska stå mitt på stegen"</em>.</li>
+  <li>Fortsätt tills du är nöjd med ritningen och 3D-bilderna: det är det underlaget som en tillverkare räknar på.</li>
+  <li>Har du en egen produkt (gångjärn, lås, glas): säg vilken eller skicka länken.</li>
+</ul>
+
+<footer>
+  <p>Steelworks Shopdrawings är öppen källkod (MIT) och bygger på FreeCAD (LGPL).
+  <a href="https://github.com/richalund/Steelworks-shopdrawings">Repot på GitHub</a> ·
+  <a href="https://github.com/richalund/Steelworks-shopdrawings/blob/main/ANVANDA.md">Användarguide</a> ·
+  <a href="https://github.com/richalund/Steelworks-shopdrawings/blob/main/BIDRA.md">Bidra</a></p>
+</footer>
+
+</main>
+</body>
+</html>

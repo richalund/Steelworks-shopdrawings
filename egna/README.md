@@ -10,7 +10,8 @@ av skickas in till skillen som en pull request, se SKILL.md):
 - `egna/ritningar/*.py` – ritskript för översikts- och planritningar (`scripts/oversikt.py`)
 - `egna/foretag.json` och loggan – företagsuppgifter till titelblocket (`scripts/foretag.py satt --fil egna/foretag.json`)
 - `egna/verkstad.json` – verkstadens gränser för regelkontrollen (kopia av `.claude/skills/freecad-styrning/mallar/verkstad.json`)
-- `egna/priser.json` – verkstadens priser för prisunderlaget (kopia av `.../mallar/priser.json`), aldrig i skillen
+- `egna/komponenter.json` – inköpta komponenter (beslag, lås, glas) med databladets mått och källa (`scripts/komponenter.py`)
+- `egna/leverans.json` – förifylld mottagare när underlaget skickas (kopia av `.../mallar/leverans.json`)
 - `egna/ornament/` – egna SVG-motiv och typsnitt till ornament (`scripts/ornament.py`)
 - `ut/` – allt som genereras (ignoreras av git)
 
