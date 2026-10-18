@@ -1,8 +1,8 @@
 """Översikt T/1: P. Hellstones entrétrappa med räckena R/1, R/2 och R/3 på plats, för 3D-visualisering.
 Trappan ritas som på fotona (se egna/trappa_hellstone.py): granitsteg på murade blockväggar, övre lopp längs
-fasaden med dörrpodest, vilplan med granitram, nedre lopp vinkelrätt ut som breddas mot innergården, stenlagd
-innergård och gång. Sten, mark och hus är referenskroppar utan positionsnummer (syns i 3D men ingår inte i
-materiallistan); bara räckena får positionsnummer.
+fasaden med dörrpodest, vilplan med granitram, jämnbrett nedre lopp vinkelrätt ut från fasaden. Bara trappan
+och räckena är med (inget hus eller mark). Stenen är referenskroppar utan positionsnummer (syns i 3D men ingår
+inte i materiallistan); bara räckena får positionsnummer.
 
 Bygg: sammanstallning.py bygg egna/konstruktioner/trappa_oversikt.py ut/T1_Trappa_oversikt.FCStd --png
 Bilder från fler håll: python3 egna/rendera.py ut/T1_Trappa_oversikt.FCStd
@@ -17,9 +17,6 @@ VARIABLER = list(racke_bas.VARIABLER_RACKE)
 
 GRANIT = (0.82, 0.82, 0.80)
 BLOCK = (0.43, 0.35, 0.29)
-MARK = (0.60, 0.54, 0.45)
-GRAS = (0.45, 0.62, 0.32)
-FASAD = (0.60, 0.17, 0.15)
 SLAB = 130.0                    # granitstegens tjocklek (= steghöjden)
 
 
@@ -51,10 +48,6 @@ def racke(modul):
 
 def bygg(k, v):
     B, Zv, Zp = T.BREDD, T.Z_VILPLAN, T.Z_PODEST
-    # ---- mark: stenlagd innergård framför övre loppet, gång framför nedre loppet, gräs på trädgårdssidan
-    referens(k, "Ref_Innergard", 0, T.X_VAGG, B, T.Y_FRAM + 1500, -60, 0, MARK)
-    referens(k, "Ref_Gang", T.X_VILPLAN, 0, T.Y_FRAM, T.Y_FRAM + 1500, -60, 0, MARK)
-    referens(k, "Ref_Gras", T.X_VILPLAN - 2500, T.X_VILPLAN, 0, T.Y_FRAM + 1500, -80, -20, GRAS)
     # ---- vilplan: murad kärna och granitram med mittfält
     referens(k, "Ref_Vilplan_mur", T.X_VILPLAN, 0, 0, B, 0, Zv - SLAB, BLOCK)
     ram = 250.0
@@ -77,10 +70,6 @@ def bygg(k, v):
     for (kk, y0, y1, x0, x1, z) in T.nedre_steg():
         referens(k, "Ref_Nedre_mur%d" % kk, x0, x1, y0, y1, 0, z - SLAB, BLOCK) if z > SLAB else None
         referens(k, "Ref_Nedre_steg%d" % kk, x0, x1, y0, y1, max(z - SLAB, 0), z, GRANIT)
-    # ---- huset: fasad med dörr, utbyggnad vid podestens ände
-    referens(k, "Ref_Fasad", T.X_VILPLAN - 2500, T.X_VAGG, -150, 0, -60, Zp + 2300, FASAD, 35)
-    referens(k, "Ref_Utbyggnad", T.X_VAGG, T.X_VAGG + 1500, -150, 2000, -60, Zp + 2300, FASAD, 65)
-    referens(k, "Ref_Dorr", T.X_PODEST + 150, T.X_PODEST + 1050, 0, 30, Zp, Zp + 2000, (0.93, 0.93, 0.90))
     # ---- räckena
     y_r1 = B - T.KANT
     x_r2, x_r3 = -T.KANT, T.X_VILPLAN + T.KANT

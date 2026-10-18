@@ -6,9 +6,8 @@ Trappan:
 - Övre lopp längs fasaden: dörrpodest framför dörren, 4 granitsteg ner till vilplanet. Bredd 1500 ut från
   fasaden, utsidan är en murad blockvägg mot en stenlagd innergård.
 - Vilplan (granitram med mittfält) i övre loppets nedre ände, lika djupt som loppet.
-- Nedre lopp vinkelrätt ut från fasaden: 5 granitsteg från vilplanets framkant ner till gången. Högra sidan
-  (bort från dörren) rak i linje med vilplanets gavel, vänstra sidan breddas 200 per steg ut mot innergården
-  (översta steget 1800, nedersta 2600).
+- Nedre lopp vinkelrätt ut från fasaden: 5 granitsteg från vilplanets framkant ner till gången, jämnbrett i
+  hela loppet (lika brett som vilplanet, 1600), sidorna i linje med vilplanets gavel och övre loppets början.
 - 11 lika stigningar à 130 från gården till dörren: vilplanet +780, dörrpodesten +1430.
 
 Koordinater: X längs fasaden (x = 0 där övre loppet börjar vid vilplanet, dörren åt +x), Y ut från fasaden
@@ -24,7 +23,7 @@ N_NEDRE = 6                    # stigningar gång -> vilplan (5 steg)
 BREDD = 1500.0                 # övre loppets bredd = vilplanets djup från fasaden
 VILPLAN = 1600.0               # vilplanets längd längs fasaden = nedre loppets översta bredd
 PODEST = 1100.0                # dörrpodestens längd längs fasaden
-NEDRE_UTBREDNING = 200.0       # nedre stegen breddas så mycket per steg mot innergården
+NEDRE_UTBREDNING = 0.0         # nedre loppet jämnbrett (fotot antydde breddning mot innergården)
 KANT = 60.0                    # räckets avstånd in från stenkanten
 
 Z_VILPLAN = N_NEDRE * R                                    # 780

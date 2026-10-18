@@ -1,37 +1,45 @@
-"""Gemensam byggare för smidesräcken i stilen från P. Hellstones förebilder (mail 2026-10-17): fyrkantiga
-stolpar FS20 nedgjutna i granitstegen, plan handledare PL40*8 med smidd snäcka i nedre änden, överliggare
-PL30*8 på högkant under handledaren, underliggare PL40*8 plant, stående spjälor D12 mellan liggarna med fri
-öppning < 100 mm.
+"""Gemensam byggare för smidesräcken i stilen från P. Hellstones förebilder (mail 2026-10-17):
+- stolpar FS20, nedgjutna i granitstegen
+- handledare FL40*10: plattstål 40x10 med rundad översida (R52, sidorna 6 höga), smidd snäcka i nedre änden
+- följare under handledaren och underliggare nedtill: 2 st plattstål PL5*20 på högkant, ett på var sida om
+  spjälorna
+- spjälor FS12 (fyrkantstång 12x12) mellan följarna, kant i kant med följarnas över- och underkant, fri
+  öppning < 100 mm
 
 Räcket följer en framkantslinje (polylinje i lokala x, z: trapplopp och plana partier med knäckar) och står på
 ytan yta(x). Handledaren ligger Hojd lodrätt över linjen och delas i knäckarna (hl/1, hl/2 ... bockas eller
 svetsas). Stolparnas lägen ges av konstruktionsskriptet; vid en knäck står stolpen på den plana sidan.
-Liggare och spjälor räknas per fack mellan stolparna.
+Följare, spjälor och fack räknas per fack mellan stolparna.
 
 Lokala koordinater: X längs räcket (uppför), Y tvärs (räckesplanet y = 0), Z uppåt. `ursprung`, `ex`, `ey`
 placerar räcket i en större modell (översikten T/1).
 Snäckan: handledarens nedre ände fortsätter 150 mm rakt förbi stolpen och rullas sedan ihop nedåt i 1,5 varv
 (mittlinjeradier 42, 28, 16) – tangerande bågar i en skiss på handledarens kropp, Pad 40.
+Detaljerna (snitt och förstoringar i 1:2) sparas i sammanställningens egenskap Detaljer och ritas av
+egna/ritning_detaljer.py efter sammanstallning.py ritning.
 Måtten räknas ut i Python (sned geometri): ändrade mått kräver ombyggnad (sammanstallning.py bygg).
 """
+import json
 import math
 
 STAL = "S235JR"
-HL_B, HL_T = 40.0, 8.0          # handledare PL40*8, plant
-OL_H, OL_T = 30.0, 8.0          # överliggare PL30*8 på högkant
-UL_B, UL_T = 40.0, 8.0          # underliggare PL40*8, plant
-SPJ_D = 12.0                    # spjäla D12
+HL_B, HL_T, HL_SIDA = 40.0, 10.0, 6.0   # handledare 40x10, sidorna 6, rundad översida
+HL_R = ((HL_B / 2) ** 2 + (HL_T - HL_SIDA) ** 2) / (2 * (HL_T - HL_SIDA))     # 52
+HL_PROFIL = "FL40*10"                 # plattstål 40x10 med rundad översida (namnet ger tjockleken till källnoterna)
+FL_H, FL_T = 20.0, 5.0          # följare/underliggare 2 st PL5*20 på högkant
+SPJ_A = 12.0                    # spjäla FS12
 ST_A = 20.0                     # stolpe FS20
 INGJUT = 100.0                  # stolparnas ingjutning i stenen
 SNACKA_RAK = 150.0              # rak handledare förbi nedersta stolpen före snäckan
 SNACKA_R = (42.0, 28.0, 16.0)   # snäckans mittlinjeradier, tre halvvarv
-SPALT = 2.0                     # svetsspalt vid liggarnas ändar
+SPALT = 2.0                     # svetsspalt vid följarnas ändar
 KNACK_SPALT = 1.5               # spalt per sida i handledarens knäck
+Y_FL = SPJ_A / 2 + FL_T / 2     # följarnas mitt från räckesplanet (8,5)
 
 VARIABLER_RACKE = [
     ("Hojd", 900, "mm, handledarens överkant lodrätt över stegframkant / plan yta"),
     ("Under", 80, "mm, underliggarens mitt lodrätt över stegframkant / plan yta"),
-    ("Mellan", 70, "mm, fritt mellan handledare och överliggare"),
+    ("Mellan", 70, "mm, fritt mellan handledare och följare"),
 ]
 
 
@@ -78,6 +86,59 @@ def bygg_snacka(k, hl):
     dd.stada()
 
 
+def handledarprofil(L):
+    """Kropp för handledaren FL40*10: tvärsnitt med plan undersida, 6 höga sidor och rundad översida R52
+    (fullt bestämd skiss, lådans mitt i origo), Pad L längs kroppens z."""
+    def bygg(d):
+        import pd
+        import Part
+        from FreeCAD import Vector as V
+        sk = d.skiss("Tvarsnitt", "XY")
+        b2, y0, y1 = HL_B / 2, -HL_T / 2, -HL_T / 2 + HL_SIDA
+        A, B, C, D = (-b2, y0), (b2, y0), (b2, y1), (-b2, y1)
+        g = [sk.geo(Part.LineSegment(V(*p, 0), V(*q, 0))) for p, q in ((A, B), (B, C), (D, A))]
+        yc = HL_T / 2 - HL_R
+        a0, a1 = math.atan2(y1 - yc, b2), math.atan2(y1 - yc, -b2)
+        bage = sk.geo(Part.ArcOfCircle(Part.Circle(V(0, yc, 0), V(0, 0, 1), HL_R), a0, a1))
+        sk.begr("Coincident", g[0], pd.SLUT, g[1], pd.START)
+        sk.begr("Coincident", g[1], pd.SLUT, bage, pd.START)
+        sk.begr("Coincident", bage, pd.SLUT, g[2], pd.START)
+        sk.begr("Coincident", g[2], pd.SLUT, g[0], pd.START)
+        for gi, pt, pp in ((g[0], pd.START, A), (g[0], pd.SLUT, B), (g[1], pd.SLUT, C), (g[2], pd.START, D)):
+            sk.placera(gi, pt, pp[0], pp[1], namn="")
+        sk.matt("Radius", bage, varde=HL_R, namn="R")
+        d.kloss(sk, round(L, 2), "Langd")
+    return bygg
+
+
+def gera(k, o, a, b):
+    """k.gera (snedkapning genom punkterna a och b) med en lösning för FreeCAD 1.1.3: en Pocket "genom allt"
+    med SideType Symmetric skär ingenting där (uppmätt 2026-10-18), så fickan görs om till en symmetrisk längd
+    som täcker hela kroppen. Kontrollerar att något skars bort."""
+    fore = o.Shape.Volume
+    diag = o.Shape.BoundBox.DiagonalLength
+    k.gera(o, a, b)
+    f = [g for g in o.Group if g.TypeId == "PartDesign::Pocket"][-1]
+    if f.Type == "ThroughAll":                 # skär ingenting eller bara ena halvan i FreeCAD 1.1.3
+        f.Type = "Length"
+        if hasattr(f, "SideType"):
+            f.SideType = "Symmetric"
+        else:
+            f.Midplane = True
+        f.Length = 2 * diag + 10
+        k.doc.recompute()
+    if f.Shape.Volume > fore - 1e-6:
+        raise RuntimeError("Snedkapningen av %s skar inte bort något" % o.Label)
+
+
+def fyrkant(a, L):
+    def bygg(d):
+        sk = d.skiss("Tvarsnitt", "XY")
+        sk.rektangel(a, a, namn=("Sida", "Sida2"))
+        d.kloss(sk, round(L, 2), "Langd")
+    return bygg
+
+
 class Linje:
     """Framkantslinjen: polylinje genom knäckpunkterna (x, z), förlängd med ändsegmentens lutning."""
 
@@ -88,8 +149,6 @@ class Linje:
         p = self.p
         for i in range(len(p) - 1):
             if x < p[i + 1][0] or (not hoger and x <= p[i + 1][0]):
-                return p[i], p[i + 1]
-            if i == len(p) - 2:
                 return p[i], p[i + 1]
         return p[-2], p[-1]
 
@@ -110,7 +169,7 @@ def bygg_racke(k, v, nos_pkt, yta, stolpar, hl_x, start="snacka", ursprung=(0, 0
                prefix="", huvuddel=True):
     """nos_pkt: framkantslinjens knäckpunkter; yta(x): stenens överkant under en stolpe; stolpar: stolparnas x
     (uppför); hl_x: handledarens ändar (x0, x1); start: "snacka" (snäcka i nedre änden) eller "rak".
-    Returnerar dict med fack, handledarbitar m.m. för noterna."""
+    Returnerar dict med fack, handledarbitar, snitt och detaljer för ritningen."""
     H, under, mellan = v["Hojd"], v["Under"], v["Mellan"]
     nos = Linje(nos_pkt)
     ex, ey = [float(q) for q in ex], [float(q) for q in ey]
@@ -130,78 +189,68 @@ def bygg_racke(k, v, nos_pkt, yta, stolpar, hl_x, start="snacka", ursprung=(0, 0
         a2 = a + (KNACK_SPALT if i > 0 else 0.0)
         b2 = b - (KNACK_SPALT if i < len(grans) - 2 else 0.0)
         t = nos.lutning((a + b) / 2)
-        zc = lambda x: nos(x) + H - HL_T / 2 / cos(t)
-        hl = k.balk(pos_("hl/%d" % (i + 1)), "PL%g*%g" % (HL_T, HL_B), P(a2, 0, zc(a2)), P(b2, 0, zc(b2)), upp=D(0, 0, 1), material=STAL)
+        c, s_ = cos(t), math.sin(math.atan(t))
+        zc = nos(a2) + H - HL_T / 2 / c
+        L = (b2 - a2) / c
+        hl = k.egen(pos_("hl/%d" % (i + 1)), HL_PROFIL, handledarprofil(L), mitt=P(a2, 0, zc),
+                    rot=(D(0, 1, 0), D(-s_, 0, c), D(c, 0, s_)), material=STAL)
         if i == 0 and start == "snacka":
             bygg_snacka(k, hl)
-        bitar.append(dict(pos=pos_("hl/%d" % (i + 1)), langd=(b2 - a2) / cos(t), lutning=math.degrees(math.atan(t))))
+        bitar.append(dict(pos=pos_("hl/%d" % (i + 1)), langd=L, lutning=math.degrees(math.atan(t))))
 
     # ---- stolpar
-    def fs20(L):
-        def bygg(d):
-            sk = d.skiss("Tvarsnitt", "XY")
-            sk.rektangel(ST_A, ST_A, namn=("Sida", "Sida2"))
-            d.kloss(sk, round(L, 2), "Langd")
-        return bygg
-
     spos = {}
     for i, x in enumerate(stolpar):
         xa, xb = x - ST_A / 2, x + ST_A / 2
         za, zb = hl_uk(xa), hl_uk(xb, hoger=False)
         z0 = yta(x) - INGJUT
         Lp = round(max(za, zb) - z0, 1)
-        nyckel = (Lp, round(zb - za, 1))
-        pos = spos.setdefault(nyckel, pos_("st/%d" % (len(spos) + 1)))
-        st = k.egen(pos, "FS%g" % ST_A, fs20(Lp), mitt=P(x, 0, z0), rot=(ex, ey, ez), material=STAL, huvuddel=(huvuddel and i == 0))
+        pos = spos.setdefault((Lp, round(zb - za, 1)), pos_("st/%d" % (len(spos) + 1)))
+        st = k.egen(pos, "FS%g" % ST_A, fyrkant(ST_A, Lp), mitt=P(x, 0, z0), rot=(ex, ey, ez), material=STAL,
+                    huvuddel=(huvuddel and i == 0))
         if abs(zb - za) > 0.01:
-            k.gera(st, P(xa, 0, za), P(xb, 0, zb))
+            gera(k, st, P(xa, 0, za), P(xb, 0, zb))
 
-    # ---- liggare och spjälor per fack (raka mellan stolparna)
-    lpos, sppos, fack = {}, {}, []
+    # ---- följare, underliggare och spjälor per fack (raka mellan stolparna)
+    lpos, sppos, fack, sp_forst = {}, {}, [], {}
     snitt_x = None
-    sp_forst = {}                                       # första spjälan per position (snitt genom varje)
 
     def nr(tab, prefixtxt, nyckel):
         return tab.setdefault(nyckel, pos_("%s/%d" % (prefixtxt, len(tab) + 1)))
 
+    prof = "PL%g*%g" % (FL_T, FL_H)
     for xa, xb in zip(stolpar, stolpar[1:]):
         fa, fb = xa + ST_A / 2, xb - ST_A / 2
-        ok_a, ok_b = hl_uk(fa) - mellan, hl_uk(fb, hoger=False) - mellan          # överliggarens överkant
+        ok_a, ok_b = hl_uk(fa) - mellan, hl_uk(fb, hoger=False) - mellan          # följarnas överkant
         tf = (ok_b - ok_a) / (fb - fa)
         cf = cos(tf)
-        ol_ok = lambda x: ok_a + (x - fa) * tf
-        ol_mitt = lambda x: ol_ok(x) - OL_H / 2 / cf
-        ol_uk = lambda x: ol_ok(x) - OL_H / cf
-        ua, ub = nos(fa) + under, nos(fb) + under                                 # underliggarens mitt
+        f_ok = lambda x: ok_a + (x - fa) * tf
+        f_mitt = lambda x: f_ok(x) - FL_H / 2 / cf
+        ua, ub = nos(fa) + under, nos(fb) + under                                 # underliggarnas mitt
         tu = (ub - ua) / (fb - fa)
         cu = cos(tu)
-        ul_mitt = lambda x: ua + (x - fa) * tu
-        ul_ok = lambda x: ul_mitt(x) + UL_T / 2 / cu
-        # överliggare på högkant: lodräta ändar mot stolparna
-        prof = "PL%g*%g" % (OL_T, OL_H)
-        L = (fb - fa - 2 * SPALT) / cf
-        ol = k.balk(nr(lpos, "l", (prof, round(L, 1), round(tf, 3))), prof, P(fa + SPALT, 0, ol_mitt(fa + SPALT)),
-                    P(fb - SPALT, 0, ol_mitt(fb - SPALT)), upp=D(0, 1, 0), material=STAL)
-        if abs(tf) > 1e-4:
-            for xf in (fa + SPALT, fb - SPALT):
-                k.gera(ol, P(xf, 0, ol_mitt(xf) - 40), P(xf, 0, ol_mitt(xf) + 40))
-        # underliggare plant: ändarna vinkelräta mot lutningen, spalt så hörnen inte går in i stolpen
-        g = SPALT + UL_T / 2 * abs(tu)
-        prof = "PL%g*%g" % (UL_T, UL_B)
-        L = (fb - fa - 2 * g) / cu
-        k.balk(nr(lpos, "l", (prof, round(L, 1), round(tu, 3))), prof, P(fa + g, 0, ul_mitt(fa + g)), P(fb - g, 0, ul_mitt(fb - g)),
-               upp=D(0, 0, 1), material=STAL)
-        # spjälor: fri öppning < 100 vågrätt
+        u_mitt = lambda x: ua + (x - fa) * tu
+        u_uk = lambda x: u_mitt(x) - FL_H / 2 / cu
+        # följare och underliggare: 2 st PL5*20 på högkant, lodräta ändar mot stolparna
+        for mitt_, t_, c_ in ((f_mitt, tf, cf), (u_mitt, tu, cu)):
+            L = (fb - fa - 2 * SPALT) / c_
+            pos = nr(lpos, "l", (round(L, 1), round(t_, 3)))
+            for y in (-Y_FL, Y_FL):
+                fl = k.balk(pos, prof, P(fa + SPALT, y, mitt_(fa + SPALT)), P(fb - SPALT, y, mitt_(fb - SPALT)), upp=D(0, 1, 0), material=STAL)
+                if abs(t_) > 1e-4:
+                    for xf in (fa + SPALT, fb - SPALT):
+                        gera(k, fl, P(xf, y, mitt_(xf) - 40), P(xf, y, mitt_(xf) + 40))
+        # spjälor FS12 mellan följarna, kant i kant med följarnas överkant och underliggarnas underkant
         w = fb - fa
-        m = max(1, int(math.ceil((w - 100.0) / (100.0 + SPJ_D))))
-        fri = (w - m * SPJ_D) / (m + 1)
-        fack.append(dict(fri=fri, cc=fri + SPJ_D, antal=m, lutning=math.degrees(math.atan(tf))))
-        r = SPJ_D / 2
+        m = max(1, int(math.ceil((w - 100.0) / (100.0 + SPJ_A))))
+        fri = (w - m * SPJ_A) / (m + 1)
+        fack.append(dict(fri=fri, cc=fri + SPJ_A, antal=m, lutning=math.degrees(math.atan(tf))))
+        r = SPJ_A / 2
         for j in range(m):
-            x = fa + fri * (j + 1) + SPJ_D * (j + 0.5)
+            x = fa + fri * (j + 1) + SPJ_A * (j + 0.5)
             if snitt_x is None and j == 1:
                 snitt_x = x
-            zb_, zt_ = ul_ok(x) - r * abs(tu), ol_uk(x) + r * abs(tf)
+            zb_, zt_ = u_uk(x) - r * abs(tu), f_ok(x) + r * abs(tf)
             Ls = zt_ - zb_
             if abs(tu) > 1e-4:                  # snedkapad nedtill: hel mm, kapet tar bort överskottet
                 Ls = math.ceil(Ls)
@@ -209,22 +258,53 @@ def bygg_racke(k, v, nos_pkt, yta, stolpar, hl_x, start="snacka", ursprung=(0, 0
             nyckel = (round(Ls), round(math.degrees(math.atan(tu))), round(math.degrees(math.atan(tf))))
             spnr = nr(sppos, "sp", nyckel)
             sp_forst.setdefault(spnr, round(x, 1))
-            sp = k.balk(spnr, "D%g" % SPJ_D, P(x, 0, zb_), P(x, 0, zt_), upp=D(0, 1, 0), material=STAL)
+            sp = k.egen(spnr, "FS%g" % SPJ_A, fyrkant(SPJ_A, Ls), mitt=P(x, 0, zb_), rot=(ex, ey, ez), material=STAL)
             if abs(tu) > 1e-4:
-                k.gera(sp, P(x - r, 0, ul_ok(x - r)), P(x + r, 0, ul_ok(x + r)))
+                gera(k, sp, P(x - r, 0, u_uk(x - r)), P(x + r, 0, u_uk(x + r)))
             if abs(tf) > 1e-4:
-                k.gera(sp, P(x - r, 0, ol_uk(x - r)), P(x + r, 0, ol_uk(x + r)))
-    snitt = snitt_x or stolpar[0] + 60
-    sp_x = sorted(sp_forst.values())
-    sp_x[0] = round(snitt, 1)
-    return dict(fack=fack, bitar=bitar, snitt_x=round(snitt, 1), sp_x=sp_x, stolpar=stolpar,
+                gera(k, sp, P(x - r, 0, f_ok(x - r)), P(x + r, 0, f_ok(x + r)))
+        if len(fack) == 1:                      # snittet A går genom första fackets andra spjäla
+            xs = snitt_x if snitt_x is not None else fa + 60
+            xm = (fa + fb) / 2                  # snitt E vinkelrätt mot handledaren genom fackets mitt
+            f1 = dict(x=xs, zfl=f_ok(xs) - FL_H / cf, zu=u_mitt(xs), fa=fa, fb=fb, t=tf,
+                      e_origo=P(xm, 0, (f_ok(xm) + u_mitt(xm)) / 2))
+    snitt = round(f1["x"], 1)
+
+    # ---- detaljer i 1:2 (ritas av egna/ritning_detaljer.py): punkter i modellen, radie i modellmått
+    zs_top = nos(snitt) + H
+    zs_fl = f1["zfl"]
+    det = [dict(vy="SnittE", punkt=P(snitt, 0, (zs_top + zs_fl) / 2), radie=round((zs_top - zs_fl) / 2 + 14, 1),
+                rubrik="HANDLEDARE OCH FÖLJARE", text=["HANDLEDARE %s, RUNDAD ÖVERSIDA R%g" % (HL_PROFIL, HL_R),
+                                                      "FÖLJARE 2 st PL5*20, SPJÄLA FS12 EMELLAN", "FRITT %g UNDER HANDLEDAREN" % mellan],
+                matt="handledare"),
+           dict(vy="SnittE", punkt=P(snitt, 0, f1["zu"]), radie=30.0,
+                rubrik="UNDERLIGGARE", text=["UNDERLIGGARE 2 st PL5*20", "SPJÄLA FS12 KANT I KANT MED UNDERKANTEN",
+                                             "%g ÖVER STEGFRAMKANT (MITT)" % under], matt="underliggare")]
+    x_st = stolpar[1] if len(stolpar) > 2 else stolpar[0]
+    det.append(dict(vy="Framvy", punkt=P(x_st, 0, hl_uk(x_st) - mellan / 2 - 10), radie=75.0, rubrik="STOLPE MOT HANDLEDARE",
+                    text=["STOLPE FS20 KAPAD I HANDLEDARENS LUTNING, a4", "FÖLJARE MED LODRÄTA ÄNDAR MOT STOLPEN, a3"]))
+    if start == "snacka":
+        zc0 = nos(x0) + H - HL_T / 2
+        det.append(dict(vy="Framvy", punkt=P(x0 - 30, 0, zc0 - 40), radie=72.0, rubrik="SNÄCKA",
+                        text=["SMIDD SNÄCKA 1,5 VARV, R%g/%g/%g (MITTLINJE)" % SNACKA_R, "UTVECKLAD LÄNGD %.0f" % snacka_langd()]))
+    for xk in nos.knackar(x0, x1):
+        det.append(dict(vy="Framvy", punkt=P(xk, 0, nos(xk) + H - 35), radie=70.0, rubrik="KNÄCK I HANDLEDAREN",
+                        text=["BOCKAS I ETT STYCKE ELLER SVETSAS OCH SLIPAS"]))
+        break
+    ce, se = cos(f1["t"]), math.sin(math.atan(f1["t"]))
+    snitt_e = dict(namn="E", origo=f1["e_origo"], normal=D(-ce, 0, -se), x_omr=[f1["fa"], f1["fb"]],
+                   text="TVÄRSNITT: FÖRSTA FACKET SETT LÄNGS HANDLEDAREN")
+    return dict(fack=fack, bitar=bitar, snitt_x=snitt, sp_x=sorted(sp_forst.values()), stolpar=stolpar, detaljer=det, snitt_e=snitt_e,
                 stolp_cc=max(b - a for a, b in zip(stolpar, stolpar[1:])))
 
 
 def ritning(k, info, noter_):
-    """Framvy och ett snitt genom en spjäla av varje position (A, B, C ...), så att alla får positionsbubbla."""
-    snitt = [dict(namn=chr(65 + i), axel="x", varde=x, mot="-") for i, x in enumerate(info["sp_x"])]
-    k.ritning(vyer=["fram"], snitt=snitt, noter=noter_)
+    """Framvy och snitt A genom en spjäla; detaljerna sparas i Sammanstallning.Detaljer för ritning_detaljer.py."""
+    k.ritning(vyer=["fram"], snitt=[dict(namn="A", axel="x", varde=info["snitt_x"], mot="-")], noter=noter_)
+    g = k.grupp
+    if not hasattr(g, "Detaljer"):
+        g.addProperty("App::PropertyString", "Detaljer", "Stal", "detaljer i 1:2 (JSON) för egna/ritning_detaljer.py")
+    g.Detaljer = json.dumps(dict(snitt=info["snitt_e"], detaljer=info["detaljer"]), ensure_ascii=False)
 
 
 def noter(beskr, v, info, start, slut_text, extra=()):
@@ -243,16 +323,17 @@ def noter(beskr, v, info, start, slut_text, extra=()):
              "STOLPAR st: FS20, %g mm NEDGJUTNA I KÄRNBORRADE HÅL Ø40 I GRANITEN (INGÅR I LÄNGDEN), c/c MAX %.0f"
              % (INGJUT, info["stolp_cc"])]
     if start == "snacka":
-        rader.append("HANDLEDARE PL40*8 PLANT: %s, NEDRE ÄNDEN SMIDD SNÄCKA 1,5 VARV (R%g/%g/%g, UTVECKLAD %.0f) PÅ %s"
-                     % (hl, SNACKA_R[0], SNACKA_R[1], SNACKA_R[2], snacka_langd(), bitar[0]["pos"]))
+        rader.append("HANDLEDARE %s (PLATTSTÅL 40x10, RUNDAD ÖVERSIDA): %s, SMIDD SNÄCKA PÅ %s (UTVECKLAD %.0f)"
+                     % (HL_PROFIL, hl, bitar[0]["pos"], snacka_langd()))
     else:
-        rader.append("HANDLEDARE PL40*8 PLANT: %s" % hl)
+        rader.append("HANDLEDARE %s (PLATTSTÅL 40x10, RUNDAD ÖVERSIDA): %s" % (HL_PROFIL, hl))
     if len(bitar) > 1:
         rader.append("HANDLEDARENS KNÄCK %s BOCKAS I ETT STYCKE ELLER SVETSAS OCH SLIPAS"
                      % " / ".join("%s %s" % (b["pos"], "PLAN" if abs(b["lutning"]) < 0.05 else "%.1f°" % b["lutning"]) for b in bitar))
     rader.append(slut_text)
     rader += list(extra)
-    rader += ["SPJÄLOR sp D12 MELLAN LIGGARNA, c/c MAX %.0f, FRI ÖPPNING MIN %.0f (< 100)" % (cc, fri),
-              "SVETS: STOLPAR MOT HANDLEDARE a4, LIGGARE MOT STOLPAR a3 RUNT OM, SPJÄLOR MOT LIGGARE a3 RUNT OM",
+    rader += ["FÖLJARE OCH UNDERLIGGARE l: 2 st PL5*20 PÅ HÖGKANT, ETT PÅ VAR SIDA OM SPJÄLORNA",
+              "SPJÄLOR sp FS12 MELLAN FÖLJARNA, c/c MAX %.0f, FRI ÖPPNING MIN %.0f (< 100)" % (cc, fri),
+              "SVETS: STOLPAR MOT HANDLEDARE a4, FÖLJARE MOT STOLPAR OCH SPJÄLOR a3 – DETALJER SE BLAD 2",
               "YTBEHANDLING: VARMFÖRZINKAD OCH PULVERLACKAD SVART RAL 9005 (ANTAGET, ENLIGT BESTÄLLNING)"]
     return rader
