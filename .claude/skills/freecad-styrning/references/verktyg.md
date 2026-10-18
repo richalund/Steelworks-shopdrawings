@@ -22,8 +22,11 @@ Material; samma positionsnummer på flera delar = samma position (de ska vara li
 | `k.referens(namn, lada=(x0,x1,y0,y1,z0,z1) \| bygg=, farg=, transparens=)` | omgivning (inte i materiallistan) |
 | `k.rorelse(namn, delar, axel=(punkt, riktning), fran=, till=, gangjarn=[...])` | rörlig del för rorelse.py |
 | `k.utseende({"g/": "patinerad", "st/": "svart"})` | utseende i 3D-bilder och glb |
-| `k.ritning(**val)` | ritningens val (annars skriptets RITNING) |
+| `k.ritning(**val)` | ritningens val (annars skriptets RITNING): vyer, snitt, dolda, detaljer, delvyer, kedjor, noter, noter_blad, bubblor, sprak |
 
+- `kedjor=[dict(pos="pi/1", vy="fram", axel="y")]` i ritningens val: måttkedja från vyns kant till varje dels mitt
+  (bounding box) för positionen, i vyerna där delarnas mitt skiljer sig; `vy` = fram, plan ..., snittets bokstav.
+  Används för pinnar, spjälor och regler som saknar hål (hålens kedjor kommer av sig själva).
 - `k.bockad`: punkterna är plåtens ena sida; materialet ligger till vänster om profilens riktning (moturs profil =
   yttermått). Inre radien standard = t. Profiltext `PL<t> BOCKAD`, längd = utdragslängden.
 - `k.trag`: yttermått langd x bredd x kant; `mitt` = bottens undersida i mitten; kanterna bockas uppåt längs delens

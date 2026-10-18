@@ -19,7 +19,8 @@ positionsnummer (Pos), profil, material och längd, hålgrupper och ritningens s
   - positionsbubblor (pl/3, b/1 ...) - varje positionsnummer en gång, i den vy där delen syns bäst
     (huvuddelen som "B/1 b/1 UPE140");
   - hålangivelser 4*Ø14 - M12x44 i vyer där hålen syns som cirklar;
-  - måttkedjor till hål och hålgruppernas mitt, totalmått;
+  - måttkedjor till hål och hålgruppernas mitt, till upprepade delars mitt (RITNING["kedjor"] =
+    [dict(pos="pi/1", vy="fram", axel="y")], t.ex. pinnar och spjälor; vy och axel valfria), totalmått;
   - materiallista ovanför titelrutan (STYCKLIT. | PROFIL | MATERIAL | ANT. | LÄNGD | AREA/st | VIKT/st, sorterad på vikt, TOTALT)
     med rutan ALLMÄNNA NOTERINGAR, noter i versaler nere till vänster och titelblocket ifyllt.
 Exporterar <modell>.pdf, <modell>.png och <modell>_materiallista.csv.
@@ -854,6 +855,7 @@ def _jobb():
         lang = a.get("sprak") or cfg.get("sprak", "sv")
         T = sprak.oversattare(lang)
         detaljer, delvyer = cfg.get("detaljer", []), cfg.get("delvyer", [])
+        delkedjor = cfg.get("kedjor", [])
         rader = stal.materiallista(ds)
         for r in rader:
             if r["fel"]:
@@ -998,7 +1000,19 @@ def _jobb():
                         elif abs(ax.dot(y)) > 0.99:
                             vd["hal_x"].add(round(p.dot(vd["x"]), 1))
 
-            def kedjor(hal, grupp, lo, hi):
+            # måttkedjor till upprepade delar (RITNING["kedjor"], t.ex. pinnar, spjälor, regler): delarnas mitt
+            vd["del_x"], vd["del_y"] = [], []
+            for kd in delkedjor:
+                namn_ = kd.get("vy")                           # fram, plan ..., snittets bokstav eller vyns namn
+                if namn_ and vd["namn"] not in (namn_, VYDEF.get(namn_, ("",))[0], "Snitt" + namn_):
+                    continue
+                cs = [o.Shape.BoundBox.Center for o in vd["delar"] if o.Pos == kd["pos"]]
+                for axel_, ax_, lst_ in (("x", vd["x"], vd["del_x"]), ("y", y, vd["del_y"])):
+                    vals = sorted({round(c.dot(ax_), 1) for c in cs})
+                    if len(vals) >= 2 and kd.get("axel", axel_) == axel_:
+                        lst_.append(vals)
+
+            def kedjor(hal, grupp, lo, hi, delar=()):
                 ut = []
                 inre = sorted(v for v in hal if lo + 0.5 < v < hi - 0.5)
                 if inre:
@@ -1006,10 +1020,12 @@ def _jobb():
                 gr = sorted(v for v in grupp if lo + 0.5 < v < hi - 0.5)
                 if len(grupp) >= 2 and gr and gr != inre:
                     ut.append([lo] + gr + [hi])
+                for dl in delar:                               # delarnas mitt, från vyns kanter
+                    ut.append([lo] + [v for v in dl if lo + 0.5 < v < hi - 0.5] + [hi])
                 ut.append([lo, hi])
                 return ut
-            vd["kedja_x"] = kedjor(vd["hal_x"], vd["grupp_x"], ext[0], ext[1])
-            vd["kedja_y"] = kedjor(vd["hal_y"], vd["grupp_y"], ext[2], ext[3])
+            vd["kedja_x"] = kedjor(vd["hal_x"], vd["grupp_x"], ext[0], ext[1], vd["del_x"])
+            vd["kedja_y"] = kedjor(vd["hal_y"], vd["grupp_y"], ext[2], ext[3], vd["del_y"])
             w, h_ = ext[1] - ext[0], ext[3] - ext[2]
             vd["w"], vd["h"] = w, h_
             vd["topp"] = FORST - 3 + STEG * len(vd["kedja_x"]) + (HALRAD if vd["hal"] else 0) + 2 + vd["extra"]
@@ -1040,8 +1056,8 @@ def _jobb():
                         vd["grupp_x"].add(round(c.dot(vd["x"]), 1))
                         vd["grupp_y"].add(round(c.dot(y), 1))
                         ext = vd["ext"]
-                        vd["kedja_x"] = kedjor(vd["hal_x"], vd["grupp_x"], ext[0], ext[1])
-                        vd["kedja_y"] = kedjor(vd["hal_y"], vd["grupp_y"], ext[2], ext[3])
+                        vd["kedja_x"] = kedjor(vd["hal_x"], vd["grupp_x"], ext[0], ext[1], vd["del_x"])
+                        vd["kedja_y"] = kedjor(vd["hal_y"], vd["grupp_y"], ext[2], ext[3], vd["del_y"])
                         vd["topp"] = FORST - 3 + STEG * len(vd["kedja_x"]) + HALRAD + 2 + vd["extra"]
                         vd["vanster"] = FORST - 3 + STEG * len(vd["kedja_y"]) + 2
                     anvanda.add(gi)

@@ -172,7 +172,8 @@ Modellen byggs med ett konstruktionsskript (API i `scripts/stal.py`, se `referen
 `REGLER`, och `bygg(k, v)` med bl.a. `k.balk`, `k.plat`, `k.hal`, `k.gera`, `k.skiva`, `k.egen`, `k.referens`,
 `k.bockad`, `k.trag`, `k.glas`, `k.inkop`, `k.rorelse` och `k.utseende`. Varje del blir en Part Design-kropp (eller
 SheetMetal-del) med egenskaperna Pos/Profil/Material. Koordinater och längder får vara uttryck mot Variabler.
-Mönster: `konstruktioner/balkongram.py`, `pelare.py`, `soffbord.py`, `trappracke.py`, `grind.py`, `skap.py`.
+Mönster: `konstruktioner/balkongram.py`, `pelare.py`, `soffbord.py`, `trappracke.py`, `grind.py`, `handdukstork.py`
+(rör med gerade knän, fiskmunskapade pinnar, väggfästen i snitt), `skap.py` (plåtskåp på en stomme av VKR).
 ```
 python3 scripts/sammanstallning.py bygg konstruktioner/balkongram.py ut/B1.FCStd [--var Langd=2400] --png --step
 python3 scripts/sammanstallning.py ritning ut/B1.FCStd --uppdrag 2026-001 --objekt "KV EXEMPEL 1" "Byggbolaget AB" "Exempelgatan 1"
@@ -189,6 +190,9 @@ python3 scripts/sammanstallning.py ritning ut/B1.FCStd --uppdrag 2026-001 --obje
   Ett vågrätt snitt (`C:z=645:-`, blicken nedåt) visar inredning och beslag i plan. Snitten läggs uppifrån och ner
   till höger om huvudvyerna och fortsätter i en ny kolumn när nästa snitt inte ryms ovanför noterna och
   materiallistan.
+- Måttkedjorna går till hål av sig själva. Upprepade delar utan hål (pinnar, spjälor, regler, steg) får en kedja
+  till delarnas mitt med `RITNING["kedjor"] = [dict(pos="pi/1", vy="fram")]` (`vy` och `axel="x"|"y"` valfria):
+  t.ex. 177.5-138-138-...-101.5 i framvyn.
 - Utskriften säger vilka positioner som inte syns (ingen bubbla) och hålgrupper som inte syns som cirklar: lägg till
   ett snitt eller en vy (`--vyer fram,plan,vanster`).
 - Noterna skrivs som de står (versaler, men `pl/3` och `a4` med gemener). Bultar, svetssymboler och mer än en

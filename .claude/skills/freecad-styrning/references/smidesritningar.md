@@ -72,6 +72,7 @@ svets, ytbehandling, montage) på en egen noteringsritning (`N-01`) och varje ri
 
 ## Vyer och mått
 - Huvudvy med måttkedjor på båda sidor och totalmått ytterst (t.ex. 550-550-550-550 / 2200, c/c 110 för spjälor).
+  Upprepade delar (spjälor, pinnar, regler) får en egen kedja till delarnas mitt (`RITNING["kedjor"]`), inte bara en not.
   Hålmått från kant i kedja (55-55, 75-75). Vinklar som lutning i grader (`0.57°`).
 - Snitt markeras med pilar och bokstav (A, B, G) i huvudvyn; snittvyn får rubrik `A - A` och skala under.
 - Isometri utan mått i ledig yta, egen skala.
