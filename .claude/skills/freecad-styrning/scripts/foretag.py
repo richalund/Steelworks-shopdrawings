@@ -2,7 +2,7 @@
 
   python3 foretag.py visa
   python3 foretag.py satt --foretag "Firma AB" --adress "Gatan 1" "123 45 Staden" "firma.se 08-123 45 67" \\
-                          --ritad-av AB --handlaggare AB --ansvarig "A. Bson" [--logga logga.png] [--fil foretag.json]
+                          --ritad-av AB --handlaggare AB --ansvarig "A. Bson" [--logga logga.png] [--land SE] [--fil foretag.json]
   python3 foretag.py ta-bort
 
 Ordning när ritningen görs: kommandoradsargument > miljövariabler FC_FORETAG, FC_ADRESS (rader åtskilda med |),
@@ -14,9 +14,9 @@ företagsnamnet, i rutan som mallen anger i sin kommentar.
 """
 import os, re, sys, json, base64, argparse
 
-FALT = ("foretag", "adress", "ritad_av", "handlaggare", "ansvarig", "logga")
+FALT = ("foretag", "adress", "ritad_av", "handlaggare", "ansvarig", "logga", "land")
 MILJO = dict(foretag="FC_FORETAG", adress="FC_ADRESS", ritad_av="FC_RITAD_AV", handlaggare="FC_HANDLAGGARE",
-             ansvarig="FC_ANSVARIG", logga="FC_LOGGA")
+             ansvarig="FC_ANSVARIG", logga="FC_LOGGA", land="FC_LAND")
 
 
 def konfigfil():
@@ -37,7 +37,7 @@ def hitta_fil():
 
 
 def _tom():
-    return dict(foretag="", adress=[], ritad_av="", handlaggare="", ansvarig="", logga="")
+    return dict(foretag="", adress=[], ritad_av="", handlaggare="", ansvarig="", logga="", land="")
 
 
 def las():
@@ -145,6 +145,7 @@ def main(argv=None):
     ap.add_argument("--handlaggare")
     ap.add_argument("--ansvarig")
     ap.add_argument("--logga", help="PNG/JPEG som ersätter företagsnamnet i titelblocket")
+    ap.add_argument("--land", help="landet där skillen används (ISO-kod, t.ex. SE, CN): där söks leverantörer av beslag och glas")
     ap.add_argument("--fil", help="foretag.json att skriva/ta bort (standard: se modulens docstring)")
     a = ap.parse_args(argv)
     if a.lage == "visa":

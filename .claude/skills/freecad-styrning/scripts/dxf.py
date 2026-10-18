@@ -26,7 +26,7 @@ def _jobb(a):
     per_pos = {}
     for o in ds:
         per_pos.setdefault(o.Pos, []).append(o)
-    import kalkyl
+    import mangder
     filer = []
     for pos, lst in sorted(per_pos.items()):
         if bara and pos not in bara:
@@ -43,7 +43,7 @@ def _jobb(a):
             pass
         bockad = not hasattr(o, "Group")
         platta = bockad or (info is not None and info["typ"] == "PL" and o.Profil.upper().startswith("PL") and info["b"] >= 100) \
-            or (info is None and kalkyl._platta(s))
+            or (info is None and mangder._platta(s))
         if not platta:
             continue
         namn = "%s_%s" % (bas, re.sub(r"[^A-Za-z0-9]+", "", pos))

@@ -480,13 +480,24 @@ class Konstruktion:
         o.Lister = lister
         return o
 
-    def inkop(self, pos, text, lada=None, cylinder=None, mitt=(0, 0, 0), rot=((1, 0, 0), (0, 1, 0), (0, 0, 1)), vikt=None,
-              material="INKÖP", farg=(0.25, 0.25, 0.28)):
+    def inkop(self, pos, text=None, lada=None, cylinder=None, komponent=None, mitt=(0, 0, 0),
+              rot=((1, 0, 0), (0, 1, 0), (0, 0, 1)), vikt=None, material="INKÖP", farg=(0.25, 0.25, 0.28)):
         """Inköpt detalj (gångjärn, lås, handtag, dörrstängare, motor, bult) som utrymmesmodell: en låda
-        `lada=(x, y, z)` centrerad i `mitt` eller en cylinder `cylinder=(d, l)` längs delens z från `mitt`, med
-        texten `text` (t.ex. "GÅNGJÄRN 120 ROSTFRITT, ART.NR ...") i materiallistan och vikten `vikt` (kg, ur
-        leverantörens datablad; annars räknas den på materialet). Måtten tas ur leverantörens datablad, de hittas
-        inte på. Syns i ritningen och 3D-bilderna, ingår i krock- och rörelsekontrollen."""
+        `lada=(x, y, z)` centrerad i `mitt` eller en cylinder `cylinder=(d, l)` längs delens z från `mitt`.
+        `komponent="id"` hämtar benämning, tillverkare, artikelnummer, mått, vikt och källa ur komponentregistret
+        (komponenter.py, egna/komponenter.json) – vägen för riktiga uppdrag: komponenten söks upp hos en leverantör
+        i landet där skillen används och läggs in med databladets mått. Utan register anges `text`, mått och `vikt`
+        direkt (t.ex. i ett exempel). Syns i ritningen och 3D-bilderna, ingår i krock- och rörelsekontrollen;
+        källan skrivs i ritningens noter."""
+        info = {}
+        if komponent:
+            import komponenter
+            info = komponenter.hamta(komponent)
+            m = info.get("matt", {})
+            lada, cylinder = m.get("lada"), m.get("cylinder")
+            text = text or info.get("benamning") or komponent
+            vikt = vikt if vikt is not None else info.get("vikt_kg")
+
         def form(dd):
             sk = dd.skiss("Kontur", "XY")
             if lada is not None:
@@ -496,10 +507,17 @@ class Konstruktion:
                 sk.cirkel(cylinder[0], namn="d")
                 dd.kloss(sk, cylinder[1], "Langd")
         if (lada is None) == (cylinder is None):
-            raise ValueError("inkop(): ange lada=(x, y, z) eller cylinder=(d, l)")
-        o = self.egen(pos, text, form, mitt=mitt, rot=rot, material=material)
-        o.addProperty("App::PropertyFloat", "Vikt", "Stal", "vikt per styck (kg) ur datablad; 0 = räknas på materialet")
+            raise ValueError("inkop(): ange komponent=, eller lada=(x, y, z) eller cylinder=(d, l)")
+        o = self.egen(pos, text or "INKÖP", form, mitt=mitt, rot=rot, material=material)
+        for p_, typ, beskr in (("Vikt", "App::PropertyFloat", "vikt per styck (kg) ur datablad; 0 = räknas på materialet"),
+                               ("Kalla", "App::PropertyString", "datablad eller produktsida (URL) och hämtdatum"),
+                               ("Inkopstext", "App::PropertyString", "benämning, tillverkare och artikelnummer")):
+            o.addProperty(typ, p_, "Stal", beskr)
         o.Vikt = float(vikt or 0)
+        if info:
+            o.Kalla = "%s %s" % (info.get("kalla", ""), info.get("hamtad", ""))
+            o.Inkopstext = ", ".join(x for x in (info.get("benamning", ""), info.get("tillverkare", ""),
+                                                  ("ART.NR " + info["artikel"]) if info.get("artikel") else "") if x)
         try:
             o.ViewObject.ShapeColor = tuple(farg)
         except Exception:

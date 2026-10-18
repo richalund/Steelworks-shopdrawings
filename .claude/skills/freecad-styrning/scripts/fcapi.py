@@ -20,7 +20,8 @@ def hitta_freecad():
         return os.environ["FREECAD_BIN"]
     if os.name != "nt":
         # Linux/macOS (t.ex. molnsession med FreeCAD från conda-forge i /opt/freecad).
-        exe = shutil.which("freecad") or ("/opt/freecad/bin/freecad" if os.path.exists("/opt/freecad/bin/freecad") else None)
+        kand = ["/opt/freecad/bin/freecad", os.path.expanduser("~/.local/opt/freecad/bin/freecad")]   # installera_linux.sh
+        exe = shutil.which("freecad") or next((k for k in kand if os.path.exists(k)), None)
         if not exe:
             raise SystemExit("FreeCAD hittades inte. Installera FreeCAD 1.x eller sätt FREECAD_BIN till bin-mappen.")
         return os.path.dirname(exe)

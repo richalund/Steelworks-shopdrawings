@@ -14,3 +14,5 @@ ut/
 foretag.json
 # referensbilderna för testa.py hör till skillen
 !.claude/skills/freecad-styrning/tester/referens/*.png
+# leveranser som agenter utan filnedladdning committar på uppdragets gren (se leverans/README.md)
+!leverans/**

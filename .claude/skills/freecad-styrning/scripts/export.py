@@ -14,7 +14,7 @@ bort dem ur glb också. Filerna heter <modell>.glb, .ifc, .step och .stl.
 """
 import os, sys, argparse
 
-EXTRA = "/opt/freecad-extra"
+EXTRA = next((p for p in ("/opt/freecad-extra", os.path.expanduser("~/.local/opt/freecad-extra")) if os.path.isdir(p)), "/opt/freecad-extra")
 
 
 def _jobb(a):

@@ -3,9 +3,10 @@ paket som kommer in.
 
   python3 paket.py skapa <modell.FCStd> [--skript egna/konstruktioner/x.py] [--antal 1] [--ut <mapp>]
   python3 paket.py kontrollera <paket.zip> [--ut <mapp>]
+  python3 paket.py skicka <paket.zip> [--till anbud@smide.com] [--avsandare "Namn, telefon"] [--meddelande "..."]
 
-`skapa` samlar modellens filer i samma mapp (FCStd, PDF, PNG, DXF, STEP, materiallista, prisunderlag), skriptet
-modellen byggdes från och de egna moduler det importerar (med sina sökvägar), kör prisunderlaget (kalkyl.py) om
+`skapa` samlar modellens filer i samma mapp (FCStd, PDF, PNG, DXF, STEP, materiallista, mängdunderlag), skriptet
+modellen byggdes från och de egna moduler det importerar (med sina sökvägar), kör mängdunderlaget (mangder.py) om
 det saknas och skriver `manifest.json`: skillens version, datum, variabler, vikt, mått, regelkontrollen och en
 kontrollsumma (SHA-256) per fil. Ger `<modell>_bestallning.zip`. Det är paketet kunden eller återförsäljaren
 skickar in.
@@ -14,6 +15,12 @@ skickar in.
 den här versionen av skillen och jämför vikt, mått, antal delar och regelkontroll med manifestet. Ger OK eller en
 lista över avvikelser (ändrad fil, annan vikt, regelfel). Ritningen som prissätts är den ombyggda, inte den
 inskickade.
+
+`skicka` gör ett mail med paketet som bilaga till en tillverkare: `<modell>_mail.eml` (öppnas som ett osänt mail i
+Outlook och Thunderbird; skicka därifrån) och en mailto-länk med ämne och text (bilagan läggs till för hand). Förifylld
+mottagare står i `egna/leverans.json` eller `mallar/leverans.json` (anbud@smide.com); användaren kan ange vilken
+adress som helst. Inget skickas av skriptet. Finns ett mailverktyg i agenten (t.ex. Gmail) kan agenten i stället
+lägga ett utkast med bilagan – och skickar bara när användaren uttryckligen säger till.
 """
 import os, re, sys, json, time, shutil, hashlib, zipfile, argparse, tempfile, subprocess
 import xml.etree.ElementTree as ET
@@ -108,12 +115,12 @@ def skapa(a):
     modell = os.path.abspath(a.fil)
     mapp, bas = os.path.dirname(modell), os.path.splitext(os.path.basename(modell))[0]
     eg = fcstd_egenskaper(modell)
-    kalkylfil = os.path.join(mapp, bas + "_kalkyl.json")
-    if not os.path.exists(kalkylfil) or os.path.getmtime(kalkylfil) < os.path.getmtime(modell):
-        print("Prisunderlag saknas eller är äldre än modellen: kör kalkyl.py")
-        subprocess.run([sys.executable, os.path.join(HIT, "kalkyl.py"), modell, "--antal", str(a.antal)], check=True)
-    with open(kalkylfil, encoding="utf-8") as f:
-        kalkyl = json.load(f)
+    mangdfil = os.path.join(mapp, bas + "_mangder.json")
+    if not os.path.exists(mangdfil) or os.path.getmtime(mangdfil) < os.path.getmtime(modell):
+        print("Mängdunderlag saknas eller är äldre än modellen: kör mangder.py")
+        subprocess.run([sys.executable, os.path.join(HIT, "mangder.py"), modell, "--antal", str(a.antal)], check=True)
+    with open(mangdfil, encoding="utf-8") as f:
+        mangd = json.load(f)
     filer = sorted(os.path.join(mapp, n) for n in os.listdir(mapp)
                    if (n == bas + os.path.splitext(n)[1] or n.startswith(bas + "_") or n.startswith(bas + "."))
                    and n.lower().endswith(TYPER) and not n.endswith("_bestallning.zip") and "_zoom_" not in n)
@@ -123,13 +130,13 @@ def skapa(a):
         print("OBS: hittade inte skriptet modellen byggdes från (%s); paketet kan inte byggas om vid kontrollen. Ange --skript."
               % eg.get("Comment", "ingen kommentar"))
     rk = json.loads(eg["Regelkontroll"]) if eg.get("Regelkontroll") else None
-    t = kalkyl["totalt"]
+    t = mangd["totalt"]
     manifest = dict(
         typ="freecad-styrning beställningspaket", skapat=time.strftime("%Y-%m-%d %H:%M"), skill=regler.skillversion(),
         modell=os.path.basename(modell), marke=eg.get("Marke", ""), namn=eg.get("Namn", ""), antal=a.antal,
         skript=relativ(skript) if skript else None, byggare="partdesign" if "partdesign.py" in eg.get("Comment", "") else "sammanstallning",
         variabler=eg["variabler"] or variabler_ur(eg.get("Comment")),
-        vikt_kg=round(t["vikt"] + sum(x["vikt"] for x in kalkyl.get("inkop", [])), 2), delar=t["delar"] + t.get("inkopta", 0), yta_m2=round(t["yta_m2"], 3), regelkontroll=rk,
+        vikt_kg=round(t["vikt"] + sum(x["vikt"] for x in mangd.get("inkop", [])), 2), delar=t["delar"] + t.get("inkopta", 0), yta_m2=round(t["yta_m2"], 3), regelkontroll=rk,
         filer={})
     zipnamn = os.path.join(os.path.abspath(a.ut) if a.ut else mapp, bas + "_bestallning.zip")
     os.makedirs(os.path.dirname(zipnamn), exist_ok=True)
@@ -154,7 +161,7 @@ def skapa(a):
 LASMIG = """Beställningspaket från freecad-styrning (skill %(skill)s)
 
 Modell: %(modell)s, vikt %(vikt)s kg, regelkontroll %(rk)s.
-ritning/   ritningar (PDF, PNG), modell (FCStd), DXF, STEP, materiallista och prisunderlag
+ritning/   ritningar (PDF, PNG), modell (FCStd), DXF, STEP, materiallista och mängdunderlag
 underlag/  skriptet modellen byggdes från och dess egna moduler
 manifest.json  variabler, vikt, regelkontroll och kontrollsumma (SHA-256) för varje fil
 
@@ -239,17 +246,70 @@ def kontrollera(a):
     return not avvik
 
 
+def leverans():
+    """Förifylld mottagare: egna/leverans.json, annars skillens mallar/leverans.json."""
+    for f in (os.path.join(os.getcwd(), "egna", "leverans.json"), os.path.join(SKILL, "mallar", "leverans.json")):
+        if os.path.exists(f):
+            with open(f, encoding="utf-8") as fh:
+                return {k: v for k, v in json.load(fh).items() if not k.startswith("_")}
+    return {}
+
+
+def skicka(a):
+    import urllib.parse
+    from email.message import EmailMessage
+    zipfil = os.path.abspath(a.fil)
+    with zipfile.ZipFile(zipfil) as z:
+        m = json.loads(z.read("manifest.json"))
+    lev = leverans()
+    till = a.till or lev.get("mottagare", "")
+    if not till:
+        raise SystemExit("Ange mottagare med --till")
+    rk = m.get("regelkontroll") or {}
+    amne = ("Underlag för offert: %s %s" % (m.get("namn") or os.path.splitext(m["modell"])[0], m.get("marke", ""))).strip()
+    text = "\n".join([
+        "Hej,", "",
+        "Här kommer underlag för offert: %s (%s), %d st." % (m.get("namn") or m["modell"], m.get("marke", ""), m.get("antal", 1)),
+        "Vikt ca %.0f kg, %d delar. Regelkontroll: %s." % (m.get("vikt_kg", 0), m.get("delar", 0),
+                                                       "OK" if rk.get("ok") and not rk.get("varningar") else ("se manifest" if rk else "ej körd")),
+        "Paketet (%s) innehåller ritningar, modell, DXF, STEP, mängdunderlag och skriptet modellen byggdes från, "
+        "framtaget med freecad-styrning %s." % (os.path.basename(zipfil), m.get("skill", "")),
+        "", a.meddelande or "", "", "Med vänlig hälsning", a.avsandare or ""]).replace("\n\n\n", "\n\n")
+    msg = EmailMessage()
+    msg["To"], msg["Subject"], msg["X-Unsent"] = till, amne, "1"
+    msg.set_content(text)
+    with open(zipfil, "rb") as fh:
+        msg.add_attachment(fh.read(), maintype="application", subtype="zip", filename=os.path.basename(zipfil))
+    eml = os.path.splitext(zipfil)[0].replace("_bestallning", "") + "_mail.eml"
+    with open(eml, "wb") as fh:
+        fh.write(bytes(msg))
+    mailto = "mailto:%s?subject=%s&body=%s" % (till, urllib.parse.quote(amne), urllib.parse.quote(text))
+    storlek = os.path.getsize(zipfil) / 1e6
+    print("Mail till %s (%s): %s" % (till, "förifylld" if till == lev.get("mottagare") else "angiven", eml))
+    print("Ämne: %s" % amne)
+    print("mailto: %s" % mailto)
+    if storlek > 20:
+        print("OBS: paketet är %.0f MB; många mailservrar tar max 20–25 MB. Dela det via en länk (Drive, Dropbox) i stället." % storlek)
+    print("Inget har skickats. Öppna .eml-filen i mailprogrammet och skicka, eller använd mailto-länken och bifoga %s." % os.path.basename(zipfil))
+    return eml
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("lage", choices=["skapa", "kontrollera"])
+    ap.add_argument("lage", choices=["skapa", "kontrollera", "skicka"])
     ap.add_argument("fil")
     ap.add_argument("--skript", default=None)
     ap.add_argument("--antal", type=int, default=1)
     ap.add_argument("--ut", default=None)
+    ap.add_argument("--till", default=None, help="mottagare (standard: leverans.json, anbud@smide.com)")
+    ap.add_argument("--avsandare", default="", help="namn och telefon under mailet")
+    ap.add_argument("--meddelande", default="", help="egen rad i mailet")
     a = ap.parse_args(argv)
     sys.path.insert(0, HIT)
     if a.lage == "skapa":
         skapa(a)
+    elif a.lage == "skicka":
+        skicka(a)
     else:
         sys.exit(0 if kontrollera(a) else 1)
 
