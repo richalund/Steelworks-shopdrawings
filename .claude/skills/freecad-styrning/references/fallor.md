@@ -115,16 +115,16 @@ FreeCAD 1.0.1 (rev 39285, Python 3.11 i FreeCAD), SheetMetal-tillägget 0.7.24, 
   på bladet. Materiallistan, noterna och snittrubrikerna (`A - A` med skalan) är symboler: exakt geometri,
   ingen gissning av textbredder som med DrawViewAnnotation.
 - **Ballong (DrawViewBalloon):** `X`, `Y`, `OriginX`, `OriginY` är OSKALADE modellmått relativt vyns mitt,
-  Y uppåt (på papperet = vyns X/Y + Scale × värdet). `BubbleShape` "Inspection" = Teklas avlånga bubbla,
+  Y uppåt (på papperet = vyns X/Y + Scale × värdet). `BubbleShape` "Inspection" = den avlånga bubblan på svenska tillverkningsritningar, bubbla,
   "Line" = understruken text med ledare (hålangivelsen `4*Ø14 - M12x44`). `EndType` "None", `KinkLength` 0.
   Utan `ViewObject.Font/Fontsize` blir texten 13,7 mm Tahoma.
 - Ballongerna fylls med inställningen `Mod/TechDraw/Colors/PageColor` (ljusgrå F1F3F5 på testdatorn) och
   linjerna ritas i `NormalColor` (mörkgrå 212529). Jobbet sätter PageColor/FaceColor vita och Normal-,
   Hidden-, Section-, Center- och VertexColor svarta (sparas inte: FreeCAD avslutas med os._exit).
 - **Måttpilar:** `ArrowStyle` finns inte på måttets ViewObject i 1.0.1. Inställningen
-  `Mod/TechDraw/Dimensions/ArrowStyle` = 2 ger snedstreck (tick) som Tekla.
+  `Mod/TechDraw/Dimensions/ArrowStyle` = 2 ger snedstreck (tick) som på svenska tillverkningsritningar.
 - **Snittbokstäverna** (A, B i basvyn) får teckenhöjden 1,39 × `Mod/TechDraw/Dimensions/FontSize` (em) och
-  typsnittet `Mod/TechDraw/Labels/LabelFont`. FontSize 3,4 ger 4,7 mm som Tekla. Bokstäverna hamnar strax
+  typsnittet `Mod/TechDraw/Labels/LabelFont`. FontSize 3,4 ger 4,7 mm som på förlagorna. Bokstäverna hamnar strax
   utanför vyn: måtten och bubblorna i en vy med snittlinjer läggs 6 mm längre ut.
 - **DrawViewSection:** `SectionNormal` n behåller materialet på -n-sidan; `Direction` = n (betraktaren på
   +n-sidan), `XDirection` = Z × n (Z uppåt i snittet), `SectionDirection` "Right"/"Left"/"Up"/"Down" = n
@@ -207,3 +207,78 @@ allt i globala koordinater: kroppens placering är noll, skissernas lägen och P
   konfiguration finns men inte den egna. Under xvfb blockerar den jobbet tills timeout utan logg.
   installera_linux.sh skapar därför `~/.config/FreeCAD/v1-1`. Samma dialog kan dyka upp på Windows efter
   en uppgradering – starta FreeCAD en gång för hand och svara på den.
+
+## FreeCAD 1.1.3 på Linux: räcken, detaljblad och översikter (2026-10-18)
+- **Symmetrisk Pocket "genom allt" skär ibland ingenting.** En FS20-stolpe med en geringsskiss i änden gav
+  volymen oförändrad med `Type = ThroughAll`, `SideType = Symmetric`; "One side" skar halva, `Length` symmetrisk
+  skar allt. Andra kroppar med samma uppställning skar rätt, så felet är inte förutsägbart. `pd.ficka` (och
+  därmed `k.hal` och `k.gera`) kontrollerar nu volymen och gör om en sådan ficka till symmetrisk längd
+  2 × kroppens diagonal + 10. En ficka som ändå inte skär något ger RuntimeError i stället för att tyst bli fel.
+- **Ett kap tar bara bort det som ligger utanför planet.** Ett snett plattstål på högkant som kapas lodrätt
+  precis i sin ände blir bara kapat på övre halvan (nedre halvan når aldrig planet). Bygg delen förlängd med
+  (h/2)·|tan v| + några mm och kapa sedan (racke.py gör så för följare och handledare).
+- `k.gera` skär i ett plan som innehåller tvärsnittets höjdriktning (`upp`). För ett liggande plattstål som ska
+  kapas lodrätt behövs bredden i planet: `k.gera(o, a, b, riktning=tvärs)` (skissen läggs då i YZ).
+- **TechDraws snitt med fri normal** (`DrawViewSection` med en sned `SectionNormal`, t.ex. vinkelrätt mot en
+  sned handledare) gav fel geometri. Använd en vanlig `DrawViewPart` som tittar längs delen med bara de delar
+  som ska synas som Source (delvyer på blad 2, `RITNING["delvyer"]`). En Pad-feature kan vara Source för att
+  slippa en snäcka i änden; featurens Shape ska då mätas med kroppen (`getParentGeoFeatureGroup()`).
+- Vyns storlek för en delvy ska räknas på hörnen (`Shape.Vertexes`), inte på lådan: sneda delar ger en
+  axelparallell låda som är mycket större än det som syns, och skalan blev 1:10 i stället för 1:5.
+- **`DrawViewDetail`**: `AnchorPoint` är i basvyns centrerade, oskalade koordinater (samma som `Start` på en
+  kosmetisk linje genom punkten). Detaljvyerna räknas i bakgrunden: skapa alla, `recompute`, och vänta in
+  `getVisibleEdges()` för var och en (upp till 30 s) innan måtten sätts och bladet exporteras; annars blir en
+  detalj tom i PDF:en. Kanterna (`getEdgeByIndex`) är oskalade relativt detaljens mitt. En cirkel som ses
+  nästan rakt framifrån kan komma som `Ellipse` med lika halvaxlar.
+- `DrawViewAnnotation` har typsnittet som egenskap på objektet (`t.Font`), inte i ViewObject.
+- `DrawViewBalloon`: `OriginX/Y` och `X/Y` är oskalade modellmått relativt vyns mitt. `EndType` väljs ur
+  `getEnumerationsOfProperty("EndType")` ("Filled arrow" i 1.1), `EndTypeScale` 0,6 ger en kort pil.
+- TechDraw-inställningar (färger, typsnitt, pilar) gäller bara jobbet de sätts i: sätt dem i varje jobb som
+  ritar (`stall_in()`), annars blir ytor svarta och texter i standardtypsnittet.
+- **Ytdetekteringen** (`TechDraw/General/HandleFaces`) hittade falska ytor i en framvy med rör och VKR (stora
+  vita fält mellan handledaren och vyns kant). `sammanstallning.py` stänger av den; bladet blir enhetligt.
+- **Att ta bort ritningsobjekt kraschar ibland FreeCAD** (segfault utan logg) när en fil med detaljblad ritas om.
+  Ta bort i ordningen mått/bubblor/texter, detaljvyer, snitt, vyer, blad, mallar, med `KeepUpdated = False` på
+  bladen och en kort `pump()` mellan grupperna (`rensa()`); tre omritningar i rad gick sedan utan krasch.
+- **3D-bilder**: `ActiveView.setViewDirection` gav samma bild från alla håll. Sätt kamerans rotation med
+  `setCameraOrientation(Rotation(matris))` och stäng av animeringen (`setAnimationEnabled(False)`), annars
+  sparas bilden mitt i övergången. Är ett ritningsblad aktivt saknar ActiveView metoden: hämta 3D-vyn med
+  `gd.mdiViewsOfType("Gui::View3DInventor")` (rendera.py).
+- Synlighet för positionsbubblor: en rundstång eller ett rör har en enda cylinderyta, och ytans tyngdpunkt
+  ligger på axeln (utanför ytan). Välj bland punkter spridda över ytan den vars normal pekar mot betraktaren,
+  annars får runda delar ingen bubbla.
+- Skissmått som heter `h` eller `t` fungerar, men går inte att använda i uttryck (`Constraints.t` tolkas som
+  enheten ton). Döp mått som ska användas i uttryck till något längre (`Sida`, `Tjocklek`).
+- `Quantity` från FreeCAD (t.ex. `ballong.OriginX`) går inte att räkna med tal direkt: använd `.Value`.
+- Lambdas i en loop binder variabeln sent: spara talen i en dict eller som standardargument
+  (`lambda x, z0=z0: ...`), annars får alla detaljer sista värdet.
+
+## Underlag från kunden
+- Bilagor i Gmail-trådar går inte alltid att hämta som bilaga via connectorn: hämta meddelandet i RAW-format,
+  spara JSON:en och packa upp den med Pythons `email`-modul till egna filer.
+- Scannade PDF:er har ingen text: läs bilderna (underlag.py ger rutor i 300 dpi med höjd kontrast). En sida i
+  hög upplösning som en enda bild skalas ner av bildvisningen och små mått blir oläsliga – läs rutorna eller zooma.
+
+## Installation (conda-forge, micromamba)
+- `micromamba install` av ett extra paket (calculix, ifcopenshell) utan att låsa FreeCAD kan byta FreeCAD 1.1.3 mot
+  en utvecklingsversion (freecad-2026.x med OCCT 8) som inte startar: jobben hänger utan logg. Lås alltid
+  `freecad=1.1.3` i samma kommando. Återställ med `micromamba install -p /opt/freecad freecad=1.1.3 occt=7.9.3`.
+- conda-paketet ifcopenshell kräver OCCT 8 och går inte ihop med FreeCAD 1.1.3. Pip-hjulet har eget OCCT: lägg
+  det i en egen mapp (`pip install --no-deps --target /opt/freecad-extra ifcopenshell`) och lägg mappen i sys.path
+  i jobbet (export.py).
+
+## TechDraw, SheetMetal, FEM och jobben (1.1.3)
+- `DrawViewSymbol` ritar SVG-symbolens mm rätt i 1.1 men med faktorn 90/96 i 1.0: skala 96/90 bara i 1.0
+  (sammanstallning.py `symbol`), annars blir materiallistan 6 % för stor och hamnar utanför ramen.
+- `SMBendWall` lägger kanten utanför basplåten och flänsens höjd räknas inte från undersidan: mät lådan och justera
+  basens mått, `length` och placeringen (stal.trag). Utan `SMViewProviderTree` på objektet syns det inte i GUI:t
+  och inte i 3D-bilderna; dölj basen.
+- SheetMetal-delar är compounds: `Shape.CenterOfMass` finns inte, räkna tyngdpunkten per solid.
+- `importSVG` vänder redan SVG:ns y-axel uppåt: vänd den inte en gång till.
+- `Part.makeWireString(text, typsnitt, storlek, spärrning)` ger textens konturer utan Draft-objekt; osifont följer med
+  FreeCAD (`Mod/TechDraw/Resources/fonts`).
+- FEM: `makeConstraintForce.Direction` är en referens (yta eller kant), inte en vektor; `Reversed` vänder den.
+  `FemToolsCcx`: `update_objects`, `setup_working_dir`, `setup_ccx`, `check_prerequisites`, `write_inp_file`,
+  `ccx_run`, `load_results`; resultatet har `vonMises` och `DisplacementLengths`.
+- Jobbets resultat-dict får inte ha nyckeln `ok` (krockar med `fcapi.avsluta(ok, ...)`): använd t.ex. `godkand`.
+- argparse tolkar ett värde som börjar med `-` som en flagga: skriv `--fast=-z`, inte `--fast -z`.

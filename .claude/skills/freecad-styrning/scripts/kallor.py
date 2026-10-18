@@ -125,7 +125,7 @@ def _kalla(src, meta, **extra):
 
 # ----------------------------------------------------------------------------------------------- profiler
 def normalisera(profil):
-    """Tekla-namn -> versaler, '*' mellan måtten, punkt som decimaltecken, inga mellanslag."""
+    """Profilnamn -> versaler, '*' mellan måtten, punkt som decimaltecken, inga mellanslag."""
     return profil.strip().upper().replace(",", ".").replace("X", "*").replace(" ", "")
 
 
@@ -244,7 +244,7 @@ def _ur_freecad_profiler(p, typ):
 
 
 def profil(namn):
-    """Mått för ett Tekla-profilnamn ur källorna, med 'kalla'. None om ingen källa känner profilen (plattor,
+    """Mått för ett profilnamn ur källorna, med 'kalla'. None om ingen källa känner profilen (plattor,
     rundstång och okända namn), så att anroparen kan använda inbyggda tabeller eller måtten i namnet."""
     p = normalisera(namn)
     s = _serie(p)
@@ -271,6 +271,9 @@ def tjocklek(namn):
     m = re.fullmatch(r"(VKR|KKR|RHS|SHS|KVR|RÖR|ROR|CHS|VKCKR|KCKR|L)" + NUM + r"\*" + NUM + r"(?:\*" + NUM + r")?", p)
     if m:
         return float(m.group(4) or m.group(3))
+    m = re.fullmatch(r"(FS|FKT|D|RUND|RD)" + NUM, p)              # massiv fyrkant- och rundstång
+    if m:
+        return float(m.group(2))
     return None
 
 
@@ -418,6 +421,31 @@ def material(namn, t=None, varmformad=False):
 
 
 # ----------------------------------------------------------------------------------------------- text till ritning
+# ---------------------------------------------------------------- motsvarande kvaliteter i andra standarder
+# Närmaste motsvarighet (inte identisk kvalitet) med källa. Lägg bara till rader som är verifierade mot en källa
+# (sök upp standardens eller leverantörens jämförelsetabell) och skriv källan på raden.
+EMPIRE = ("Empire Engineering: Comparison of European and Chinese Standard for Structural Steel in Offshore Wind Industry (2020), "
+          "https://www.empireengineering.co.uk/wp-content/uploads/2020/12/Comparison-of-European-and-Chinese-Standard-for-Structural-Steel-in-Offshore-Wind-Industry.pdf")
+MOTSVARIGHET = [
+    # (EN-beteckning, standard, motsvarighet, dess standard, källa)
+    ("S355JR", "EN 10025-2", "Q355B", "GB/T 1591-2018", EMPIRE),
+    ("S355J0", "EN 10025-2", "Q355C", "GB/T 1591-2018", EMPIRE),
+    ("S355J2", "EN 10025-2", "Q355D", "GB/T 1591-2018", EMPIRE),
+    ("CW614N", "EN 12164 (CuZn39Pb3)", "HPb59-3", "GB/T 5231",
+     "JT Copper: CuZn39Pb3 chemical composition, https://en.jtcopper.com/cuzn39pb3-chemical-composition-details-and-properties.html"),
+]
+ALIAS = {"CUZN39PB3": "CW614N"}
+
+
+def motsvarighet(namn):
+    """Rader (dict) med närmaste motsvarighet i andra standarder (t.ex. kinesisk GB) för en EN-kvalitet eller
+    tvärtom. Tom lista om ingen verifierad rad finns: då ska motsvarigheten sökas upp med källa, inte gissas."""
+    rensa = lambda x: re.sub(r"[\s\-]", "", x.upper())
+    n = ALIAS.get(rensa(namn or ""), rensa(namn or ""))
+    return [dict(en=en, standard=std, motsvarighet=mot, motsvarighet_standard=mstd, kalla=kalla)
+            for en, std, mot, mstd, kalla in MOTSVARIGHET if n in (rensa(en), rensa(mot))]
+
+
 def bryt(s, n=72):
     """Radbrytning vid mellanslag så att ingen rad blir längre än n tecken."""
     ut, rad = [], ""
@@ -433,7 +461,7 @@ def bryt(s, n=72):
 
 
 def _versaler(s):
-    """Versaler som i Tekla-noterna, men enheter och storheter behåller sin skrivning."""
+    """Versaler som i ritningsnoterna, men enheter och storheter behåller sin skrivning."""
     u = s.upper()
     for a, b in (("MPA", "MPa"), ("FY ", "fy "), ("FU ", "fu "), ("(T ≤", "(t ≤"), ("< T ≤", "< t ≤"), (" MM)", " mm)"),
                  (" MM,", " mm,"), (" MM.", " mm."), ("KG/M³", "kg/m³")):
@@ -528,7 +556,7 @@ def status():
 def main(argv=None):
     import argparse
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("lage", choices=["profil", "material", "uppdatera", "status"])
+    ap.add_argument("lage", choices=["profil", "material", "motsvarighet", "uppdatera", "status"])
     ap.add_argument("namn", nargs="*")
     ap.add_argument("--t", type=float, default=None, help="godstjocklek (mm) för fy/fu-området")
     ap.add_argument("--varmformad", action="store_true", help="hålprofil enligt EN 10210 (KKR) i stället för EN 10219")
@@ -540,6 +568,14 @@ def main(argv=None):
     if not a.namn:
         ap.error("ange minst ett namn")
     for n in a.namn:
+        if a.lage == "motsvarighet":
+            rader = motsvarighet(n)
+            if not rader:
+                print("%-14s ingen verifierad motsvarighet i tabellen: sök upp standardens jämförelsetabell och lägg in raden med källa" % n)
+            for r in rader:
+                print("%-14s %s (%s) motsvarar närmast %s (%s). Ej identiska kvaliteter, kontrollera mot standarden. Källa: %s" % (
+                    n, r["en"], r["standard"], r["motsvarighet"], r["motsvarighet_standard"], r["kalla"]))
+            continue
         if a.lage == "profil":
             i = profil(n)
             if i is None:

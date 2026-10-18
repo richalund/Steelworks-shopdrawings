@@ -1,4 +1,4 @@
-"""Sammanställningsritning för stålkonstruktioner i Tekla-stil (svenska smidesritningar) (A2 liggande).
+"""Sammanställningsritning för stålkonstruktioner och smide: klassisk svensk tillverkningsritning (A2 liggande).
 
   python sammanstallning.py bygg <konstruktion.py> <ut.FCStd> [--var Langd=2400] [--png] [--step]
   python sammanstallning.py ritning <modell.FCStd> --uppdrag 2026-001 --objekt "KV EXEMPEL 1" "Byggbolaget AB" "Exempelgatan 1, Stockholm"
@@ -13,7 +13,7 @@ FC_LOGGA om de inte ges på kommandoraden.
 `bygg` kör ett konstruktionsskript (se ../konstruktioner/ och stal.py) och sparar modellen: delar med
 positionsnummer (Pos), profil, material och längd, hålgrupper och ritningens standardval.
 
-`ritning` lägger ett A2-blad (mallar/A2_tekla.svg) i modellens .FCStd:
+`ritning` lägger ett A2-blad (mallar/A2.svg) i modellens .FCStd:
   - framvy och planvy (E-metoden) till vänster, snitten A-A, B-B ... till höger med egen skala, isometri nere
     till höger;
   - positionsbubblor (pl/3, b/1 ...) - varje positionsnummer en gång, i den vy där delen syns bäst
@@ -71,6 +71,10 @@ def args(argv=None):
     ap.add_argument("--vyer", default=None, help="t.ex. fram,plan")
     ap.add_argument("--skala", type=float, default=None)
     ap.add_argument("--skala-snitt", dest="skala_snitt", type=float, default=None)
+    ap.add_argument("--sprak", choices=["sv", "en", "zh"], default=None,
+                    help="ritningens språk för fasta texter (materiallista, titelblock); standard RITNING['sprak'] eller sv")
+    ap.add_argument("--bubblor", choices=["nara", "rad"], default=None,
+                    help="positionsbubblor intill delen med kort pil (nara, standard) eller på en rad under vyn (rad)")
     ap.add_argument("--hal", default="22", help="standardhål i ALLMÄNNA NOTERINGAR (mm)")
     ap.add_argument("--svets", default="3.0", help="standardsvets a-mått i ALLMÄNNA NOTERINGAR (mm)")
     ap.add_argument("--utan-kallor", dest="utan_kallor", action="store_true",
@@ -117,9 +121,12 @@ def s_txt(x, y, s, h=3.33, anchor="start", font=FONT):
     return '<text x="%g" y="%g" font-family="%s" font-size="%g" fill="#000"%s>%s</text>' % (x, y, font, h, a, esc(s))
 
 
-def materiallista_svg(rader, marke, antal, hal, svets):
-    """Materiallista + ALLMÄNNA NOTERINGAR, mått uppmätta ur Tekla-ritningen (130 mm bred, rader 5 mm).
-    Returnerar (svg, bredd, höjd)."""
+def materiallista_svg(rader, marke, antal, hal, svets, T=None):
+    """Materiallista + ALLMÄNNA NOTERINGAR, mått uppmätta ur en svensk tillverkningsritning (130 mm bred, rader
+    5 mm). T = sprak.oversattare(språk) för texterna. Returnerar (svg, bredd, höjd)."""
+    if T is None:
+        import sprak
+        T = sprak.oversattare("sv")
     n = len(rader)
     W, H = 130.0, 26.0 + 5.0 * n
     e = [s_lin(0, 0, W, 0), s_lin(0, 11, W, 11, 0.3), s_lin(0, 16, W, 16, 0.3), s_lin(0, 21, W, 21, 0.2),
@@ -130,13 +137,15 @@ def materiallista_svg(rader, marke, antal, hal, svets):
         e.append(s_lin(x, 16, x, H, 0.3))
     for i in range(1, n):
         e.append(s_lin(0, 21 + 5 * i, W, 21 + 5 * i, 0.08))
-    e += [s_txt(4.2, 7.4, "ALLMÄNNA NOTERINGAR:", 4.67),
-          s_txt(62, 4.9, "ALLA HÅL ÄR  %s mm OM EJ ANNAT ANGES" % hal),
-          s_txt(62, 9.0, "ALLA SVETSAR ÄR %s mm OM EJ ANNAT ANGES" % svets),
-          s_txt(2.2, 15.0, "MATERIALLISTA FÖR ETT GODS MÄRKT:"), s_txt(62.1, 15.0, marke),
-          s_txt(127, 15.0, "%s  st. TILLVERKAS" % antal, anchor="end")]
+    def ryms(t, w, h=3.33):                       # textstorlek så att t ryms på w mm (kinesiska tecken ~1 em breda)
+        return min(h, w / max(1e-6, sum(1.0 if ord(c) > 0x2E80 else 0.56 for c in t)))
+    t_hal, t_svets = T("ALLA HÅL ÄR %s mm OM EJ ANNAT ANGES", hal), T("ALLA SVETSAR ÄR %s mm OM EJ ANNAT ANGES", svets)
+    e += [s_txt(4.2, 7.4, T("ALLMÄNNA NOTERINGAR:"), 4.67),
+          s_txt(62, 4.9, t_hal, min(ryms(t_hal, 66), ryms(t_svets, 66))), s_txt(62, 9.0, t_svets, min(ryms(t_hal, 66), ryms(t_svets, 66))),
+          s_txt(2.2, 15.0, T("MATERIALLISTA FÖR ETT GODS MÄRKT:")), s_txt(62.1, 15.0, marke),
+          s_txt(127, 15.0, T("%s st. TILLVERKAS", antal), anchor="end")]
     for x, t in ((2, "STYCKLIT."), (23, "PROFIL"), (51, "MATERIAL"), (73, "ANT."), (85, "LÄNGD"), (101.3, "AREA/st"), (118, "VIKT/st")):
-        e.append(s_txt(x, 20.0, t))
+        e.append(s_txt(x, 20.0, T(t)))
     ta = tv = 0.0
     for i, r in enumerate(rader):
         y = 25.0 + 5 * i
@@ -146,7 +155,7 @@ def materiallista_svg(rader, marke, antal, hal, svets):
         ta += r["antal"] * r["area"]
         tv += r["antal"] * r["vikt"]
     y = H - 1.0
-    e += [s_txt(96, y, "TOTALT", anchor="end"), s_txt(109.8, y, "%.1f" % ta, anchor="end"), s_txt(126.1, y, "%.1f" % tv, anchor="end")]
+    e += [s_txt(96, y, T("TOTALT"), anchor="end"), s_txt(109.8, y, "%.1f" % ta, anchor="end"), s_txt(126.1, y, "%.1f" % tv, anchor="end")]
     return svg(W, H, e), W, H, ta, tv
 
 
@@ -157,7 +166,7 @@ def noter_svg(noter, h=4.0, rad=6.0):
 
 
 def rubrik_svg(titel, skala):
-    """'A - A' understruken med skalan under, som Tekla."""
+    """'A - A' understruken med skalan under."""
     w, h = 40.0, 13.0
     tb = len(titel) * 2.4
     return svg(w, h, [s_txt(w / 2, 5.5, titel, 4.67, "middle"), s_lin(w / 2 - tb / 2, 6.6, w / 2 + tb / 2, 6.6, 0.2),
@@ -172,11 +181,11 @@ def _jobb():
     import FreeCAD as App, FreeCADGui as Gui, Part
     from FreeCAD import Vector as V
     from PySide import QtGui
-    import fcapi, stal, foretag
+    import fcapi, stal, foretag, sprak
     from fcapi import logg, pump
 
     skillmapp = os.path.dirname(fcapi.jobb()["skriptmapp"])
-    MALL = os.path.join(skillmapp, "mallar", "A2_tekla.svg")
+    MALL = os.path.join(skillmapp, "mallar", "A2.svg")
 
     def tolka_var(lista):
         ut = {}
@@ -217,11 +226,12 @@ def _jobb():
         ogiltiga = [o.Label for o in ds if not o.Shape.isValid() or len(o.Shape.Solids) != 1]
         if ogiltiga:
             logg("OBS: ogiltig geometri eller inte en solid:", ogiltiga)
-        skisser = [f for o in ds for f in o.Group if f.TypeId == "Sketcher::SketchObject"]
+        skisser = [f for o in ds for f in (o.Group if hasattr(o, "Group") else [getattr(o, "Skiss", None)])
+                   if f is not None and f.TypeId == "Sketcher::SketchObject"]
         for f in skisser:
             f.solve()
-        ej = ["%s/%s" % (f.getParentGeoFeatureGroup().Label, f.Name) for f in skisser if not f.FullyConstrained]
-        fel = ["%s/%s" % (o.Label, f.Name) for o in ds for f in o.Group if "Invalid" in f.State or "Error" in f.State]
+        ej = ["%s/%s" % ((f.getParentGeoFeatureGroup() or f).Label, f.Name) for f in skisser if not f.FullyConstrained]
+        fel = ["%s/%s" % (o.Label, f.Name) for o in ds for f in getattr(o, "Group", [o]) if "Invalid" in f.State or "Error" in f.State]
         logg("Skisser %d, fullt bestämda: %s; features med fel: %s" % (len(skisser), "alla" if not ej else "INTE " + ", ".join(ej), ", ".join(fel) or "inga"))
         krock = []
         for i, o1 in enumerate(ds):
@@ -231,6 +241,12 @@ def _jobb():
                     if c.Volume > 1.0:
                         krock.append("%s/%s %.0f mm3" % (o1.Label, o2.Label, c.Volume))
         logg("Krockar (överlappande delar): %s" % (", ".join(krock) if krock else "inga"))
+        import regler
+        if not hasattr(g, "Regler"):
+            g.addProperty("App::PropertyString", "Regler", "Stal", "produktens regler från konstruktionsskriptet (JSON)")
+        g.Regler = json.dumps(mod.get("REGLER", []), ensure_ascii=False)
+        rk = regler.kontrollera(doc, mod.get("REGLER", []), v, ds, logg=logg)
+        doc.Comment += ", skill %s" % rk["version"]
         fil = os.path.abspath(a["ut_fil"])
         doc.saveAs(fil)
         logg("Sparat:", fil)
@@ -246,7 +262,8 @@ def _jobb():
             pump(0.3)
             gd.ActiveView.saveImage(bas + "_modell.png", 1600, 1200, "White")
             logg("PNG:", bas + "_modell.png")
-        return dict(vikt=tv, rader=len(rader), krockar=krock)
+        return dict(vikt=tv, rader=len(rader), krockar=krock, regelkontroll=rk,
+                    lada=[bb.XLength, bb.YLength, bb.ZLength], delar=len(ds))
 
     # ------------------------------------------------------------------ ritningshjälpare
     def textbredd(s, h):
@@ -345,13 +362,20 @@ def _jobb():
             d.X, d.Y = etikett[0] - self.v.X.Value, etikett[1] - self.v.Y.Value
             return stil(d)
 
-        def ballong(self, text, origo, lage, form="Inspection"):
-            """Positionsbubbla (form Inspection = avlång som Tekla) eller hålangivelse (form Line = understruken
-            text). Ballongens X/Y och Origin är OSKALADE modellmått relativt vyns mitt (uppmätt)."""
+        def ballong(self, text, origo, lage, form="Inspection", pil=False):
+            """Positionsbubbla (form Inspection = avlång) eller hålangivelse (form Line = understruken
+            text). Ballongens X/Y och Origin är OSKALADE modellmått relativt vyns mitt (uppmätt). pil = kort
+            hänvisningslinje med fylld pil mot delen."""
             b = self.doc.addObject("TechDraw::DrawViewBalloon", "Ballong")
             b.SourceView = self.v
             self.page.addView(b)
             b.Text, b.BubbleShape, b.EndType = text, form, "None"
+            if pil:
+                typer = b.getEnumerationsOfProperty("EndType")
+                b.EndType = next((t for t in typer if "arrow" in t.lower() and "fill" in t.lower()), None) or \
+                    next((t for t in typer if "arrow" in t.lower()), "None")
+                if hasattr(b, "EndTypeScale"):
+                    b.EndTypeScale = 0.6
             b.OriginX, b.OriginY = (origo[0] - self.v.X.Value) / self.s, (origo[1] - self.v.Y.Value) / self.s
             b.X, b.Y = (lage[0] - self.v.X.Value) / self.s, (lage[1] - self.v.Y.Value) / self.s
             b.KinkLength = 0.0
@@ -360,12 +384,12 @@ def _jobb():
             return b
 
     def symbol(doc, page, namn, svgtext, x0, y0, w, h):
-        """SVG-symbol med övre vänstra hörnet i (x0, y0) på papperet (Y uppåt). FreeCAD ritar symbolens mm med
-        faktorn 90/96 - skalan 96/90 ger rätt storlek (uppmätt)."""
+        """SVG-symbol med övre vänstra hörnet i (x0, y0) på papperet (Y uppåt). FreeCAD 1.0 ritar symbolens mm
+        med faktorn 90/96 - skalan 96/90 ger rätt storlek där; 1.1 ritar mm rätt (uppmätt i båda)."""
         s = doc.addObject("TechDraw::DrawViewSymbol", namn)
         s.Symbol = svgtext
         page.addView(s)
-        s.Scale = 96.0 / 90.0
+        s.Scale = 96.0 / 90.0 if tuple(int(x) for x in App.Version()[:2]) < (1, 1) else 1.0
         s.X, s.Y = x0 + w / 2, y0 - h / 2
         return s
 
@@ -373,29 +397,44 @@ def _jobb():
         """Ta bort ritningsobjekt från en tidigare körning. Ett blad tar med sig sina vyer, så gå på namn."""
         # Vyer först, sedan blad och mallar, och låt TechDraws bakgrundsberäkning bli klar innan:
         # att ta bort ett blad vars vyer fortfarande räknas kraschar FreeCAD (sett i 1.x på Linux).
+        # Ordning: mått, bubblor och texter, detaljvyer, snitt, vyer, blad, mallar (en basvy före sina detaljer
+        # eller ett blad med vyer som räknas kraschar FreeCAD ibland).
         td = [o for o in doc.Objects if o.TypeId.startswith("TechDraw::")]
-        ordning = {"TechDraw::DrawPage": 1, "TechDraw::DrawSVGTemplate": 2}
+        ordning = {"TechDraw::DrawViewDetail": 1, "TechDraw::DrawViewSection": 2, "TechDraw::DrawViewPart": 3,
+                   "TechDraw::DrawPage": 4, "TechDraw::DrawSVGTemplate": 5}
+        for p_ in [o for o in td if o.TypeId == "TechDraw::DrawPage"]:
+            try:
+                p_.KeepUpdated = False
+            except Exception:
+                pass
         namn = [o.Name for o in sorted(td, key=lambda o: ordning.get(o.TypeId, 0))]
         if namn and fcapi.har_gui():
             fcapi.pump(1.0)
-        borta = 0
+        borta, forra = 0, None
         for n in namn:
-            if doc.getObject(n) is not None:
-                doc.removeObject(n)
-                borta += 1
+            o = doc.getObject(n)
+            if o is None:
+                continue
+            if forra is not None and ordning.get(o.TypeId, 0) != forra and fcapi.har_gui():
+                fcapi.pump(0.3)
+            forra = ordning.get(o.TypeId, 0)
+            doc.removeObject(n)
+            borta += 1
         doc.recompute()
         return borta
 
     def stall_in():
         """TechDraw-inställningar för jobbet (sparas inte: FreeCAD avslutas med os._exit)."""
-        for grp, typ, k, val in [("Dimensions", "Int", "ArrowStyle", 2),             # snedstreck (tick) som Tekla
+        for grp, typ, k, val in [("Dimensions", "Int", "ArrowStyle", 2),             # snedstreck (tick)
                                  ("Dimensions", "Float", "FontSize", 3.4),           # snittbokstäverna: 1,39 x FontSize em
                                  ("Dimensions", "String", "FontName", FONT),
                                  ("Labels", "String", "LabelFont", FONT),
-                                 ("Labels", "Float", "LabelSize", 3.0)]:
+                                 ("Labels", "Float", "LabelSize", 3.0),
+                                 # ytdetekteringen hittar ibland falska ytor (vita fält mellan rör och vyns kant)
+                                 ("General", "Bool", "HandleFaces", False)]:
             pg = App.ParamGet("User parameter:BaseApp/Preferences/Mod/TechDraw/" + grp)
             getattr(pg, "Set" + typ)(k, val)
-        # bubblorna fylls med sidans färg (standard ljusgrå F1F3F5) och linjerna är mörkgrå: svart/vitt som Tekla
+        # bubblorna fylls med sidans färg (standard ljusgrå F1F3F5) och linjerna är mörkgrå: svart/vitt
         pg = App.ParamGet("User parameter:BaseApp/Preferences/Mod/TechDraw/Colors")
         for k in ("PageColor", "FaceColor"):
             pg.SetUnsigned(k, 0xFFFFFFFF)
@@ -419,19 +458,30 @@ def _jobb():
             return None
         return r if r.Volume > 1e-6 else None
 
-    def ytpunkt(f):
+    def ytpunkt(f, d=None):
+        """En punkt på ytan (p, u, v). Med blickriktningen d väljs, bland punkter spridda över ytan, den vars normal
+        pekar mest mot betraktaren (en rundstång eller ett rör har en enda cylinderyta)."""
         c = f.CenterOfMass
-        if f.isInside(c, 0.01, True):
+        if d is None and f.isInside(c, 0.01, True):
             u, v = f.Surface.parameter(c)
             return c, u, v
         u0, u1, v0, v1 = f.ParameterRange
-        for i in (0.5, 0.25, 0.75, 0.1, 0.9):
+        bast = None
+        for i in (0.5, 0.25, 0.75, 0.1, 0.9, 0.0, 0.375, 0.625):
             for j in (0.5, 0.25, 0.75, 0.1, 0.9):
                 u, v = u0 + (u1 - u0) * i, v0 + (v1 - v0) * j
                 p = f.valueAt(u, v)
-                if f.isInside(p, 0.01, True):
+                if not f.isInside(p, 0.01, True):
+                    continue
+                if d is None:
                     return p, u, v
-        return None
+                try:
+                    k = f.normalAt(u, v).dot(d)
+                except Exception:
+                    continue
+                if bast is None or k > bast[0]:
+                    bast = (k, p, u, v)
+        return bast[1:] if bast else None
 
     def skymd(p, d, hinder, langd):
         if langd <= 0.1:
@@ -455,7 +505,7 @@ def _jobb():
         for f in shape.Faces:
             if f.Area < 1.0:
                 continue
-            q = ytpunkt(f)
+            q = ytpunkt(f, None if f.Surface.__class__.__name__ == "Plane" else d)
             if q is None:
                 continue
             p, u, v = q
@@ -501,6 +551,207 @@ def _jobb():
                 x[a] = min(x[a], x[b] - poster[b][1] / 2 - poster[a][1] / 2 - luft)
         return [x[i] for i in range(len(poster))]
 
+    # ------------------------------------------------------------------ blad 2: detaljer och delvyer
+    DETALJSKALOR = [1, 2, 5, 10, 20]
+
+    def kanter(v):
+        ut, i = [], 0
+        while True:
+            try:
+                e = v.getEdgeByIndex(i)
+            except Exception:
+                break
+            if e is None:
+                break
+            ut.append(e)
+            i += 1
+        return ut
+
+    def vanta(v, n=300):
+        for _ in range(n):
+            pump(0.05)
+            if v.getVisibleEdges():
+                return True
+        return False
+
+    def vit(v):
+        vo = v.ViewObject
+        for k_, v_ in (("LineWidth", 0.35), ("HiddenWidth", 0.13), ("FaceColor", (1.0, 1.0, 1.0))):
+            if hasattr(vo, k_):
+                setattr(vo, k_, v_)
+
+    def text(doc, page, namn, rader, x, y, storlek=2.6):
+        t = doc.addObject("TechDraw::DrawViewAnnotation", namn)
+        page.addView(t)
+        t.Text = [str(r_) for r_ in rader]
+        t.TextSize = storlek
+        t.X, t.Y = x, y
+        if hasattr(t, "Font"):                        # DrawViewAnnotation har Font på objektet, inte i ViewObject
+            t.Font = FONT
+        return t
+
+    def detaljmatt(doc, page, v, nr, matt):
+        """Mått i en detaljvy efter värde: {typ: x|y|r|d, varde: 40, lage: over|under|vanster|hoger} (r = radie,
+        d = diameter på en cirkel). Kanten med rätt
+        längd och riktning (x = vågrät, y = lodrät) eller båge med rätt radie letas i vyn; finns flera tas den som
+        ligger längst åt `lage`. Kanternas koordinater är oskalade relativt vyns mitt."""
+        s_ = v.Scale
+        ek = kanter(v)
+        n = 0
+        nivaer = {}                                   # flera mått åt samma håll staplas 5 mm isär
+        for j, m in enumerate(matt):
+            typ, varde, lage = m.get("typ", "x"), float(m["varde"]), m.get("lage", "over")
+            kand = []
+            for i, e in enumerate(ek):
+                namn_ = e.Curve.__class__.__name__
+                if typ in ("r", "d"):
+                    rad_ = e.Curve.Radius if namn_ == "Circle" else (e.Curve.MajorRadius if namn_ == "Ellipse" and
+                                                                     abs(e.Curve.MajorRadius - e.Curve.MinorRadius) < 0.3 else None)
+                    if rad_ is not None and abs(rad_ * (2 if typ == "d" else 1) - varde) < 0.5:
+                        c = e.discretize(3)[1]
+                        kand.append((i, c, c))
+                elif len(e.Vertexes) == 2 and namn_ in ("Line", "LineSegment"):
+                    p_, q_ = e.Vertexes[0].Point, e.Vertexes[1].Point
+                    dx, dy = abs(q_.x - p_.x), abs(q_.y - p_.y)
+                    if (typ == "x" and abs(dx - varde) < 0.3 and dy < 0.1) or (typ == "y" and abs(dy - varde) < 0.3 and dx < 0.1):
+                        kand.append((i, p_, q_))
+            if not kand:
+                logg("OBS: detalj D%d: ingen kant %s = %g för måttet" % (nr, typ, varde))
+                continue
+            nyckel = {"over": lambda k_: -(k_[1].y + k_[2].y), "under": lambda k_: k_[1].y + k_[2].y,
+                      "vanster": lambda k_: k_[1].x + k_[2].x, "hoger": lambda k_: -(k_[1].x + k_[2].x)}[lage]
+            i, p_, q_ = sorted(kand, key=nyckel)[0]
+            mx, my = (p_.x + q_.x) / 2 * s_, (p_.y + q_.y) / 2 * s_
+            steg_ = nivaer.get(lage, 0)
+            nivaer[lage] = steg_ + 1
+            off = {"over": (0, 5 + 5 * steg_), "under": (0, -5 - 5 * steg_), "vanster": (-6 - 6 * steg_, 0), "hoger": (6 + 6 * steg_, 0)}[lage]
+            d = doc.addObject("TechDraw::DrawViewDimension", "DetaljMatt%d_%d" % (nr, j))
+            d.Type = {"x": "DistanceX", "y": "DistanceY", "r": "Radius", "d": "Diameter"}[typ]
+            d.MeasureType = "Projected"
+            d.References2D = [(v, "Edge%d" % i)]
+            page.addView(d)
+            d.X, d.Y = mx + off[0] + (8 if typ in ("r", "d") else 0), my + off[1] + (8 if typ in ("r", "d") else 0)
+            stil(d)
+            if typ == "r":
+                d.FormatSpec = "R%.1w"
+            elif typ == "d":
+                d.FormatSpec = "Ø%.1w"
+            n += 1
+        return n
+
+    def detaljblad(doc, page1, tpl1, marke, vdef, ds, detaljer, delvyer, T):
+        """Blad 2 i samma FCStd: delvyer (utvalda delar sedda längs en riktning, t.ex. längs en sned balk där
+        TechDraws snitt ger fel) till vänster och detaljer (förstoringar, DrawViewDetail) i ett rutnät, med text
+        och mått under varje. Detaljcirklarna D1, D2 ... syns i basvyerna på blad 1. Bladens nummer blir
+        <märke>.1 och <märke>.2."""
+        tpl2 = doc.addObject("TechDraw::DrawSVGTemplate", "MallDetaljer")
+        tpl2.Template = tpl1.Template
+        blad2 = doc.addObject("TechDraw::DrawPage", "Detaljblad")
+        blad2.Label = "Detaljer"
+        blad2.Template = tpl2
+        et1, et2 = dict(tpl1.EditableTexts), dict(tpl1.EditableTexts)
+        et1["Nummer"], et2["Nummer"] = marke + ".1", marke + ".2"
+        doc.recompute()
+        blad2.ViewObject.show()
+        pump(0.5)
+        delar_ = {o.Name: o for o in doc.Objects}
+        vyer = {}
+        for vd in vdef:
+            vyer[vd["namn"]] = vd["vy"].v
+            for k_, (vn, _, _) in VYDEF.items():
+                if vn == vd["namn"]:
+                    vyer[k_] = vd["vy"].v
+            if vd["snitt"]:
+                vyer[vd["snitt"]["namn"]] = vd["vy"].v
+        # ---- delvyer i vänsterkolumnen (under rutan PLACERING I STOMNÄT)
+        y = 372.0
+        skalor = set()
+        for i, dv_ in enumerate(delvyer):
+            kallor = [delar_[n_] for n_ in dv_.get("kallor", []) if n_ in delar_] or list(ds)
+            n_ = V(*dv_["normal"]).normalize()
+            xr = V(*dv_["xriktning"]) if dv_.get("xriktning") else (V(0, 0, 1).cross(n_).normalize() if abs(n_.z) < 0.9 else V(1, 0, 0))
+            # en feature (t.ex. Pad utan snäckan) mäts med sin kropp: featurens Shape kan sakna kroppens placering
+            kroppar_ = [o.getParentGeoFeatureGroup() if o.TypeId.startswith("PartDesign::") and o.TypeId != "PartDesign::Body"
+                        and o.getParentGeoFeatureGroup() is not None else o for o in kallor]
+            yr_ = n_.cross(xr)                         # hörnen, inte lådan: sneda delar ger annars för stor vy
+            pts_ = [q.Point for o in kroppar_ for q in o.Shape.Vertexes] or [V()]
+            bb = (min(q.dot(xr) for q in pts_), max(q.dot(xr) for q in pts_), min(q.dot(yr_) for q in pts_), max(q.dot(yr_) for q in pts_))
+            w_, h_ = bb[1] - bb[0], bb[3] - bb[2]
+            sk = dv_.get("skala") or next((k_ for k_ in SKALOR if w_ / k_ <= 110 and h_ / k_ <= 270), SKALOR[-1])
+            skalor.add(sk)
+            namn = "Delvy%s" % dv_.get("namn", str(i + 1))
+            v = doc.addObject("TechDraw::DrawViewPart", namn)
+            blad2.addView(v)
+            v.Source = kallor
+            v.Direction, v.XDirection = n_, xr
+            v.ScaleType, v.Scale = "Custom", 1.0 / sk
+            y -= h_ / sk / 2 + 4
+            v.X, v.Y = 80, y
+            doc.recompute()
+            vanta(v)
+            vit(v)
+            vyer[dv_.get("namn", str(i + 1))] = v
+            vyer[namn] = v
+            y -= h_ / sk / 2 + 6
+            text(doc, blad2, "DelvyText%d" % (i + 1), ["VY %s  %s" % (dv_.get("namn", i + 1), skaltext(sk))] + list(dv_.get("text", [])), 80, y)
+            y -= 8 + 3 * len(dv_.get("text", []))
+            logg("Delvy %s: %d delar, skala %s" % (dv_.get("namn", i + 1), len(kallor), skaltext(sk)))
+        # ---- detaljer i rutnät till höger om delvyerna
+        x0 = 150.0 if delvyer else 60.0
+        kol = int((584 - x0) // 120)
+        nm = 0
+        gjorda = []
+        for i, d in enumerate(detaljer[:kol * 2]):
+            bas_ = vyer.get(d.get("vy", "fram"))
+            if bas_ is None:
+                logg("OBS: vyn %s saknas, detalj D%d hoppas över" % (d.get("vy"), i + 1))
+                continue
+            sk = d.get("skala") or next((k_ for k_ in DETALJSKALOR if 2 * d["radie"] / k_ <= 105), DETALJSKALOR[-1])
+            skalor.add(sk)
+            p = V(*d["punkt"])
+            tag = bas_.makeCosmeticLine3D(p, p + V(bas_.XDirection).normalize() * 0.01)
+            ce = bas_.getCosmeticEdge(tag)
+            f_ = ce.Format
+            f_["visible"] = False
+            ce.Format = f_
+            dv = doc.addObject("TechDraw::DrawViewDetail", "Detalj%d" % (i + 1))
+            blad2.addView(dv)
+            dv.BaseView = bas_
+            dv.Source = bas_.Source
+            dv.Direction, dv.XDirection = bas_.Direction, bas_.XDirection
+            dv.AnchorPoint = V(ce.Start.x, ce.Start.y, 0)      # basvyns centrerade, oskalade koordinater
+            dv.Radius = d["radie"]
+            dv.Reference = "D%d" % (i + 1)
+            dv.ScaleType, dv.Scale = "Custom", 1.0 / sk
+            cx = x0 + 60 + 120 * (i % kol)
+            cy = 325.0 if i < kol else 170.0
+            dv.X, dv.Y = cx, cy
+            gjorda.append((i, d, dv))
+            rader_ = [T("DETALJ D%s  %s", i + 1, skaltext(sk)), d.get("rubrik", "")] + list(d.get("text", []))
+            text(doc, blad2, "DetaljText%d" % (i + 1), rader_, cx, cy - d["radie"] / sk - 8 - 2.2 * len(rader_))
+        # detaljvyerna räknas i bakgrunden: vänta in alla (en detalj utan kanter blir tom i PDF:en)
+        doc.recompute()
+        for i, d, dv in gjorda:
+            if not vanta(dv, 600):
+                logg("OBS: detalj D%d räknades inte klart" % (i + 1))
+            vit(dv)
+        for i, d, dv in gjorda:
+            if d.get("matt"):
+                try:
+                    nm += detaljmatt(doc, blad2, dv, i + 1, d["matt"])
+                except Exception as e:
+                    logg("OBS: mått i D%d: %s" % (i + 1, e))
+        text(doc, blad2, "DetaljRubrik", [T("DETALJER %s – DETALJERNAS LÄGEN D1 ... VISAS I BLAD %s.1", marke, marke)], 230, 402, 3.5)
+        et2["Skala"] = "  ".join(skaltext(k_) for k_ in sorted(skalor))
+        tpl1.EditableTexts = et1
+        tpl2.EditableTexts = et2
+        doc.recompute()
+        pump(1.5)
+        logg("Blad 2: %d delvyer, %d detaljer, %d mått" % (len(delvyer), min(len(detaljer), kol * 2), nm))
+        if len(detaljer) > kol * 2:
+            logg("OBS: bara %d detaljer får plats på blad 2, resten hoppas över" % (kol * 2))
+        return blad2
+
     # ------------------------------------------------------------------ ritning
     def ritning(a):
         stall_in()
@@ -517,6 +768,10 @@ def _jobb():
         dolda = cfg.get("dolda", [])
         snittdef = [tolka_snitt(s) for s in a["snitt"]] if a.get("snitt") else cfg.get("snitt", [])
         noter = a["noter"] if a.get("noter") else cfg.get("noter", [])
+        bubbelstil = a.get("bubblor") or cfg.get("bubblor", "nara")
+        lang = a.get("sprak") or cfg.get("sprak", "sv")
+        T = sprak.oversattare(lang)
+        detaljer, delvyer = cfg.get("detaljer", []), cfg.get("delvyer", [])
         rader = stal.materiallista(ds)
         for r in rader:
             if r["fel"]:
@@ -531,10 +786,12 @@ def _jobb():
                 kl = []
             tjock, varm = {}, {}
             for r in rader:
+                if r["material"].upper() == "INKÖP":         # inköpta detaljer (k.inkop): ingen materialkvalitet
+                    continue
                 t = kallor.tjocklek(r["profil"])
-                tjock[r["material"]] = max(tjock.get(r["material"], 0.0), t or 0.0) or None
+                tjock[r["material"]] = max(tjock.get(r["material"], 0.0), t or 0.0)      # 0 = okänd (egen profiltext)
                 varm[r["material"]] = varm.get(r["material"], False) or r["profil"].upper().startswith(("KKR", "KCKR"))
-            mat = {m: kallor.material(m, tjock[m], varm[m]) for m in tjock}
+            mat = {m: kallor.material(m, tjock[m] or None, varm[m]) for m in tjock}
             kallrader = kallor.noter(kl, mat, bredd=70)
             for s_ in kallrader:
                 logg("Not:", s_)
@@ -543,6 +800,13 @@ def _jobb():
             for s_ in kallor.fel():
                 logg("Källor FEL:", s_)
             noter = list(noter) + kallrader
+        try:                                          # regelkontrollen från bygget (scripts/regler.py) som not
+            import regler, kallor
+            rk = regler.not_text(json.loads(getattr(g, "Regelkontroll", "") or "null"), T)
+            if rk:
+                noter = list(noter) + kallor.bryt(rk, 70)
+        except ValueError:
+            pass
         alla = [o.Shape for o in ds]
         komp = Part.makeCompound(alla)
         huvud = doc.getObject(g.Huvuddel) if g.Huvuddel else None
@@ -652,7 +916,7 @@ def _jobb():
             vd["botten"] = BUBBEL + (14.0 if vd["snitt"] else 0.0) + vd["extra"]
 
         # ---- hålgrupper som inte syns i någon vy (t.ex. bultförbandet bakom UPE-livet): hålangivelsen i första vyn
-        # där hålen ligger längs blickriktningen, som Teklas ledare till dolda hål, och med i måttkedjorna
+        # där hålen ligger längs blickriktningen, som ledare till dolda hål, och med i måttkedjorna
         anvanda = {gi for vd in vdef for gi in vd["hal"] + vd["skymda"]}
         for gi in range(len(hg)):
             if gi in anvanda:
@@ -686,7 +950,7 @@ def _jobb():
         huvud_v = [vd for vd in vdef if vd["snitt"] is None]
         snitt_v = [vd for vd in vdef if vd["snitt"]]
         # noterna nere till vänster (underkant y = 26) och materiallistan bestämmer hur långt ner vyerna får gå
-        ml, mw, mh, ta, tv = materiallista_svg(rader, marke, a["antal"], a["hal"], a["svets"])
+        ml, mw, mh, ta, tv = materiallista_svg(rader, marke, a["antal"], a["hal"], a["svets"], T)
         nsvg, nw, nh_ = noter_svg(noter) if noter else (None, 0.0, 0.0)
         Y0, X0 = 392.0, 50.0
 
@@ -737,7 +1001,7 @@ def _jobb():
         # ---- blad, mall, vyer
         page = doc.addObject("TechDraw::DrawPage", "Sammanstallningsritning")
         tpl = doc.addObject("TechDraw::DrawSVGTemplate", "Mall")
-        tpl.Template = foretag.mall_med_logga(MALL, a.get("logga"), utmapp)
+        tpl.Template = sprak.mallfil(foretag.mall_med_logga(MALL, a.get("logga"), utmapp), lang, utmapp)
         if a.get("logga"):
             logg("Logga i titelblocket:", a["logga"])
         page.Template = tpl
@@ -774,6 +1038,7 @@ def _jobb():
 
         # ---- måttkedjor och totalmått
         nm = 0
+        hinder = []                                    # rutor på papperet (x0, y0, x1, y1) som bubblorna undviker
 
         def lagen(seg, mitt):
             """Måttexternas lägen längs en kedja: mitt i segmentet, eller utanför det (mot kedjans närmaste ände)
@@ -813,11 +1078,15 @@ def _jobb():
                         pts = [(vy.punkt(ext[0], p), vy.punkt(ext[0], q)) for p, q in par]
                         seg = [(vy.papper(A_)[1], vy.papper(B_)[1]) for A_, B_ in pts]
                     seg = [(min(u, v), max(u, v), textbredd(fmt(q - p), 3.0)) for (u, v), (p, q) in zip(seg, par)]
-                    for (A_, B_), c in zip(pts, lagen(seg, X if axel == "x" else Y)):
+                    for (A_, B_), c, sg in zip(pts, lagen(seg, X if axel == "x" else Y), seg):
                         if axel == "x":
-                            vy.matt("DistanceX", A_, B_, (c, Y + h_ / 2 + FORST + vd["extra"] + STEG * niva), "Matt%s" % vd["namn"])
+                            yl = Y + h_ / 2 + FORST + vd["extra"] + STEG * niva
+                            vy.matt("DistanceX", A_, B_, (c, yl), "Matt%s" % vd["namn"])
+                            hinder += [(c - sg[2] / 2 - 0.5, yl - 2.2, c + sg[2] / 2 + 0.5, yl + 2.6), (sg[0], yl - 3.5, sg[1], yl - 0.5)]
                         else:
-                            vy.matt("DistanceY", A_, B_, (X - w / 2 - FORST - STEG * niva, c), "Matt%s" % vd["namn"])
+                            xl = X - w / 2 - FORST - STEG * niva
+                            vy.matt("DistanceY", A_, B_, (xl, c), "Matt%s" % vd["namn"])
+                            hinder += [(xl - 2.6, c - sg[2] / 2 - 0.5, xl + 2.2, c + sg[2] / 2 + 0.5), (xl + 0.5, sg[0], xl + 3.5, sg[1])]
                         nm += 1
         logg("Mått: %d" % nm)
 
@@ -835,10 +1104,44 @@ def _jobb():
         saknas = sorted({o.Pos for o in ds} - set(bast))
         if saknas:
             logg("OBS: positioner som inte syns i någon vy (ingen bubbla): %s" % ", ".join(saknas))
+        # ---- hinder för bubblorna: materiallista, noter, titelblock, andra vyer, snittmarkeringar och -rubriker
+        hinder += [(ML_X, ML_Y, ML_X + mw, ML_Y + mh), (360.0, 0.0, 594.0, 75.0)]
+        if noter:
+            hinder.append((X0, 26.0, X0 + nw, 26.0 + nh_))
+        if iso:
+            hinder.append((iso.v.X.Value - wi / ni / 2, iso.v.Y.Value - hi / ni / 2 - 14, iso.v.X.Value + wi / ni / 2, iso.v.Y.Value + hi / ni / 2))
+        for vd in vdef:
+            vy = vd["vy"]
+            X, Y, w_, h_ = vy.v.X.Value, vy.v.Y.Value, vd["w"] * vy.s, vd["h"] * vy.s
+            vd["ruta"] = (X - w_ / 2, Y - h_ / 2, X + w_ / 2, Y + h_ / 2)
+            if vd["snitt"]:
+                hinder.append((X - 20, Y - h_ / 2 - BUBBEL - 15, X + 20, Y - h_ / 2 - BUBBEL - 1))       # rubriken A - A
+                bv = vyobj[vd["snitt"]["basnamn"]]
+                bvd = next(v_ for v_ in vdef if v_["namn"] == vd["snitt"]["basnamn"])
+                px, py = bv.papper(V(*vd["snitt"]["origo"]))
+                BX, BY, bw, bh = bv.v.X.Value, bv.v.Y.Value, bvd["w"] * bv.s, bvd["h"] * bv.s
+                if vd["snitt"]["riktning"] in ("Left", "Right"):                   # lodrät snittlinje
+                    hinder += [(px - 5, BY + bh / 2 - 2, px + 18, BY + bh / 2 + 16), (px - 5, BY - bh / 2 - 16, px + 18, BY - bh / 2 + 2)]
+                else:
+                    hinder += [(BX - bw / 2 - 16, py - 5, BX - bw / 2 + 2, py + 18), (BX + bw / 2 - 2, py - 5, BX + bw / 2 + 16, py + 18)]
+        vynamn = {VYDEF[k_][0]: k_ for k_ in VYDEF}
+        for d_ in detaljer:                                       # detaljcirklarna D1, D2 ... i sina basvyer
+            vd = next((v_ for v_ in vdef if v_["namn"] == d_.get("vy") or vynamn.get(v_["namn"]) == d_.get("vy")
+                       or v_["namn"] == "Snitt%s" % d_.get("vy")), None)
+            if vd is not None:
+                px, py = vd["vy"].papper(V(*d_["punkt"]))
+                r_ = d_["radie"] * vd["vy"].s
+                hinder.append((px - r_, py - r_, px + r_ + 8, py + r_))
+
+        def overlapp(r, q, marg=1.0):
+            return not (r[2] + marg <= q[0] or q[2] + marg <= r[0] or r[3] + marg <= q[1] or q[3] + marg <= r[1])
+
         # ---- hålangivelser 4*Ø14 - M12x44: grupper i vyns övre halva ovanför måtten, i nedre halvan i raden
-        # med positionsbubblor under vyn. Varje hålgrupp en gång (i första vyn där hålen syns som cirklar).
+        # under vyn. Varje hålgrupp en gång (i första vyn där hålen syns som cirklar). Positionsbubblorna läggs
+        # intill delen med en kort pil (bubblor "nara", standard) eller i raden under vyn (bubblor "rad").
         nb = nh = 0
         gjorda = set()
+        nara = []                                     # (vy, text, ankare, bredd)
         for vd in vdef:
             vy = vd["vy"]
             X, Y, h_ = vy.v.X.Value, vy.v.Y.Value, vd["h"] * vy.s
@@ -848,7 +1151,10 @@ def _jobb():
             for pos, (_, v_, p, o) in bast.items():
                 if v_ is vd:
                     txt = "%s %s %s" % (marke, pos, o.Profil) if huvud is not None and o.Pos == huvud.Pos else pos
-                    nere.append((txt, vy.papper(p), textbredd(txt, 3.0) + 7, "Inspection", 0.0))
+                    if bubbelstil == "nara":
+                        nara.append((vd, txt, vy.papper(p), textbredd(txt, 3.0) + 7))
+                    else:
+                        nere.append((txt, vy.papper(p), textbredd(txt, 3.0) + 7, "Inspection", 0.0))
             for gi in vd["hal"]:
                 if gi in gjorda:
                     continue
@@ -870,12 +1176,49 @@ def _jobb():
                     dx, dy = xb - ank[0], yr - ank[1]
                     L = math.hypot(dx, dy) or 1.0
                     vy.ballong(txt, (ank[0] + dx / L * r, ank[1] + dy / L * r), (xb, yr), form=form)
+                    hinder.append((xb - b / 2, yr - 3, xb + b / 2, yr + 3))
                     if form == "Line":
                         nh += 1
                     else:
                         nb += 1
             if uppe or nere:
                 logg("%s: %s" % (vd["namn"], ", ".join(t[0] for t in nere + uppe)))
+        # bubblor intill delen: första lediga läget runt ankaret (inte på mått, noter, andra bubblor, andra vyer)
+        reserv = {}
+        for vd, txt, (ox, oy), w in sorted(nara, key=lambda t: (-t[3], t[2][0])):
+            hd = 6.0
+            kand = [(w / 2 + 7, 8), (-w / 2 - 7, 8), (w / 2 + 7, -8), (-w / 2 - 7, -8), (0, 11), (0, -11),
+                    (w / 2 + 10, 0), (-w / 2 - 10, 0), (w / 2 + 9, 14), (-w / 2 - 9, 14), (w / 2 + 9, -14),
+                    (-w / 2 - 9, -14), (0, 18), (0, -18), (w / 2 + 14, 22), (-w / 2 - 14, 22), (w / 2 + 14, -22), (-w / 2 - 14, -22)]
+            andra = [v_["ruta"] for v_ in vdef if v_ is not vd]
+            val = None
+            for dx, dy in kand:
+                cx, cy = ox + dx, oy + dy
+                r = (cx - w / 2, cy - hd / 2, cx + w / 2, cy + hd / 2)
+                if r[0] < 32 or r[2] > 584 or r[1] < 12 or r[3] > 410:
+                    continue
+                if any(overlapp(r, q) for q in hinder) or any(overlapp(r, q, 0.0) for q in andra):
+                    continue
+                val = (cx, cy, r)
+                break
+            if val is None:
+                reserv.setdefault(vd["namn"], []).append((vd, txt, (ox, oy), w))
+                continue
+            cx, cy, r = val
+            hinder.append(r)
+            vd["vy"].ballong(txt, (ox, oy), (cx, cy), pil=True)
+            nb += 1
+        for lst in reserv.values():                   # ingen ledig plats intill: raden under vyn som förut
+            vd = lst[0][0]
+            vy = vd["vy"]
+            ybub = vy.v.Y.Value - vd["h"] * vy.s / 2 - 8.5 - vd["extra"]
+            xs = sprid([(ank[0], w) for _, _, ank, w in lst], 44, 570, 3.0)
+            for (_, txt, ank, w), xb in zip(lst, xs):
+                vy.ballong(txt, ank, (xb, ybub))
+                nb += 1
+            logg("OBS: %s: ingen plats intill delen för %s, lagda under vyn" % (vd["namn"], ", ".join(t[1] for t in lst)))
+        if nara:
+            logg("Positionsbubblor intill delen: %d" % (len(nara) - sum(len(l_) for l_ in reserv.values())))
         skymda = {gi for vd in vdef for gi in vd["skymda"]}
         ejvisade = [stal.haltext(len(h["punkter"]), h["d"], h["bult"]) for i, h in enumerate(hg) if i not in gjorda and i not in skymda]
         logg("Positionsbubblor: %d, hålangivelser: %d (%d grupper bakom andra med samma hålbild)%s" % (
@@ -895,7 +1238,7 @@ def _jobb():
         symbol(doc, page, "Materiallista", ml, ML_X, ML_Y + mh, mw, mh)
         if noter:
             symbol(doc, page, "Noter", nsvg, X0, 26.0 + nh_, nw, nh_)
-        skalor = sorted({n} | ({ns} if ns else set()))          # som Tekla: huvudvyer och snitt (inte isometrin)
+        skalor = sorted({n} | ({ns} if ns else set()))          # huvudvyer och snitt (inte isometrin)
         rev = [s.strip() for s in a["rev"].split("|")] if a.get("rev") else []
         if len(rev) == 4:
             rev = [rev[0], ""] + rev[1:]
@@ -903,7 +1246,7 @@ def _jobb():
         obj = (a.get("objekt") or []) + ["", "", ""]
         adr = list(a.get("adress") or []) + ["", "", ""]
         falt = dict(Foretag=a.get("foretag") or "", Adress1=adr[0], Adress2=adr[1], Adress3=adr[2],
-                    Uppdrag=a["uppdrag"], RitadAv=a["ritad_av"], Datum=a.get("datum") or time.strftime("%Y-%m-%d"),
+                    Uppdrag=a["uppdrag"], RitadAv=a["ritad_av"], Datum=a.get("datum") or os.environ.get("FC_DATUM") or time.strftime("%Y-%m-%d"),
                     Handlaggare=a["handlaggare"], Ansvarig=a["ansvarig"], Objekt1=obj[0], Objekt2=obj[1], Objekt3=obj[2],
                     Skala="  ".join(skaltext(k) for k in skalor), Nummer=marke, Bet=a["bet"],
                     RevBet=rev[0], RevAnt=rev[1], RevText=rev[2], RevDatum=rev[3], RevSign=rev[4],
@@ -914,27 +1257,33 @@ def _jobb():
         tpl.EditableTexts = et
         doc.recompute()
         pump(1.0)
+        blad = [page]
+        if detaljer or delvyer:
+            blad.append(detaljblad(doc, page, tpl, marke, vdef, ds, detaljer, delvyer, T))
 
         # ---- kontroll och export
         fel = [o.Name for o in doc.Objects if "Invalid" in o.State or "Error" in o.State]
         if fel:
             logg("OBS: objekt med fel:", fel)
         with open(bas + "_materiallista.csv", "w", encoding="utf-8-sig") as f:
-            f.write("STYCKLIT.;PROFIL;MATERIAL;ANT.;LÄNGD;AREA/st;VIKT/st\n")
+            f.write(";".join(T(x) for x in ("STYCKLIT.", "PROFIL", "MATERIAL", "ANT.", "LÄNGD", "AREA/st", "VIKT/st")) + "\n")
             for r in rader:
                 f.write("%s;%s;%s;%d;%s;%s;%s\n" % (r["pos"], r["profil"], r["material"], r["antal"], fmt(r["langd"]),
                                                   ("%.2f" % r["area"]).replace(".", ","), ("%.1f" % r["vikt"]).replace(".", ",")))
-            f.write(";;;;TOTALT;%s;%s\n" % (("%.1f" % ta).replace(".", ","), ("%.1f" % tv).replace(".", ",")))
+            f.write(";;;;%s;%s;%s\n" % (T("TOTALT"), ("%.1f" % ta).replace(".", ","), ("%.1f" % tv).replace(".", ",")))
             for s_ in kallrader:
-                f.write("KÄLLA;%s\n" % s_)
+                f.write("%s;%s\n" % (T("KÄLLA"), s_))
         doc.saveAs(bas + ".FCStd")
         logg("Sparat:", bas + ".FCStd")
-        page.ViewObject.show()
-        pump(1.0)
         import TechDrawGui
-        tmp = bas + "_tmp.pdf"
-        TechDrawGui.exportPageAsPdf(page, tmp)
-        return dict(sidor=[tmp], bas=bas, skala=n, skala_snitt=ns, skala_iso=ni, matt=nm, bubblor=nb, hal=nh, vikt=tv)
+        sidor = []
+        for j, p_ in enumerate(blad):
+            p_.ViewObject.show()
+            pump(1.0)
+            tmp = "%s_tmp%d.pdf" % (bas, j + 1)
+            TechDrawGui.exportPageAsPdf(p_, tmp)
+            sidor.append(tmp)
+        return dict(sidor=sidor, bas=bas, skala=n, skala_snitt=ns, skala_iso=ni, matt=nm, bubblor=nb, hal=nh, vikt=tv)
 
     fcapi.kor_jobb(lambda a: bygg(a) if a["lage"] == "bygg" else ritning(a))
 
@@ -946,17 +1295,23 @@ def _efterbehandla(r):
         import fitz as pymupdf
     bas = r["bas"]
     pdf = bas + ".pdf"
-    with pymupdf.open(r["sidor"][0]) as d:
-        try:
-            if os.path.exists(pdf):
-                os.remove(pdf)
-        except PermissionError:
-            pdf = bas + "_" + time.strftime("%H%M%S") + ".pdf"
-            print("OBS: PDF:en är öppen i ett annat program - sparar som %s" % os.path.basename(pdf))
-        d.save(pdf)
-        d[0].get_pixmap(dpi=110).save(bas + ".png")
-    os.remove(r["sidor"][0])
-    print("PDF: %s  PNG: %s  CSV: %s" % (pdf, os.path.basename(bas + ".png"), os.path.basename(bas + "_materiallista.csv")))
+    ny = pymupdf.open()
+    pngs = []
+    for i, s in enumerate(r["sidor"]):
+        with pymupdf.open(s) as d:
+            ny.insert_pdf(d)
+            png = bas + (".png" if i == 0 else "_detaljer.png" if i == 1 else "_blad%d.png" % (i + 1))
+            d[0].get_pixmap(dpi=110).save(png)
+            pngs.append(os.path.basename(png))
+        os.remove(s)
+    try:
+        if os.path.exists(pdf):
+            os.remove(pdf)
+    except PermissionError:
+        pdf = bas + "_" + time.strftime("%H%M%S") + ".pdf"
+        print("OBS: PDF:en är öppen i ett annat program - sparar som %s" % os.path.basename(pdf))
+    ny.save(pdf)
+    print("PDF: %s (%d blad)  PNG: %s  CSV: %s" % (pdf, len(r["sidor"]), ", ".join(pngs), os.path.basename(bas + "_materiallista.csv")))
 
 
 if __name__ == "__fcjobb__":

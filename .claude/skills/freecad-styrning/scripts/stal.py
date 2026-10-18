@@ -13,7 +13,7 @@ Används inne i FreeCAD av `sammanstallning.py bygg` via ett konstruktionsskript
 Regeln i SKILL.md gäller: allt ritas med FreeCADs egna verktyg. Varje del blir en PartDesign::Body i gruppen
 "Sammanstallning": skissen Tvarsnitt (fullt bestämd, namngivna mått b, h, tf, t ...), Pad "Langd", rotradierna
 som Fillet "Rotradie" och hålen som Pocket från en skiss med cirklar (fickans egenskaper Bult och Halgrupp).
-Kroppen har egenskaperna Pos (positionsnummer, t.ex. "b/1"), Profil (Tekla-namn: "UPE140", "PL10*110",
+Kroppen har egenskaperna Pos (positionsnummer, t.ex. "b/1"), Profil (svensk profilbeteckning: "UPE140", "PL10*110",
 "VKR100*6.3") och Material. Koordinater och längder får vara uttryck mot Variabler ("Langd", "Djup - 65"):
 kroppens Placement och Pad-längden binds då till bladet och följer med när användaren ändrar en variabel.
 Hålens lägen och antalet delar är tal - ändras de: bygg om (`sammanstallning.py bygg ... --var Bjalkar=4`).
@@ -39,7 +39,9 @@ HEB = {100: (100, 100, 6, 10, 12), 120: (120, 120, 6.5, 11, 12), 140: (140, 140,
        180: (180, 180, 8.5, 14, 15), 200: (200, 200, 9, 15, 18), 220: (220, 220, 9.5, 16, 18), 240: (240, 240, 10, 17, 21),
        260: (260, 260, 10, 17.5, 24), 280: (280, 280, 10.5, 18, 24), 300: (300, 300, 11, 19, 27)}
 
-DENSITET = {"stal": 7850.0, "rostfritt": 8000.0, "aluminium": 2700.0, "glas": 2500.0, "tra": 500.0}
+# mässing: ca 8,4 g/cm3 för CuZn37 (CW508L) och CuZn39Pb3 (CW614N) enligt EN 12165/12167-tabellerna
+# (color-metal.ro/en/extruded-copper-bars-and-profiles-subsequent-forging-or-stamping-en-12165, hämtad 2026-10-18)
+DENSITET = {"stal": 7850.0, "rostfritt": 8000.0, "aluminium": 2700.0, "glas": 2500.0, "tra": 500.0, "massing": 8400.0}
 NUM = r"(\d+(?:\.\d+)?)"
 
 
@@ -51,13 +53,15 @@ def densitet(material):
         return DENSITET["tra"]
     if m.startswith(("6060", "6063", "6082", "AL", "EN AW")):
         return DENSITET["aluminium"]
+    if m.startswith(("MÄSSING", "MASSING", "BRASS", "CUZN", "CW5", "CW6", "CW7")):
+        return DENSITET["massing"]
     if m.startswith(("1.4", "EN 1.4", "ROSTFRITT", "SS", "A2", "A4")):
         return DENSITET["rostfritt"]
     return DENSITET["stal"]
 
 
 def tolka(profil, kallor=True):
-    """Profilnamn (Tekla-stil) -> dict med typ, mått och 'kalla' (var måtten kommer ifrån). Måtten hämtas i
+    """Profilnamn (svensk beteckning) -> dict med typ, mått och 'kalla' (var måtten kommer ifrån). Måtten hämtas i
     första hand ur källorna i kallor.py (standardtabeller på nätet med cache, FreeCAD:s profiltabell), annars ur
     de inbyggda tabellerna här. Plåt (PL), rundstång (D) och mått i namnet har ingen källa (kalla=None).
     Okänt namn ger ValueError med exempel."""
@@ -120,6 +124,9 @@ def _inbyggd(p):
     if m:
         a1, a2 = float(m.group(2)), float(m.group(3))
         return dict(typ="PL", t=min(a1, a2), b=max(a1, a2))
+    m = re.fullmatch(r"(FS|FKT)" + NUM, p)                          # fyrkantstång a x a (ritas som plåt a*a)
+    if m:
+        return dict(typ="PL", t=float(m.group(2)), b=float(m.group(2)))
     m = re.fullmatch(r"(D|RUND|RD)" + NUM, p)
     if m:
         return dict(typ="D", d=float(m.group(2)))
@@ -131,11 +138,11 @@ def _inbyggd(p):
         a1, a2, a3 = float(m.group(1)), float(m.group(2)), m.group(3)
         h, b, t = (a1, a2, float(a3)) if a3 else (a1, a1, a2)
         return dict(typ="L", h=h, b=b, t=t)
-    raise ValueError("Okänd profil '%s'. Exempel: UPE140, IPE100, HEA160, VKR100*6.3, VKR120*80*5, PL10*150, D20, RÖR48.3*4, L50*5" % p)
+    raise ValueError("Okänd profil '%s'. Exempel: UPE140, IPE100, HEA160, VKR100*6.3, VKR120*80*5, PL10*150, FS20, D20, RÖR48.3*4, L50*5" % p)
 
 
 def bultdiameter(bult):
-    """M12x44 -> håldiameter 14 (M+2 från M12, M+1 under), som i svenska Tekla-ritningar."""
+    """M12x44 -> håldiameter 14 (M+2 från M12, M+1 under), som på svenska tillverkningsritningar."""
     m = re.match(r"M(\d+)", (bult or "").upper())
     if not m:
         return None
@@ -144,7 +151,7 @@ def bultdiameter(bult):
 
 
 def haltext(antal, d, bult=None):
-    """4*Ø14 - M12x44 (Tekla-stil)."""
+    """4*Ø14 - M12x44 (som på ritningarna)."""
     s = "%s*Ø%s" % (antal, ("%.1f" % d).rstrip("0").rstrip("."))
     return s + (" - %s" % bult if bult else "")
 
@@ -344,7 +351,7 @@ class Konstruktion:
     def _ny(self, d, pos, profil, material, huvuddel):
         o = d.body
         o.Label = "%s %s" % (pos, profil)
-        for p, beskr in (("Pos", "positionsnummer (stycklitterering)"), ("Profil", "profil enligt Tekla-katalogen"), ("Material", "material")):
+        for p, beskr in (("Pos", "positionsnummer (stycklitterering)"), ("Profil", "profil (svensk beteckning)"), ("Material", "material")):
             o.addProperty("App::PropertyString", p, "Stal", beskr)
         o.Pos, o.Profil, o.Material = pos, profil, material or self.material
         self.grupp.addObject(o)
@@ -430,6 +437,75 @@ class Konstruktion:
         self._placera(d, (V(1, 0, 0), V(0, 1, 0), V(0, 0, 1)), tuple(mitt))
         return self._ny(d, pos, profil, material, huvuddel)
 
+    def glas(self, pos, horn1, horn2, normal=(0, 1, 0), t=8, glipa=5, djup=0, material="Glas härdat", profil=None,
+             list_profil=None, list_pos=("li/1", "li/2"), list_material=None):
+        """Glas i en öppning: hörnen `horn1`, `horn2` (globala, diagonalt motsatta) i öppningens plan med normalen
+        `normal`; rutan blir öppningen minus `glipa` runt om, `t` tjock, centrerad i planet förskjutet `djup` längs
+        normalen. Profiltext "GLAS t", vikt med 2500 kg/m3. `list_profil` (t.ex. "FL15*8") ger fyra glaslister på
+        rutans +normal-sida mot öppningens kant: de längs x hela bredden (pos list_pos[0]), de andra emellan
+        (list_pos[1]).
+        Returnerar rutan (och listerna som rutan.Lister)."""
+        from FreeCAD import Vector as V
+        n = V(*normal).normalize()
+        a_, b_ = V(*horn1), V(*horn2)
+        d = b_ - a_
+        axlar = [V(1, 0, 0), V(0, 1, 0), V(0, 0, 1)]
+        u = next(x for x in axlar if abs(x.dot(n)) < 1e-6 and abs(d.dot(x)) > 1e-6)
+        w_ = n.cross(u)
+        L, B = abs(d.dot(u)), abs(d.dot(w_))
+        mitt = (a_ + b_) * 0.5 + n * float(djup)
+
+        def ruta(dd):
+            sk = dd.skiss("Glas", "XY")
+            sk.rektangel(round(L - 2 * glipa, 3), round(B - 2 * glipa, 3), namn=("Langd", "Bredd"))
+            dd.kloss(sk, t, "Tjocklek", symmetrisk=True)
+        o = self.egen(pos, profil or "GLAS %s" % _txt(t), ruta, mitt=tuple(mitt), rot=(tuple(u), tuple(w_), tuple(n)), material=material)
+        try:
+            o.ViewObject.ShapeColor, o.ViewObject.Transparency = (0.70, 0.85, 0.90), 60
+        except Exception:
+            pass
+        lister = []
+        if list_profil:
+            info = tolka(list_profil)
+            lb, lt = info["b"], info["t"]
+            z = n * (float(djup) + t / 2.0 + lt / 2.0)
+            c = (a_ + b_) * 0.5
+            for s_, langd_, riktn in ((1, L, u), (-1, L, u), (1, B - 2 * lb, w_), (-1, B - 2 * lb, w_)):
+                tvar = w_ if riktn is u else u
+                halv = (B if riktn is u else L) / 2.0 - lb / 2.0
+                m_ = c + z + tvar * (s_ * halv)
+                lister.append(self.plat(list_pos[0 if riktn is u else 1], list_profil, mitt=tuple(m_), langd=round(langd_, 3), lriktning=tuple(riktn),
+                                        briktning=tuple(tvar), material=list_material))
+        o.addProperty("App::PropertyLinkList", "Lister", "Stal", "glaslister")
+        o.Lister = lister
+        return o
+
+    def inkop(self, pos, text, lada=None, cylinder=None, mitt=(0, 0, 0), rot=((1, 0, 0), (0, 1, 0), (0, 0, 1)), vikt=None,
+              material="INKÖP", farg=(0.25, 0.25, 0.28)):
+        """Inköpt detalj (gångjärn, lås, handtag, dörrstängare, motor, bult) som utrymmesmodell: en låda
+        `lada=(x, y, z)` centrerad i `mitt` eller en cylinder `cylinder=(d, l)` längs delens z från `mitt`, med
+        texten `text` (t.ex. "GÅNGJÄRN 120 ROSTFRITT, ART.NR ...") i materiallistan och vikten `vikt` (kg, ur
+        leverantörens datablad; annars räknas den på materialet). Måtten tas ur leverantörens datablad, de hittas
+        inte på. Syns i ritningen och 3D-bilderna, ingår i krock- och rörelsekontrollen."""
+        def form(dd):
+            sk = dd.skiss("Kontur", "XY")
+            if lada is not None:
+                sk.rektangel(lada[0], lada[1], namn=("Langd", "Bredd"))
+                dd.kloss(sk, lada[2], "Hojd", symmetrisk=True)
+            else:
+                sk.cirkel(cylinder[0], namn="d")
+                dd.kloss(sk, cylinder[1], "Langd")
+        if (lada is None) == (cylinder is None):
+            raise ValueError("inkop(): ange lada=(x, y, z) eller cylinder=(d, l)")
+        o = self.egen(pos, text, form, mitt=mitt, rot=rot, material=material)
+        o.addProperty("App::PropertyFloat", "Vikt", "Stal", "vikt per styck (kg) ur datablad; 0 = räknas på materialet")
+        o.Vikt = float(vikt or 0)
+        try:
+            o.ViewObject.ShapeColor = tuple(farg)
+        except Exception:
+            pass
+        return o
+
     def egen(self, pos, profil, bygg, mitt=(0, 0, 0), rot=((1, 0, 0), (0, 1, 0), (0, 0, 1)), material=None, huvuddel=False):
         """Egen kropp som konstruktionsskriptet bygger självt: `bygg(d)` får en pd.Del (skisser, Pad, Pocket, Hole,
         Fillet, mönster ... enligt references/partdesign.md) och ritar delen kring kroppens origo; kroppen placeras
@@ -441,6 +517,176 @@ class Konstruktion:
         bygg(d)
         self._placera(d, tuple(V(*r) for r in rot), tuple(mitt))
         return self._ny(d, pos, profil, material, huvuddel)
+
+    def referens(self, namn, lada=None, bygg=None, mitt=(0, 0, 0), rot=((1, 0, 0), (0, 1, 0), (0, 0, 1)),
+                 farg=(0.8, 0.8, 0.78), transparens=0):
+        """Referenskropp för omgivningen (trappsteg, vägg, bjälklag, mark, befintlig stomme): syns i modellen, i
+        3D-bilderna (rendera.py) och på översiktsritningen (oversikt.py), men saknar positionsnummer och kommer
+        därför inte med i materiallistan, bubblorna eller sammanställningsritningens vyer. `lada` = (x0, x1, y0,
+        y1, z0, z1) ger en låda; annars ritar `bygg(d)` kroppen med pd-API:t som i egen(), placerad med mitt/rot.
+        Kropparna samlas i gruppen Omgivning."""
+        import pd
+        import FreeCAD as App
+        from FreeCAD import Vector as V
+        body = self.doc.addObject("PartDesign::Body", re.sub(r"[^A-Za-z0-9_]", "", namn) or "Referens")
+        body.Label = namn
+        d = pd.Del(self.doc, body.Name)
+        if lada is not None:
+            x0, x1, y0, y1, z0, z1 = [float(q) for q in lada]
+            sk = d.skiss("Kontur", "XY")
+            sk.rektangel(round(x1 - x0, 3), round(y1 - y0, 3), namn=("Langd", "Bredd"))
+            d.kloss(sk, round(z1 - z0, 3), "Hojd")
+            body.Placement = App.Placement(V((x0 + x1) / 2, (y0 + y1) / 2, z0), App.Rotation())
+        else:
+            bygg(d)
+            u, v, w = (V(*r) for r in rot)
+            m = App.Matrix(u.x, v.x, w.x, 0, u.y, v.y, w.y, 0, u.z, v.z, w.z, 0, 0, 0, 0, 1)
+            body.Placement = App.Placement(V(*[d.uttryck(c)[1] for c in mitt]), App.Rotation(m))
+        d.stada()
+        g = self.doc.getObject("Omgivning")
+        if g is None:
+            g = self.doc.addObject("App::DocumentObjectGroup", "Omgivning")
+        g.addObject(body)
+        try:
+            body.ViewObject.ShapeColor = tuple(farg)
+            body.ViewObject.Transparency = int(transparens)
+        except Exception:
+            pass
+        return body
+
+    # -------------------------------------------------------------- bockad plåt (SheetMetal)
+    SIDA = {"vanster": "Inside", "hoger": "Outside", "mitt": "Middle"}
+
+    def _plat_del(self, obj, pos, profil, material, huvuddel, skiss):
+        """Gemensamt för SheetMetal-delar: egenskaperna Pos/Profil/Material, gruppen, färg."""
+        obj.Label = "%s %s" % (pos, profil)
+        for p_, beskr in (("Pos", "positionsnummer (stycklitterering)"), ("Profil", "profil / benämning i materiallistan"),
+                          ("Material", "material"), ("Skiss", "profilskissen")):
+            obj.addProperty("App::PropertyLink" if p_ == "Skiss" else "App::PropertyString", p_, "Stal", beskr)
+        obj.Pos, obj.Profil, obj.Material, obj.Skiss = pos, profil, material or self.material, skiss
+        self.grupp.addObject(obj)
+        if huvuddel:
+            self.grupp.Huvuddel = obj.Name
+        try:
+            obj.ViewObject.ShapeColor = (0.62, 0.64, 0.67)
+            skiss.ViewObject.Visibility = False
+        except Exception:
+            pass
+        return obj
+
+    def _fri_profil(self, namn, mitt, rot):
+        """Fristående skiss (pd.fri_skiss) placerad i `mitt` (tal eller uttryck, binds till Variabler) med delens
+        x-, y- och z-riktning `rot`."""
+        import pd
+        import FreeCAD as App
+        from FreeCAD import Vector as V
+        u, v, w = (V(*r) for r in rot)
+        m = App.Matrix(u.x, v.x, w.x, 0, u.y, v.y, w.y, 0, u.z, v.z, w.z, 0, 0, 0, 0, 1)
+        sk = pd.fri_skiss(self.doc, namn, App.Placement())
+        vals = [sk.d.uttryck(c) for c in mitt]
+        sk.obj.Placement = App.Placement(V(*[val for _, val in vals]), App.Rotation(m))
+        for k, (ex, _) in zip("xyz", vals):
+            if ex:
+                sk.obj.setExpression(".Placement.Base." + k, ex)
+        return sk
+
+    def bockad(self, pos, t, punkter, langd, mitt=(0, 0, 0), rot=((1, 0, 0), (0, 1, 0), (0, 0, 1)), radie=None,
+               sida="vanster", material=None, huvuddel=False, profil=None, matt=None):
+        """Kantvikt plåt (SheetMetal): profilen `punkter` [(x, y), ...] i delens XY-plan (öppen polylinje, t.ex.
+        L, U, Z, hatt eller en kantkappa över en dörrkant), bockad med inre radien `radie` (standard = t) och
+        utdragen `langd` (tal eller uttryck) längs delens z. Materialet ligger till vänster om profilens riktning
+        (`sida="vanster"`, då är punkterna yttermått om profilen går moturs), "hoger" eller "mitt". `mitt` = delens
+        origo (profilens nollpunkt), `rot` = delens x-, y- och z-riktning. `matt` = {sträcka: uttryck} binder
+        sträckornas längder till Variabler. Blir en SheetMetal-bas (redigerbar i FreeCAD) med Pos/Profil/Material
+        i materiallistan som "PL<t> BOCKAD"; utbredning och DXF med dxf.py."""
+        import SheetMetalBaseCmd
+        namn = re.sub(r"[^A-Za-z0-9]", "", pos) or "Plat"
+        sk = self._fri_profil(namn + "_Profil", mitt, rot)
+        sk.linjetag(punkter, matt=matt)
+        self.doc.recompute()
+        if not sk.obj.FullyConstrained:
+            raise RuntimeError("bockad %s: profilskissen blev inte fullt bestämd" % pos)
+        bf = self.doc.addObject("Part::FeaturePython", namn)
+        SheetMetalBaseCmd.SMBaseBend(bf, sk.obj)
+        try:
+            SheetMetalBaseCmd.SMBaseViewProvider(bf.ViewObject)
+        except Exception:
+            pass
+        bf.BendSide = self.SIDA[sida]
+        for prop, x in (("Thickness", t), ("Radius", radie if radie is not None else t), ("Length", langd)):
+            ex, val = sk.d.uttryck(x)
+            setattr(bf, prop, val)
+            if ex:
+                bf.setExpression(prop, ex)
+        self.doc.recompute()
+        if not bf.Shape.Solids:
+            raise RuntimeError("bockad %s: SheetMetal gav ingen solid (kontrollera profilen och radien)" % pos)
+        return self._plat_del(bf, pos, profil or "PL%s BOCKAD" % _txt(sk.d.uttryck(t)[1]), material, huvuddel, sk.obj)
+
+    def trag(self, pos, t, langd, bredd, kant, mitt=(0, 0, 0), rot=((1, 0, 0), (0, 1, 0), (0, 0, 1)), radie=None,
+             sidor=("-x", "+x", "-y", "+y"), material=None, huvuddel=False, profil=None):
+        """Plåttråg (SheetMetal): botten langd x bredd (yttermått, x resp. y) med uppbockade kanter `kant` högt
+        (yttermått, längs delens +z) på `sidor` ("-x", "+x", "-y", "+y"; standard alla fyra, med hörnurtag).
+        Beklädnad av ett dörrblad, en lucka eller en pelare, täckplåt, låda. `mitt` = bottens mitt (undersida),
+        `rot` = delens riktningar. Utbredning och DXF med dxf.py."""
+        import SheetMetalBaseCmd, SheetMetalCmd
+        import pd
+        import FreeCAD as App
+        from FreeCAD import Vector as V
+        namn = re.sub(r"[^A-Za-z0-9]", "", pos) or "Trag"
+        sk = self._fri_profil(namn + "_Botten", mitt, rot)
+        L, B, T, K = (float(sk.d.uttryck(x)[1]) for x in (langd, bredd, t, kant))
+        R = float(sk.d.uttryck(radie)[1]) if radie is not None else T
+        g = sk.rektangel(L, B, mitt=(0, 0), namn=("Langd", "Bredd"))
+        self.doc.recompute()
+        bas = self.doc.addObject("Part::FeaturePython", namn + "_Bas")
+        SheetMetalBaseCmd.SMBaseBend(bas, sk.obj)
+        bas.Thickness, bas.Radius = T, R
+        self.doc.recompute()
+        inv = sk.obj.Placement.inverse()
+
+        def lokal(p):
+            return inv.multVec(p)
+        topp = max((f for f in bas.Shape.Faces if f.Surface.TypeId == "Part::GeomPlane"),
+                   key=lambda f: lokal(f.CenterOfMass).z)
+        kanter = []
+        for i, e in enumerate(bas.Shape.Edges):
+            if not any(e.isSame(te) for te in topp.Edges):
+                continue
+            c = lokal(e.CenterOfMass)
+            sidan = ("+x" if c.x > 0 else "-x") if abs(abs(c.x) - L / 2) < abs(abs(c.y) - B / 2) else ("+y" if c.y > 0 else "-y")
+            if sidan in sidor:
+                kanter.append("Edge%d" % (i + 1))
+        if not kanter:
+            raise RuntimeError("trag %s: hittade inga kanter för sidorna %s" % (pos, sidor))
+        w = self.doc.addObject("Part::FeaturePython", namn)
+        SheetMetalCmd.SMBendWall(w, bas, kanter)
+        try:
+            SheetMetalCmd.SMViewProviderTree(w.ViewObject)
+            SheetMetalBaseCmd.SMBaseViewProvider(bas.ViewObject)
+        except Exception:
+            pass
+        w.length, w.radius = K, R
+        self.doc.recompute()
+        # bocken lägger kanten utanför botten och flänsen blir något högre: mät och justera till yttermåtten
+        for _ in range(2):
+            bb = w.Shape.transformed(inv.toMatrix()).BoundBox
+            q = lambda x: App.Units.Quantity(x, App.Units.Length)
+            sk.obj.setDatum("Langd", q(sk.obj.getDatum("Langd").Value - (bb.XLength - L)))
+            sk.obj.setDatum("Bredd", q(sk.obj.getDatum("Bredd").Value - (bb.YLength - B)))
+            w.length = getattr(w.length, "Value", w.length) - (bb.ZLength - K)
+            pl = sk.obj.Placement                    # centrerat kring mitt (även när bara några sidor bockas), undersidan i mitt
+            sk.obj.Placement = App.Placement(pl.Base - pl.Rotation.multVec(V((bb.XMin + bb.XMax) / 2, (bb.YMin + bb.YMax) / 2, bb.ZMin)), pl.Rotation)
+            inv = sk.obj.Placement.inverse()
+            self.doc.recompute()
+        bb = w.Shape.transformed(inv.toMatrix()).BoundBox
+        if abs(bb.XLength - L) > 0.2 or abs(bb.YLength - B) > 0.2 or abs(bb.ZLength - K) > 0.2:
+            self.logg("OBS: tråget %s blev %.1f x %.1f x %.1f (önskat %g x %g x %g)" % (pos, bb.XLength, bb.YLength, bb.ZLength, L, B, K))
+        try:
+            bas.ViewObject.Visibility = False
+        except Exception:
+            pass
+        return self._plat_del(w, pos, profil or "PL%s BOCKAD" % _txt(T), material, huvuddel, sk.obj)
 
     def hal(self, delar, punkter, riktning, d=None, bult=None, langd=None):
         """Hål med diametern d (eller bultens: M12 -> Ø14) genom `delar` i punkterna (globala tal), längs
@@ -491,11 +737,17 @@ class Konstruktion:
             dd.stada()
 
     # -------------------------------------------------------------- gering
-    def gera(self, o, yttre, inre):
+    def gera(self, o, yttre, inre, riktning=None):
         """Geringskapa änden av profilen `o` (hörn i en ram, 45° när två lika profiler möts): snittplanet går
         genom hörnets yttre och inre punkt (globala koordinater, tal eller uttryck) och profilens höjdriktning.
         Pocket "Gering" genom allt från en sluten skiss i kroppens XZ-plan (fullt bestämd). I slutänden följer
-        skissen Pad-längden (uttryck på AttachmentOffset), så geringen följer med när längden ändras."""
+        skissen Pad-längden (uttryck på AttachmentOffset), så geringen följer med när längden ändras.
+        Kapet tar bara bort det som ligger utanför planet: en profil som slutar innan planet når hela tvärsnittet
+        (t.ex. ett snett plattstål kapat lodrätt i sin ände) blir bara kapad på halva höjden. Bygg den förlängd
+        med (h/2)·|tan v| + några mm och kapa sedan. Skär kapet ingenting blir det fel (RuntimeError).
+        `riktning` (global vektor) = en riktning som ska ligga i kapplanet; den måste vara tvärsnittets bredd- eller
+        höjdriktning. Standard är höjdriktningen (`upp` i balk()); bredden används t.ex. för ett liggande plattstål
+        som kapas lodrätt mot en stolpe."""
         import pd
         import FreeCAD as App
         from FreeCAD import Vector as V
@@ -504,15 +756,23 @@ class Konstruktion:
         self.doc.recompute()
         L = pad.Length.Value
         inv = o.Placement.inverse()
-        p1, p2 = (inv.multVec(V(*[dd.uttryck(c)[1] for c in q])) for q in (yttre, inre))
+        c = 0                                                        # kroppens x i skissen (plan genom kroppens y)
+        if riktning is not None:
+            rl = inv.Rotation.multVec(V(*riktning)).normalize()
+            if abs(abs(rl.x) - 1) < 1e-6:
+                c = 1                                                # planet genom kroppens x: skiss i YZ
+            elif abs(abs(rl.y) - 1) > 1e-6:
+                raise ValueError("gera: riktningen %s är varken tvärsnittets bredd eller höjd i %s" % (tuple(riktning), o.Label))
+        p1, p2 = (inv.multVec(V(*[dd.uttryck(c_)[1] for c_ in q])) for q in (yttre, inre))
         slut = (p1.z + p2.z) / 2 > L / 2
         ze = L if slut else 0.0
-        a, b = (p1.x, p1.z - ze), (p2.x, p2.z - ze)
+        a, b = (p1[c], p1.z - ze), (p2[c], p2.z - ze)
         lb = o.Shape.transformed(inv.toMatrix()).BoundBox            # tvärsnittets utsträckning i kroppen
         W = max(lb.XLength, lb.YLength) + 20
         span = max(abs(a[1]), abs(b[1]))
         z0, z1 = (-W, span + W) if not slut else (-(span + W), W)
-        ruta = [(lb.XMin - 20, z0), (lb.XMax + 20, z0), (lb.XMax + 20, z1), (lb.XMin - 20, z1)]
+        cmin, cmax = (lb.XMin, lb.XMax) if c == 0 else (lb.YMin, lb.YMax)
+        ruta = [(cmin - 20, z0), (cmax + 20, z0), (cmax + 20, z1), (cmin - 20, z1)]
         kors = lambda q: (b[0] - a[0]) * (q[1] - a[1]) - (b[1] - a[1]) * (q[0] - a[0])
         sida = -1 if kors((0.0, L / 2 - ze)) > 0 else 1              # bort: sidan utan balkens mitt
         ut = []
@@ -526,7 +786,7 @@ class Konstruktion:
                 ut.append((P[0] + t * (Q[0] - P[0]), P[1] + t * (Q[1] - P[1])))
         ut = [q for i, q in enumerate(ut) if math.dist(q, ut[i - 1]) > 1e-6]
         nr = sum(1 for f in o.Group if f.Name.startswith("Gering")) // 2 + 1
-        sk = dd.skiss("Gering%d" % nr, "XZ")
+        sk = dd.skiss("Gering%d" % nr, "XZ" if c == 0 else "YZ")
         sk.obj.AttachmentOffset = App.Placement(V(0, ze, 0), App.Rotation())
         if slut:
             sk.obj.setExpression(".AttachmentOffset.Base.y", "%s.Length" % pad.Name)
@@ -541,6 +801,26 @@ class Konstruktion:
     def ritning(self, **val):
         self.grupp.Ritning = json.dumps(val, ensure_ascii=False)
 
+    def utseende(self, val):
+        """Utseende i 3D-bilderna per positionsprefix, t.ex. {"g/": "patinerad", "st/": "svart"} (rendera.py UTSEENDE)."""
+        if not hasattr(self.grupp, "Utseende"):
+            self.grupp.addProperty("App::PropertyString", "Utseende", "Stal", "utseende i 3D-bilderna (JSON, rendera.py)")
+        d = json.loads(self.grupp.Utseende or "{}")
+        d.update(val)
+        self.grupp.Utseende = json.dumps(d, ensure_ascii=False)
+
+    def rorelse(self, namn, delar, axel, fran=0, till=90, gangjarn=None):
+        """Rörlig del (dörrblad, grind, lucka) för rorelse.py: `delar` = positionsnummer (lista, eller ett prefix
+        som "g/" för alla som börjar så), `axel` = (punkt, riktning) för gångjärnsaxeln (globalt), vridning fran..till
+        grader (positivt moturs kring riktningen), `gangjarn` = gångjärnens lägen längs axeln (globala punkter) för
+        lasten. Sparas i gruppen (egenskapen Rorelser)."""
+        if not hasattr(self.grupp, "Rorelser"):
+            self.grupp.addProperty("App::PropertyString", "Rorelser", "Stal", "rörliga delar för rorelse.py (JSON)")
+        lst = json.loads(self.grupp.Rorelser or "[]")
+        lst.append(dict(namn=namn, delar=delar, axel=[list(axel[0]), list(axel[1])], fran=fran, till=till,
+                        gangjarn=[list(p) for p in gangjarn or []]))
+        self.grupp.Rorelser = json.dumps(lst, ensure_ascii=False)
+
 
 def _txt(x):
     return x if isinstance(x, str) else ("%.4f" % x).rstrip("0").rstrip(".")
@@ -550,7 +830,7 @@ def profilnamn(o):
     """Profilnamnet; för en plåt räknat ur skissen Tvarsnitt (b och t), så att det följer en ändrad bredd."""
     p = o.Profil
     m = re.fullmatch(r"(PL|FL|FLA|PLT)" + NUM + r"\*" + NUM, p.upper().replace(",", "."))
-    sk = next((f for f in o.Group if f.TypeId == "Sketcher::SketchObject" and f.Name.startswith("Tvarsnitt")), None)
+    sk = next((f for f in getattr(o, "Group", []) if f.TypeId == "Sketcher::SketchObject" and f.Name.startswith("Tvarsnitt")), None)
     if not m or sk is None:
         return p
     try:
@@ -562,9 +842,26 @@ def profilnamn(o):
 
 
 def langd(o):
-    """Delens längd i materiallistan: Pad-längden (följer variablerna)."""
+    """Delens längd i materiallistan: Pad-längden (följer variablerna); för en bockad plåt utdragslängden,
+    för ett tråg den längsta sidan."""
+    if not hasattr(o, "Group"):
+        if hasattr(o, "Length") and hasattr(o, "BendSide"):
+            return float(getattr(o.Length, "Value", o.Length))
+        return round(max(o.Shape.BoundBox.XLength, o.Shape.BoundBox.YLength, o.Shape.BoundBox.ZLength), 1)
     pad = next((f for f in o.Group if f.TypeId == "PartDesign::Pad"), None)
-    return float(pad.Length.Value) if pad is not None else 0.0
+    L = float(pad.Length.Value) if pad is not None else 0.0
+    if (getattr(o, "Profil", "") or "").upper().startswith("GLAS"):                   # glasruta: längsta sidan
+        bb = o.Shape.BoundBox
+        return round(max(bb.XLength, bb.YLength, bb.ZLength), 1)
+    m = re.fullmatch(r"(PL|FL|FLA|PLT)" + NUM + r"\*" + NUM, (getattr(o, "Profil", "") or "").upper().replace(",", "."))
+    if m and L and abs(L - min(float(m.group(2)), float(m.group(3)))) < 0.01:     # egen platta utdragen i tjockleken
+        b = max(float(m.group(2)), float(m.group(3)))
+        bb = o.Shape.BoundBox
+        rest = sorted((bb.XLength, bb.YLength, bb.ZLength))
+        rest.remove(min(rest, key=lambda x: abs(x - L)))
+        rest.remove(min(rest, key=lambda x: abs(x - b)))
+        return round(rest[0], 1)
+    return L
 
 
 def halgrupper(ds):
@@ -574,7 +871,7 @@ def halgrupper(ds):
     from FreeCAD import Vector as V
     grp = {}
     for o in ds:
-        for f in o.Group:
+        for f in getattr(o, "Group", []):
             if f.TypeId != "PartDesign::Pocket" or not hasattr(f, "Halgrupp"):
                 continue
             sk = f.Profile[0] if isinstance(f.Profile, (list, tuple)) else f.Profile
@@ -611,7 +908,7 @@ def delar(doc):
 
 def materiallista(ds):
     """Rader per positionsnummer: pos, profil, material, antal, längd, area/st (m2), vikt/st (kg), sorterade efter
-    vikt (tyngst först) som i Tekla. Varnar (fel=...) om delar med samma nummer skiljer sig."""
+    vikt (tyngst först). Varnar (fel=...) om delar med samma nummer skiljer sig."""
     grp = {}
     for o in ds:
         grp.setdefault(o.Pos, []).append(o)
@@ -621,7 +918,8 @@ def materiallista(ds):
         vol = o.Shape.Volume
         L = langd(o)
         fel = [x.Label for x in lst[1:] if abs(x.Shape.Volume - vol) > 1e-3 * max(vol, 1) or x.Profil != o.Profil or abs(langd(x) - L) > 0.5]
+        vikt = float(getattr(o, "Vikt", 0) or 0) or vol * 1e-9 * densitet(o.Material)      # inköpt: databladets vikt
         rader.append(dict(pos=pos, profil=profilnamn(o), material=o.Material, antal=len(lst), langd=L,
-                          area=o.Shape.Area / 1e6, vikt=vol * 1e-9 * densitet(o.Material), fel=fel))
+                          area=o.Shape.Area / 1e6, vikt=vikt, fel=fel))
     rader.sort(key=lambda r: (-round(r["vikt"], 1), r["pos"]))
     return rader

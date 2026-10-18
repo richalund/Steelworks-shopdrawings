@@ -12,3 +12,5 @@ Thumbs.db
 *.stp
 ut/
 foretag.json
+# referensbilderna för testa.py hör till skillen
+!.claude/skills/freecad-styrning/tester/referens/*.png

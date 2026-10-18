@@ -1,0 +1,48 @@
+name: Testa skillen
+
+# Kör scripts/testa.py (bygger och ritar alla exempel) på varje pull request mot main som ändrar skillen, så att
+# en granskare kan godkänna utan att själv köra något. Bilderna och loggarna laddas upp som artefakt "testbilder".
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".claude/skills/freecad-styrning/**"
+      - ".github/workflows/testa.yml"
+  workflow_dispatch:
+
+jobs:
+  testa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Förbered (Xvfb, skrivrätt i /opt)
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq xvfb libgl1 libegl1 libxkbcommon-x11-0 libxcb-cursor0 libfontconfig1 libdbus-1-3
+          sudo chown "$USER" /opt
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq fonts-wqy-zenhei
+      - name: FreeCAD från cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            /opt/freecad
+            /opt/freecad-extra
+          key: freecad-1.1.3-${{ hashFiles('.claude/skills/freecad-styrning/scripts/installera_linux.sh') }}
+      - name: Installera FreeCAD, SheetMetal och Python-paket
+        run: bash .claude/skills/freecad-styrning/scripts/installera_linux.sh
+      - name: Testa alla exempel
+        run: python3 .claude/skills/freecad-styrning/scripts/testa.py --ut ut/test
+      - name: Ladda upp bilder och loggar
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testbilder
+          path: |
+            ut/test/*.png
+            ut/test/*.pdf
+            ut/test/*_test.log
+            ut/test/*.csv

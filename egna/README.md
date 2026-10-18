@@ -1,16 +1,21 @@
 # Egna skript och uppgifter
 
-Skillen i `.claude/skills/freecad-styrning/` ändras inte av användaren. Allt eget läggs här, så att skillen kan
-uppdateras från Steelworks-shopdrawings utan att något går förlorat:
+Skillen i `.claude/skills/freecad-styrning/` ändras inte för ett enskilt uppdrag. Allt eget läggs här, så att
+skillen kan uppdateras från Steelworks-shopdrawings utan att något går förlorat (förbättringar som fler har nytta
+av skickas in till skillen som en pull request, se SKILL.md):
 
 - `egna/konstruktioner/*.py` – egna konstruktionsskript (sammanställningar), samma form som
   `.claude/skills/freecad-styrning/konstruktioner/balkongram.py`
 - `egna/delar/*.py` – egna delskript för Part Design, samma form som `.../delar/fotplatta.py`
+- `egna/ritningar/*.py` – ritskript för översikts- och planritningar (`scripts/oversikt.py`)
 - `egna/foretag.json` och loggan – företagsuppgifter till titelblocket (`scripts/foretag.py satt --fil egna/foretag.json`)
+- `egna/verkstad.json` – verkstadens gränser för regelkontrollen (kopia av `.claude/skills/freecad-styrning/mallar/verkstad.json`)
+- `egna/priser.json` – verkstadens priser för prisunderlaget (kopia av `.../mallar/priser.json`), aldrig i skillen
+- `egna/ornament/` – egna SVG-motiv och typsnitt till ornament (`scripts/ornament.py`)
 - `ut/` – allt som genereras (ignoreras av git)
 
-Behöver ett skript något som skillen saknar: skriv det i skriptet, inte i skillens filer. Det är regeln, för
-varje ritning har sina egna utmaningar. Delar som `k.balk`, `k.plat` och `k.skiva` inte täcker byggs med `k.egen`
+Behöver ett skript något som skillen saknar: skriv det först i skriptet. Visar det sig vara allmängiltigt,
+föreslå att det skickas in till skillen. Delar som `k.balk`, `k.plat` och `k.skiva` inte täcker byggs med `k.egen`
 och Part Design-API:t (`.claude/skills/freecad-styrning/references/partdesign.md`):
 
 ```python

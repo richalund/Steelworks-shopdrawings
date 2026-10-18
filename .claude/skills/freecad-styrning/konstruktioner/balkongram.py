@@ -1,10 +1,10 @@
-"""Balkongram av UPE140 med IPE100-bjälkar, anslutningsplåtar och däckplåt - testfall efter en Tekla-sammanställning
+"""Balkongram av UPE140 med IPE100-bjälkar, anslutningsplåtar och däckplåt - testfall efter en svensk sammanställningsritning
 (balkongram B/1, A2).
 
-Som i Tekla: ramens UPE-hörn är gerade 45° (k.gera). På UPE-flänsarnas spetsar sitter påsvetsade plåtar pl/1
+Som i förlagan: ramens UPE-hörn är gerade 45° (k.gera). På UPE-flänsarnas spetsar sitter påsvetsade plåtar pl/1
 (fram) och pl/2 (bak), PL120*10 L=140; IPE100-bjälkarnas ändplåtar pl/3 (PL110*10 L=100) bultas mot dem med
 4*Ø14 - M12x44 (c/c 55 x 40). Det ger 85 mm från UPE:ns utsida till bjälkänden (65 + 10 + 10) och bjälklängden
-Djup - 170 = 1200 (Tekla 1199). Förenklat: bjälkarnas överkant i nivå med UPE:ns (Tekla: i fall 1:100,
+Djup - 170 = 1200 (förlagan 1199). Förenklat: bjälkarnas överkant i nivå med UPE:ns (förlagan: i fall 1:100,
 +1 fram / +13 bak), däckplåten bultas i UPE-flänsarna.
 
 Koordinater: X = längd (framkant), Y = djup bakåt (framsida y = 0), Z uppåt (underkant ram z = 0).

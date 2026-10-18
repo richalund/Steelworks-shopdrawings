@@ -1,0 +1,19 @@
+{
+  "_info": "Verkstadens gränser för regelkontrollen (scripts/regler.py). Tumregler: kopiera filen till egna/verkstad.json och ställ in mot den egna verkstaden. null = kontrolleras inte.",
+  "_lagerlangd_mm": "vanlig lagerlängd för stång och profil (längre ger VARNING: skarv eller specialbeställning)",
+  "lagerlangd_mm": 6000,
+  "_max_langd_mm": "längsta del som kan hanteras och transporteras (FEL)",
+  "max_langd_mm": 12000,
+  "_platformat_mm": "största plåtformat i lasern eller på lagret [kortsida, långsida]",
+  "platformat_mm": [1500, 3000],
+  "_max_vikt_hand_kg": "tyngre del lyfts inte för hand (VARNING)",
+  "max_vikt_hand_kg": 25,
+  "_max_vikt_kg": "verkstadens lyft (FEL), null = ingen gräns",
+  "max_vikt_kg": null,
+  "_forzinkning_mm": "förzinkningsbadets inre mått [längd, bredd, djup] (FEL om sammanställningen inte ryms), null = ingen kontroll",
+  "forzinkning_mm": null,
+  "_transport_mm": "största transportmått [längd, bredd, höjd] (VARNING), null = ingen kontroll",
+  "transport_mm": null,
+  "_min_hal_mot_tjocklek": "minsta håldiameter som andel av godstjockleken för laser och stans (1.0 = d >= t)",
+  "min_hal_mot_tjocklek": 1.0
+}

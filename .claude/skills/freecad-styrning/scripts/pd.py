@@ -97,14 +97,23 @@ class Del:
         return f
 
     def _skar(self, f):
-        """Fickor och hål: kontrollera att något skars bort, annars vänd riktningen."""
+        """Fickor och hål: kontrollera att något skars bort, annars vänd riktningen. En symmetrisk ficka "genom
+        allt" som inte skär något (händer i FreeCAD 1.1.3, se references/fallor.md) görs om till en symmetrisk
+        längd som täcker hela kroppen."""
         fore = f.BaseFeature.Shape.Volume if f.BaseFeature else 0.0
         self._rakna(f)
-        if f.Shape.Volume > fore - 1e-6 and not getattr(f, "Midplane", False):
+        if f.Shape.Volume <= fore - 1e-6:
+            return f
+        symmetrisk = getattr(f, "Midplane", False) or getattr(f, "SideType", "") == "Symmetric"
+        if not symmetrisk:
             f.Reversed = not f.Reversed
             self._rakna(f)
-            if f.Shape.Volume > fore - 1e-6:
-                raise RuntimeError("%s skär inte bort något i någon riktning" % f.Name)
+        elif getattr(f, "Type", "") == "ThroughAll" and f.BaseFeature is not None:
+            f.Type = "Length"
+            f.Length = 2 * f.BaseFeature.Shape.BoundBox.DiagonalLength + 10
+            self._rakna(f)
+        if f.Shape.Volume > fore - 1e-6:
+            raise RuntimeError("%s skär inte bort något (kontrollera skissens läge mot kroppen)" % f.Name)
         return f
 
     def kloss(self, sk, langd, namn="Kloss", symmetrisk=False, omvand=False):
@@ -212,6 +221,19 @@ class Del:
                 o.ViewObject.Visibility = (o == self.body.Tip)
         if self.body.ViewObject is not None:
             self.body.ViewObject.Visibility = True
+
+
+def fri_skiss(doc, namn, placement):
+    """Skiss utanför en kropp (t.ex. profil till en SheetMetal-del i en sammanställning) med samma hjälpare som
+    Skiss: placering `placement` (FreeCAD.Placement), mått mot Variabler."""
+    d = Del.__new__(Del)
+    d.doc, d.sh, d.body = doc, doc.getObject("Variabler"), None
+    d.alias = set(alias_lista(d.sh)) if d.sh else set()
+    sk = Skiss.__new__(Skiss)
+    sk.d, sk.namn_anvanda = d, set()
+    sk.obj = doc.addObject("Sketcher::SketchObject", namn)
+    sk.obj.Placement = placement
+    return sk
 
 
 class Skiss:
@@ -428,6 +450,28 @@ class Skiss:
             self.matt("Distance", g[i], varde=v, namn=(namn or {}).get(i))
         if start is not None:
             self.placera(g[0], START, *start, namn="")
+        return g
+
+
+    def linjetag(self, punkter, matt=None, start=None, namn=None):
+        """Öppen polylinje genom punkterna (t.ex. en bockad plåts profil). Varje sträcka får riktning (vågrät,
+        lodrät eller vinkel mot x-axeln) och längd (matt[i] eller den uppmätta), första punkten låses i `start`
+        (standard punkten själv) -> fullt bestämd. Returnerar linjeindex."""
+        g = []
+        for a, b in zip(punkter, punkter[1:]):
+            g.append(self.geo(Part.LineSegment(V(a[0], a[1], 0), V(b[0], b[1], 0))))
+        for i in range(len(g) - 1):
+            self.begr("Coincident", g[i], SLUT, g[i + 1], START)
+        for i, (a, b) in enumerate(zip(punkter, punkter[1:])):
+            dx, dy = b[0] - a[0], b[1] - a[1]
+            if abs(dy) < 1e-9:
+                self.begr("Horizontal", g[i])
+            elif abs(dx) < 1e-9:
+                self.begr("Vertical", g[i])
+            else:
+                self.matt("Angle", g[i], varde=round(math.degrees(math.atan2(dy, dx)), 6), namn="")
+            self.matt("Distance", g[i], varde=(matt or {}).get(i, round(math.hypot(dx, dy), 4)), namn=(namn or {}).get(i))
+        self.placera(g[0], START, *(start if start is not None else punkter[0]), namn="")
         return g
 
 
