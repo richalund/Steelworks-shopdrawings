@@ -6,11 +6,11 @@ Kör före varje bidrag (PR).
 Varje exempel byggs med sitt kommando (partdesign.py, datastall.py, sammanstallning.py), ritas (ritning.py,
 sammanstallning.py ritning) och kontrolleras: skisserna fullt bestämda, inga features med fel, inga krockar,
 regelkontrollen utan FEL, PDF och PNG skapade. Sammanställningarna får dessutom 3D-bild (rendera.py),
-prisunderlag (kalkyl.py) och DXF (dxf.py); exempel med k.rorelse rörelsekontroll (rorelse.py); grinden även
-export (export.py), beställningspaket (paket.py skapa/kontrollera); trappräcket balkkontroll och konsolen FEM
+mängdunderlag (mangder.py) och DXF (dxf.py); exempel med k.rorelse rörelsekontroll (rorelse.py); grinden även
+export (export.py), beställningspaket och leveransmail (paket.py skapa/kontrollera/skicka); trappräcket balkkontroll och konsolen FEM
 (hallfasthet.py); balkongramens PDF läses av underlag.py. --snabb hoppar över allt utom bygget.
 
-Bildjämförelse: ritningens PNG jämförs med `tester/referens/<exempel>.png` (gråskala, 1000 px bred). Skiljer sig
+Bildjämförelse: ritningens PNG (för enstaka delar blad 1) jämförs med `tester/referens/<exempel>.png` (gråskala, 1000 px bred). Skiljer sig
 mer än 0,5 % av pixlarna står det ÄNDRAD x % i tabellen och `<exempel>_diff.png` (ändringarna i rött) läggs i
 ut-mappen: titta på den och avgör om ändringen är avsedd. Är den det: kör med --uppdatera-referens och lägg de
 nya referensbilderna i samma PR. --strikt gör en ändrad bild till FEL. Datum, företagsuppgifter, källnoter och
@@ -40,24 +40,25 @@ def fall(ut):
             extra = [[s("hallfasthet.py"), "fem", f("konsol.FCStd"), "--fast=-y", "--last", "+z:8=2000", "--natstorlek", "6"]]
         ut_.append((namn, [[s("partdesign.py"), "bygg", os.path.join(d, namn + ".py"), f(namn + ".FCStd"), "--png"]],
                     [[s("ritning.py"), f(namn + ".FCStd"), "--namn", namn.upper(), "--nummer", "TEST-" + namn, "--utan-kallor"],
-                     [s("kalkyl.py"), f(namn + ".FCStd")]] + extra))
+                     [s("mangder.py"), f(namn + ".FCStd")]] + extra))
     ut_.append(("datastall", [[s("datastall.py"), "bygg", f("datastall.FCStd"), "--png"]],
                 [[s("ritning.py"), f("datastall.FCStd"), "--namn", "DATASTÄLL", "--nummer", "TEST-DS", "--utan-kallor"],
-                 [s("kalkyl.py"), f("datastall.FCStd")]]))
+                 [s("mangder.py"), f("datastall.FCStd")]]))
     for namn in sorted(n[:-3] for n in os.listdir(k) if n.endswith(".py")):
         skript = os.path.join(k, namn + ".py")
         text = open(skript, encoding="utf-8").read()
         m = f(namn + ".FCStd")
         rita = [[s("sammanstallning.py"), "ritning", m, "--uppdrag", "TEST", "--utan-kallor"],
                 [s("rendera.py"), m, "--vyer", "iso"],
-                [s("kalkyl.py"), m],
+                [s("mangder.py"), m],
                 [s("dxf.py"), m]]
         if "k.rorelse" in text:
             rita.append([s("rorelse.py"), m, "--oppen", "-60", "--ut", f(namn + "_oppen.FCStd")])
         if namn == "grind":
             rita += [[s("export.py"), m, "--format", "glb,ifc,step"],
                      [s("paket.py"), "skapa", m, "--skript", skript],
-                     [s("paket.py"), "kontrollera", f(namn + "_bestallning.zip"), "--ut", f("paketkontroll")]]
+                     [s("paket.py"), "kontrollera", f(namn + "_bestallning.zip"), "--ut", f("paketkontroll")],
+                     [s("paket.py"), "skicka", f(namn + "_bestallning.zip"), "--avsandare", "Test"]]
         if namn == "trappracke":
             rita.append([s("hallfasthet.py"), "balk", m, "--pos", "hl/1", "--q", "0.5", "--spann", "860", "--riktning", "sida"])
         if namn == "balkongram":
@@ -121,7 +122,7 @@ def main():
         json.dump(dict(foretag="Testföretag AB", adress=["Testgatan 1", "123 45 Teststad"], ritad_av="TT",
                        handlaggare="TT", ansvarig="T. Test", logga=""), fh, ensure_ascii=False)
     miljo = dict(os.environ, FC_DATUM="2026-01-01", FC_FORETAG_FIL=fore, FC_SKILLVERSION="TEST")
-    for k in ("FC_FORETAG", "FC_ADRESS", "FC_RITAD_AV", "FC_HANDLAGGARE", "FC_ANSVARIG", "FC_LOGGA", "FC_VERKSTAD_FIL", "FC_PRISER_FIL"):
+    for k in ("FC_FORETAG", "FC_ADRESS", "FC_RITAD_AV", "FC_HANDLAGGARE", "FC_ANSVARIG", "FC_LOGGA", "FC_VERKSTAD_FIL", "FC_KOMPONENT_FIL"):
         miljo.pop(k, None)
     bara = {x.strip() for x in a.bara.split(",") if x.strip()}
     rader, alla_ok = [], True
@@ -130,7 +131,7 @@ def main():
             continue
         t0, fel, logg, status = time.time(), [], [], ""
         for cmd in bygg + ([] if a.snabb else rita):
-            # verktygen körs från skillens mapp så att egna/ i arbetsmappen (verkstad, priser) inte påverkar
+            # verktygen körs från skillens mapp så att egna/ i arbetsmappen (verkstad, komponenter) inte påverkar
             r = subprocess.run([PY] + cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", env=miljo, cwd=a.ut)
             logg.append("$ " + " ".join(os.path.basename(c) if os.path.isabs(c) else c for c in cmd) + "\n" + r.stdout + r.stderr)
             fel += kontroll(r.stdout + r.stderr)
@@ -143,7 +144,11 @@ def main():
                 if not os.path.exists(os.path.join(a.ut, namn + slut)):
                     fel.append("saknar %s%s" % (namn, slut))
         if not a.snabb and not fel:
-            png, ref = os.path.join(a.ut, namn + ".png"), os.path.join(REFERENS, namn + ".png")
+            # enstaka delar: ritningens blad 1 (ritning.py); <namn>.png är där 3D-bilden, vars utsnitt varierar
+            png = os.path.join(a.ut, namn + "_blad1.png")
+            if not os.path.exists(png):
+                png = os.path.join(a.ut, namn + ".png")
+            ref = os.path.join(REFERENS, namn + ".png")
             if a.uppdatera or not os.path.exists(ref):
                 from PIL import Image
                 os.makedirs(REFERENS, exist_ok=True)

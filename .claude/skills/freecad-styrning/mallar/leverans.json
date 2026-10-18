@@ -1,0 +1,5 @@
+{
+  "_info": "Förifylld mottagare när användaren skickar underlaget till en tillverkare (paket.py skicka). Användaren kan alltid ange en annan adress. egna/leverans.json går före.",
+  "mottagare": "anbud@smide.com",
+  "namn": "Smideskompaniet"
+}

@@ -8,7 +8,7 @@ produktregler (REGLER, scripts/regler.py) och utseende i 3D-bilderna (k.utseende
   python3 scripts/rorelse.py ut/G1.FCStd --oppen 80 --ut ut/G1_oppen.FCStd
   python3 scripts/rendera.py ut/G1_oppen.FCStd --vyer iso
   python3 scripts/dxf.py ut/G1.FCStd                 # laser: ornamentplåten, utbredning: tråget
-  python3 scripts/kalkyl.py ut/G1.FCStd               # prisunderlag
+  python3 scripts/mangder.py ut/G1.FCStd              # mängdunderlag
 
 Gångjärnens och låsets mått är utrymmesmodeller: byt mot måtten i det valda beslagets datablad.
 """

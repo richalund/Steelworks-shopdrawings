@@ -1,6 +1,6 @@
 ---
 name: freecad-styrning
-description: Tar fram tillverkningsritningar för smide och plåt i FreeCAD 1.x (licensfritt) från en textbeskrivning, kundens foton och mail, eller befintliga ritningar (även scannade PDF och DXF). Parametriska delar (Part Design, SheetMetal, variabelblad), stålkonstruktioner, räcken, grindar och dörrar med positionsbubblor, snitt, materiallista och detaljblad, bockad plåt och beklädnad, ornament och text, glas och beslag, DXF till laser och kantpress, STEP, glTF och IFC, 3D-bilder, plan- och översiktsritningar, ritningar på svenska, engelska eller kinesiska, prisunderlag, regelkontroll, beställningspaket, rörelsekontroll för grindar och dörrar och hållfasthetsöverslag (balk, FEM). Använd när användaren vill rita eller offerera ett smide eller en plåtdel, nämner FreeCAD eller en .FCStd-fil, skickar foton, mått eller en ritning att göra tillverkningsritning av, eller vill ha ritning, DXF eller pris utan SolidWorks-licens.
+description: Tar fram tillverkningsritningar för smide och plåt i FreeCAD 1.x (licensfritt) från en textbeskrivning, kundens foton och mail, eller befintliga ritningar (även scannade PDF och DXF). Parametriska delar (Part Design, SheetMetal, variabelblad), stålkonstruktioner, räcken, grindar och dörrar med positionsbubblor, snitt, materiallista och detaljblad, bockad plåt och beklädnad, ornament och text, glas och beslag, DXF till laser och kantpress, STEP, glTF och IFC, 3D-bilder, plan- och översiktsritningar, ritningar på svenska, engelska eller kinesiska, mängdunderlag, regelkontroll, beställningspaket och leverans till en tillverkare, rörelsekontroll för grindar och dörrar och hållfasthetsöverslag (balk, FEM). Använd när användaren vill rita eller offerera ett smide eller en plåtdel, nämner FreeCAD eller en .FCStd-fil, skickar foton, mått eller en ritning att göra tillverkningsritning av, eller vill ha ritning eller DXF utan CAD-licens. Fungerar i alla kodagenter som kan köra Python och kommandon (Claude Code, Codex, Copilot, Cursor).
 ---
 
 # FreeCAD-styrning
@@ -12,11 +12,21 @@ skärm), kör samma fil som jobb inne i FreeCAD, skriver ut jobbets logg löpand
 `references/verktyg.md`.
 
 ## Förutsättningar
-- Skillen används i en Claude Code-molnsession (Claude-appen på telefonen eller claude.ai/code). SessionStart-hooken
-  kör `scripts/installera_linux.sh` i bakgrunden första gången i en container (10–15 min): FreeCAD 1.1.3 med
-  CalculiX i `/opt/freecad`, SheetMetal 0.7.24, Xvfb, ifcopenshell i `/opt/freecad-extra`, ett typsnitt med
-  kinesiska tecken och PyMuPDF/ezdxf/Pillow. Vänta på att `/opt/freecad/bin/freecad` finns innan första ritningen,
-  eller kör skriptet själv. Starta skripten med system-`python3`, inte FreeCADs Python.
+- Skillen körs av en kodagent i en Linux-container i molnet: Claude Code (Claude-appen eller claude.ai/code),
+  OpenAI Codex, GitHub Copilot coding agent eller Cursor cloud agents. Inget i skripten är bundet till en viss
+  agent. `scripts/installera_linux.sh` installerar FreeCAD 1.1.3 med CalculiX, SheetMetal 0.7.24, Xvfb,
+  ifcopenshell, ett typsnitt med kinesiska tecken och PyMuPDF/ezdxf/Pillow (10–15 min första gången, sedan
+  sekunder). I Claude Code kör SessionStart-hooken det i bakgrunden; i Codex, Copilot och Cursor står det i
+  miljöns installationssteg (se repots `AGENTS.md`). Utan root och sudo installeras det i `~/.local/opt`.
+  Vänta på att FreeCAD finns (`/opt/freecad/bin/freecad` eller `~/.local/opt/freecad/bin/freecad`) innan första
+  ritningen, eller kör skriptet själv. Starta skripten med system-`python3`, inte FreeCADs Python.
+- Nätet: installationen hämtar från micro.mamba.pm, github.com och objects.githubusercontent.com (micromamba),
+  conda.anaconda.org, cdn.jsdelivr.net, data.jsdelivr.com, pypi.org, files.pythonhosted.org och Ubuntus
+  paketarkiv (apt); källorna (kallor.py) från raw.githubusercontent.com och eurocodeapplied.com. Är nätet
+  begränsat i agentens miljö ska de domänerna vara tillåtna. Komponenter söks på leverantörers webbplatser
+  (webbsök).
+- Frågor till användaren: använd agentens frågeformulär om det finns (i Claude Code AskUserQuestion), annars en
+  kort fråga i chatten med numrerade alternativ.
 - Lokalt fungerar skripten om FreeCAD 1.x finns (`FREECAD_BIN` = bin-mappen), men skillen underhålls för molnet.
 - Ha inte samma .FCStd öppen i FreeCAD samtidigt som ett skript sparar den.
 
@@ -43,11 +53,12 @@ python3 scripts/foretag.py satt --foretag "Firma AB" --adress "Gatan 1" "123 45 
         --ritad-av AB --handlaggare AB --ansvarig "A. Bson" [--logga logga.png]
 ```
 **Första gången i en session:** kör `foretag.py visa`. Står det SAKNAS, fråga användaren innan första
-ritningen, med AskUserQuestion-formuläret om det finns (annars i chatten): företagsnamn, adressrader,
-signatur (RITAD AV), handläggare, ansvarig och om en logga (PNG/JPEG) ska användas i stället för namnet.
+ritningen, med frågeformuläret om det finns (annars i chatten): företagsnamn, adressrader, signatur (RITAD AV),
+handläggare, ansvarig, landet där företaget finns (`--land SE`, för komponenter) och om en logga (PNG/JPEG) ska
+användas i stället för namnet.
 Spara svaren med `foretag.py satt` och fortsätt. Fråga inte igen i samma session. Enstaka fält kan alltid ges per
 kommando (`--foretag`, `--adress`, `--ritad-av`, `--handlaggare`, `--ansvarig`, `--logga`); miljövariablerna
-`FC_FORETAG`, `FC_ADRESS` (rader åtskilda med `|`), `FC_RITAD_AV`, `FC_HANDLAGGARE`, `FC_ANSVARIG`, `FC_LOGGA` går
+`FC_FORETAG`, `FC_ADRESS` (rader åtskilda med `|`), `FC_RITAD_AV`, `FC_HANDLAGGARE`, `FC_ANSVARIG`, `FC_LOGGA`, `FC_LAND` går
 före filen. Filen `foretag.json` söks i `FC_FORETAG_FIL`, `egna/`, arbetsmappen och `~/.config/freecad-styrning/`.
 I en molnsession försvinner den med containern om den inte ligger i en egen gren eller fork; föreslå
 miljövariablerna i molnmiljöns inställningar. Loggan läggs i en kopia av mallen i utmappen (`_A3_logga.svg`,
@@ -73,8 +84,10 @@ ritningarna anger var måtten och materialet är verifierade (A2 i noterna, A3 e
 Skillen installeras från Steelworks-shopdrawings och ska gå att uppdatera därifrån. Det som görs för ett
 uppdrag läggs därför utanför skillen:
 - konstruktionsskript i `egna/konstruktioner/`, delskript i `egna/delar/`, ritskript för översikter i
-  `egna/ritningar/`, egna ornament (SVG, typsnitt) i `egna/ornament/`, verkstadens gränser i `egna/verkstad.json`
-  och priser i `egna/priser.json`. Skripten tar vilken sökväg som helst: `sammanstallning.py bygg egna/konstruktioner/x.py`.
+  `egna/ritningar/`, egna ornament (SVG, typsnitt) i `egna/ornament/`, verkstadens gränser i `egna/verkstad.json`,
+  komponenter (beslag, glas) i `egna/komponenter.json` och förifylld mottagare i `egna/leverans.json`. Priser
+  ingår inte: prissättningen görs av tillverkaren utanför skillen. Skripten tar vilken sökväg som helst:
+  `sammanstallning.py bygg egna/konstruktioner/x.py`.
 - det som är unikt för uppdraget (kundens mått, förebildens stil, noter) skrivs i det egna skriptet. Delar som
   skillens byggare inte täcker byggs med `k.egen(pos, "TEXT", bygg, mitt=, rot=, material=)`, där `bygg(d)` ritar
   kroppen med Part Design-API:t i `scripts/pd.py`.
@@ -127,8 +140,9 @@ geometri (Block-villkor) i en skiss.
 4. **Kontrollera alltid** innan leverans: skisserna fullt bestämda, inga krockar, regelkontrollen utan FEL, lådan och
    vikten rimliga, tillverkningsgranskningen utan FEL (plåt), PNG:erna granskade med Read. Jämför med
    `references/smidesritningar.md`.
-5. **Leverera** FCStd, PDF, DXF och STEP i `ut/` bredvid varandra, och vid offert prisunderlaget och
-   beställningspaketet. Skriv aldrig över kundens eller användarens originalfil.
+5. **Leverera** FCStd, PDF, DXF och STEP i `ut/` bredvid varandra, och vid offert mängdunderlaget och
+   beställningspaketet. Skriv aldrig över kundens eller användarens originalfil. När användaren är nöjd: fråga om
+   underlaget ska skickas till en tillverkare (se "Leverans till en tillverkare").
 
 ## Part Design (solida delar: plattor, konsoler, flänsar, hylsor)
 Läs `references/partdesign.md` (API:t i `scripts/pd.py`) innan ett nytt delskript skrivs. Ett delskript i `delar/`
@@ -181,8 +195,9 @@ python3 scripts/sammanstallning.py ritning ut/B1.FCStd --uppdrag 2026-001 --obje
 - `k.trag(pos, t, langd, bredd, kant, mitt=, rot=, sidor=)`: plåttråg med uppbockade kanter och hörnurtag –
   beklädnad av blad, luckor och pelare, fyllningar, täckplåtar.
 - `k.glas(pos, horn1, horn2, normal=, t=, glipa=, list_profil=)`: glasruta i en öppning, med glaslister.
-- `k.inkop(pos, text, lada= | cylinder=, mitt=, vikt=)`: inköpt detalj (gångjärn, lås, handtag, stängare) som
-  utrymmesmodell med databladets mått och vikt. Hitta inte på mått: fråga efter beslaget eller använd databladet.
+- `k.inkop(pos, komponent="id", mitt=, rot=)`: inköpt detalj (gångjärn, lås, handtag, stängare, motor) som
+  utrymmesmodell med databladets mått och vikt ur komponentregistret (se "Komponenter" nedan). Utan register:
+  `k.inkop(pos, text, lada= | cylinder=, mitt=, vikt=)` med mått ur ett datablad. Hitta aldrig på mått.
 - `python3 scripts/dxf.py <modell.FCStd>`: en DXF per plåtposition (`_kontur.dxf` för laser med märkning,
   `_utbredning.dxf` med bocklinjer och bocknoter för bockade delar).
 
@@ -224,17 +239,60 @@ När en kund skickar foton och några mått (mail, chatt) på ett räcke, en gri
    i en egen modul (`egna/<uppdrag>.py`) som alla skript och översikten importerar.
 4. Gör en översikt (alla delar på plats + omgivningen) för 3D-bilderna (`rendera.py`) och planritningen
    (`oversikt.py`), och visa PNG:erna för användaren efter varje steg.
-5. Offert: prisunderlag (`kalkyl.py`) och, när kunden ska beställa, beställningspaketet (`paket.py skapa`).
+5. Offert: mängdunderlaget (`mangder.py`), beställningspaketet (`paket.py skapa`) och, när användaren vill,
+   leveransen till en tillverkare (`paket.py skicka`).
 
-## Prisunderlag och beställningspaket
-- `python3 scripts/kalkyl.py <modell.FCStd> [--antal 2] [--yta pulverlack]`: vikt per material, yta för
-  ytbehandling, kap och geringar, hål, laserlängd och håltagningar, bockningar, uppskattad svetslängd och inköpta
-  detaljer (`_kalkyl.csv`, `_kalkyl.json`). Med verkstadens priser i `egna/priser.json` (mall `mallar/priser.json`)
-  blir det ett pris. Priser läggs aldrig i skillen.
-- `python3 scripts/paket.py skapa <modell.FCStd>` samlar ritningar, modell, DXF, STEP, prisunderlag, skriptet och
+## Komponenter: beslag, lås, glas och motorer
+Skillen innehåller inga komponentdata. Inköpta komponenter (gångjärn, lås, handtag, dörrstängare, grindmotorer,
+glas, bultar) ritas med mått ur en leverantörs datablad, som söks upp på nätet i landet där skillen används:
+1. **Land:** `python3 scripts/komponenter.py visa` visar registret och landet (`land` i foretag.json, `FC_LAND`).
+   Okänt: fråga användaren och spara med `foretag.py satt --land SE`.
+2. **Sök** (webbsök) efter komponenten hos leverantörer och grossister i det landet, på landets språk, för
+   uppgiften: t.ex. "gångjärn grind kullager 120 kg" eller "门铰链 不锈钢 承重" i Kina. Välj en vanlig produkt som
+   finns i lager, eller den användaren anger. Läs produktsidan eller databladet: ytterkontur och montagemått,
+   vikt och tillåten last. Säg till användaren vilken produkt som valts och varför; de kan byta.
+3. **Lägg in** den med källan: `python3 scripts/komponenter.py lagg-till --id gj-grind-120 --typ gångjärn
+   --benamning "GÅNGJÄRN KULLAGRAT" --tillverkare "..." --artikel "..." --cylinder 22x120 --vikt 0.4
+   --last "120 kg/par" --kalla <URL>`. Registret ligger i `egna/komponenter.json` och följer med uppdraget.
+4. **Rita:** `k.inkop("gj/1", komponent="gj-grind-120", mitt=(...), rot=(...))`. Benämning, tillverkare och
+   artikelnummer hamnar i materiallistan, källan i noterna (`INKÖP gj/1: ... MÅTT ENL. DATABLAD <domän> <datum>`),
+   vikten i rörelsekontrollens gångjärnslast. Jämför lasten från `rorelse.py` med databladets.
+- **Glas:** glastyp och tjocklek väljs efter landets regler för glas i byggnader (i Sverige t.ex. Svensk Planglas
+  glasguide och BBR, för räcken och dörrar ofta laminerat säkerhetsglas) eller leverantörens dimensioneringsguide,
+  med källan i noterna. `k.glas(..., t=)` ritar rutan; glipa och lister efter leverantörens anvisning.
+- Hittas inget datablad med mått: fråga användaren efter produkten eller måtten. Gissa aldrig, och skriv aldrig
+  `ANTAGET` på en komponents mått utan att säga det till användaren.
+
+## Mängdunderlag och beställningspaket
+- `python3 scripts/mangder.py <modell.FCStd> [--antal 2]`: vikt per material, yta för ytbehandling, kap och
+  geringar, hål, laserlängd och håltagningar, bockningar, uppskattad svetslängd och inköpta komponenter
+  (`_mangder.csv`, `_mangder.json`). Det är underlag för tillverkarens kalkyl. Skillen sätter inga priser och
+  användaren ska inte få några prisuppgifter ur den: prissättningen görs av tillverkaren när underlaget kommit in
+  och konstruktionen verifierats.
+- `python3 scripts/paket.py skapa <modell.FCStd>` samlar ritningar, modell, DXF, STEP, mängdunderlag, skriptet och
   dess egna moduler med skillens version, variablerna, regelkontrollen och kontrollsummor i
   `<modell>_bestallning.zip`. Tillverkaren kör `paket.py kontrollera <zip>`: kontrollsummorna jämförs och modellen
   byggs om med den egna versionen av skillen; vikt, antal delar och regelkontroll ska stämma.
+
+## Leverans till en tillverkare
+När användaren säger sig vara nöjd med ritningarna (eller ber om offert):
+1. Fråga, med frågeformuläret om det finns: **"Vill du skicka underlaget till en tillverkare för offert?"** med
+   alternativen *Ja, till <mottagare> (förifylld)*, *Ja, till en annan adress* och *Nej, inte nu*. Den förifyllda
+   mottagaren står i `egna/leverans.json` eller `mallar/leverans.json` (anbud@smide.com). Användaren kan skicka
+   vart hen vill; fråga efter adressen vid "annan adress", och efter namn och telefon till mailets avslutning.
+2. `python3 scripts/paket.py skapa <modell.FCStd> --skript <konstruktionsskript>` och
+   `python3 scripts/paket.py skicka ut/<modell>_bestallning.zip --till <adress> --avsandare "Namn, telefon"
+   [--meddelande "..."]`. Det ger `<modell>_mail.eml` (osänt mail med paketet som bilaga) och en mailto-länk.
+3. Har agenten ett mailverktyg (t.ex. Gmail): lägg ett **utkast** till mottagaren med ämne, text och paketet
+   som bilaga, visa det och skicka bara när användaren uttryckligen säger "skicka". Annars: ge användaren
+   .eml-filen och zip:en att skicka själv (se "Filerna till användaren"). Skicka aldrig något utan ett tydligt ja.
+4. Paket över 20 MB går inte med vanlig mail: föreslå en delningslänk (Drive, Dropbox) i mailet i stället.
+
+## Filerna till användaren
+I Claude Code kan användaren ladda ner filerna i `ut/` direkt ur sessionen. I agenter där bara det som
+committas syns (Codex, Copilot, Cursor): kopiera det användaren ska ha (PDF, PNG, zip, .eml) till
+`leverans/<uppdrag>/` i repot, committa det på uppdragets gren och ge länken till grenen eller PR:en. Lägg aldrig
+leveranser på `main` och aldrig i en förbättrings-PR för skillen.
 
 ## 3D-bilder, export och översiktsritning
 - `python3 scripts/rendera.py <modell.FCStd> [--vyer iso,iso2,bak,fram,sida,plan] [--vy namn:dx,dy,dz]
@@ -254,7 +312,7 @@ kontroller, inte dimensionering: säg det, och att räcken, bärande delar och i
 konstruktör.
 
 ## Testa skillen
-`python3 scripts/testa.py` bygger och ritar alla exempel, kör verktygen på dem (kalkyl, dxf, rörelse, export, paket,
+`python3 scripts/testa.py` bygger och ritar alla exempel, kör verktygen på dem (mängder, dxf, rörelse, export, paket,
 hållfasthet, underlag) och jämför ritningarna med referensbilderna i `tester/referens/`. OK/ÄNDRAD/FEL per exempel;
 `--snabb` bara bygger, `--bara namn,namn` väljer exempel, `--uppdatera-referens` sparar nya referensbilder.
 Kör det efter varje ändring i skillen och innan en pull request.
@@ -283,11 +341,11 @@ ritningsnummer, material, ytbehandling, beslag och antagna mått.
 - `scripts/fcapi.py` startar FreeCAD och kör jobb; `scripts/pd.py` Part Design-hjälpare; `scripts/stal.py`
   Konstruktion (balk, plåt, hål, gering, bockad plåt, tråg, glas, inköp, rörelse, utseende) och materiallista.
 - Kommandon: `partdesign.py`, `datastall.py`, `ritning.py` (A3), `sammanstallning.py` (A2), `oversikt.py`,
-  `rendera.py`, `export.py`, `dxf.py`, `kalkyl.py`, `regler.py`, `paket.py`, `rorelse.py`, `hallfasthet.py`,
-  `underlag.py`, `granska.py`, `foretag.py`, `kallor.py`, `testa.py`.
+  `rendera.py`, `export.py`, `dxf.py`, `mangder.py`, `regler.py`, `paket.py`, `rorelse.py`, `hallfasthet.py`,
+  `underlag.py`, `granska.py`, `foretag.py`, `komponenter.py`, `kallor.py`, `testa.py`.
 - Moduler: `racke.py` (räcken), `ornament.py`, `sprak.py`, `plat.py` (utbredning, DXF), `dfm.py`.
 - `delar/`, `konstruktioner/` exempel; `mallar/A3.svg`, `mallar/A2.svg` (titelblock med stomnät, etapp och
-  revisionsrad), `mallar/verkstad.json`, `mallar/priser.json`; `tester/referens/` referensbilder; `VERSION`.
+  revisionsrad), `mallar/verkstad.json`, `mallar/leverans.json`; `tester/referens/` referensbilder; `VERSION`.
 - `references/verktyg.md` verktygens API, `references/smidesritningar.md` ritningskonventionerna,
   `references/partdesign.md` Part Design-API:t, `references/fallor.md` kända fällor i FreeCAD 1.0.1 och 1.1.3.
 
@@ -295,4 +353,4 @@ ritningsnummer, material, ytbehandling, beslag och antagna mått.
 - Modell och ritning ligger i samma .FCStd. Variablerna i kalkylbladet `Variabler`.
 - TechDraw kräver GUI, så FreeCAD öppnas minimerat under jobbet (i molnet i Xvfb).
 - Svetssymboler, bultar och fler än en revisionsrad ritas inte (skrivs i noterna).
-- Hållfasthet och svetslängd är överslag; priset gäller verkstadens egna priser.
+- Hållfasthet och svetslängd är överslag. Inga priser: mängdunderlaget prissätts av tillverkaren.

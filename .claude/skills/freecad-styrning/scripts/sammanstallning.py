@@ -800,6 +800,15 @@ def _jobb():
             for s_ in kallor.fel():
                 logg("Källor FEL:", s_)
             noter = list(noter) + kallrader
+        inkopta = {}                                  # inköpta komponenter ur registret: leverantör och källa i noterna
+        for o in ds:
+            if getattr(o, "Inkopstext", "") and o.Pos not in inkopta:
+                url = (getattr(o, "Kalla", "") or "").split()
+                kort = url[0].split("//")[-1].split("/")[0] if url else ""
+                inkopta[o.Pos] = "INKÖP %s: %s%s" % (o.Pos, o.Inkopstext.upper(), (", MÅTT ENL. DATABLAD %s %s" % (kort.upper(), url[1] if len(url) > 1 else "")) if kort else "")
+        if inkopta:
+            import kallor
+            noter = list(noter) + [r_ for t_ in inkopta.values() for r_ in kallor.bryt(t_, 70)]
         try:                                          # regelkontrollen från bygget (scripts/regler.py) som not
             import regler, kallor
             rk = regler.not_text(json.loads(getattr(g, "Regelkontroll", "") or "null"), T)
