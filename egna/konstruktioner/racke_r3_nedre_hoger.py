@@ -13,9 +13,9 @@ VARIABLER = list(racke_bas.VARIABLER_RACKE)
 def parametrar():
     nos, yta = T.linje_nedre(med_vilplan=True)
     g = T.G_NEDRE
-    x_kn = T.L_NEDRE + 30                              # på vilplanet, vid knäcken
     x_sist = T.Y_FRAM - 120                            # 120 från fasaden
-    stolpar = [0.5 * g, 2.5 * g, x_kn, (x_kn + x_sist) / 2, x_sist]
+    x_2 = 3.5 * g                                      # mitt på fjärde steget
+    stolpar = [0.5 * g, x_2, (x_2 + x_sist) / 2, x_sist]   # fack 1050 / 953 / 953 (max c/c 1300)
     return dict(nos_pkt=nos, yta=yta, stolpar=stolpar, hl_x=(stolpar[0] - racke_bas.SNACKA_RAK, T.Y_FRAM - 20), start="snacka")
 
 

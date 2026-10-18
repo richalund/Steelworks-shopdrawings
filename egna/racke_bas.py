@@ -128,7 +128,7 @@ def gera(k, o, a, b):
         f.Length = 2 * diag + 10
         k.doc.recompute()
     if f.Shape.Volume > fore - 1e-6:
-        raise RuntimeError("Snedkapningen av %s skar inte bort något" % o.Label)
+        raise RuntimeError("Snedkapningen av %s skar inte bort något (punkter %s, %s; låda %s)" % (o.Label, a, b, o.Shape.BoundBox))
 
 
 def fyrkant(a, L):
@@ -166,7 +166,7 @@ class Linje:
 
 
 def bygg_racke(k, v, nos_pkt, yta, stolpar, hl_x, start="snacka", ursprung=(0, 0, 0), ex=(1, 0, 0), ey=(0, 1, 0),
-               prefix="", huvuddel=True):
+               prefix="", huvuddel=True, extern=()):
     """nos_pkt: framkantslinjens knäckpunkter; yta(x): stenens överkant under en stolpe; stolpar: stolparnas x
     (uppför); hl_x: handledarens ändar (x0, x1); start: "snacka" (snäcka i nedre änden) eller "rak".
     Returnerar dict med fack, handledarbitar, snitt och detaljer för ritningen."""
@@ -198,9 +198,11 @@ def bygg_racke(k, v, nos_pkt, yta, stolpar, hl_x, start="snacka", ursprung=(0, 0
             bygg_snacka(k, hl)
         bitar.append(dict(pos=pos_("hl/%d" % (i + 1)), langd=L, lutning=math.degrees(math.atan(t))))
 
-    # ---- stolpar
+    # ---- stolpar (de i `extern` hör till ett anslutande räcke och byggs inte här, t.ex. R/1:s hörnstolpe för R/2)
     spos = {}
     for i, x in enumerate(stolpar):
+        if i in extern:
+            continue
         xa, xb = x - ST_A / 2, x + ST_A / 2
         za, zb = hl_uk(xa), hl_uk(xb, hoger=False)
         z0 = yta(x) - INGJUT
@@ -211,45 +213,92 @@ def bygg_racke(k, v, nos_pkt, yta, stolpar, hl_x, start="snacka", ursprung=(0, 0
         if abs(zb - za) > 0.01:
             gera(k, st, P(xa, 0, za), P(xb, 0, zb))
 
-    # ---- följare, underliggare och spjälor per fack (raka mellan stolparna)
+    # ---- följare, underliggare och spjälor per fack mellan stolparna. Följarna följer handledaren och
+    # underliggarna framkantslinjen: i en knäck inne i facket bockas de (två bitar med gering i knäcken).
     lpos, sppos, fack, sp_forst = {}, {}, [], {}
     snitt_x = None
 
     def nr(tab, prefixtxt, nyckel):
         return tab.setdefault(nyckel, pos_("%s/%d" % (prefixtxt, len(tab) + 1)))
 
+    def mittlinje(fa, fb, z):
+        """Polylinje (x, z) från fa till fb med knäck där framkantslinjen knäcker; z(x, hoger) ger mittens höjd.
+        Knäckpunkten är skärningen mellan linjerna på var sida (de är förskjutna olika mycket när lutningen ändras),
+        så att varje bit blir exakt parallell med handledaren respektive framkantslinjen."""
+        pts = [(fa, z(fa, True))]
+        for xk in nos.knackar(fa, fb):
+            tl, tr = nos.lutning(xk, False), nos.lutning(xk, True)
+            zl, zr = z(xk, False), z(xk, True)
+            xi = xk + (zr - zl) / (tl - tr) if abs(tl - tr) > 1e-9 else xk
+            pts.append((xi, zl + tl * (xi - xk)))
+        pts.append((fb, z(fb, False)))
+        return pts
+
+    def segment(pl, x):
+        for (x0_, z0_), (x1_, z1_) in zip(pl, pl[1:]):
+            if x <= x1_ or (x1_, z1_) == pl[-1]:
+                t_ = (z1_ - z0_) / (x1_ - x0_)
+                return t_, (lambda xx, x0_=x0_, z0_=z0_, t_=t_: z0_ + (xx - x0_) * t_)
+        raise ValueError(x)
+
+    def plattstal(pl, pos_fn):
+        """2 st PL5*20 på högkant längs mittlinjen pl: lodräta ändar mot stolparna, gering i knäckarna. Varje bit
+        byggs förlängd och kapas, så att kapet går genom hela höjden."""
+        h2 = FL_H / 2
+        for i, ((xa_, za_), (xb_, zb_)) in enumerate(zip(pl, pl[1:])):
+            t_ = (zb_ - za_) / (xb_ - xa_)
+            c_ = cos(t_)
+            mitt_ = lambda x, xa_=xa_, za_=za_, t_=t_: za_ + (x - xa_) * t_
+            f_st, f_kn = h2 * abs(t_) + 3, h2 * abs(t_) + FL_H                # förlängning före kap (stolpe/knäck)
+            x_s = xa_ - (f_kn if i > 0 else f_st)
+            x_e = xb_ + (f_kn if i < len(pl) - 2 else f_st)
+            L = (xb_ - xa_) / c_ + h2 * abs(t_) * 2 / c_
+            pos = pos_fn(round(L, 1), round(t_, 3))
+            for y in (-Y_FL, Y_FL):
+                fl = k.balk(pos, prof, P(x_s, y, mitt_(x_s)), P(x_e, y, mitt_(x_e)), upp=D(0, 1, 0), material=STAL)
+                for j, xf in ((0, xa_), (1, xb_)):
+                    kn = (j == 0 and i > 0) or (j == 1 and i < len(pl) - 2)
+                    if not kn:                          # lodrät ände mot stolpen
+                        gera(k, fl, P(xf, y, mitt_(xf) - 40), P(xf, y, mitt_(xf) + 40))
+                    else:                               # gering i knäcken mot grannbiten
+                        xo, zo = pl[i + j - 1] if j == 0 else pl[i + 2]
+                        t2 = (zo - (za_ if j == 0 else zb_)) / (xo - xf)
+                        c2 = cos(t2)
+                        if abs(t2 - t_) < 1e-6:
+                            gera(k, fl, P(xf, y, mitt_(xf) - 40), P(xf, y, mitt_(xf) + 40))
+                            continue
+                        zk = za_ if j == 0 else zb_
+                        dx = h2 * (1 / c2 - 1 / c_) / (t_ - t2)        # överkanternas skärning
+                        T = (xf + dx, zk + t_ * dx + h2 / c_)
+                        B = (xf - dx, zk - t_ * dx - h2 / c_)
+                        gera(k, fl, P(T[0], y, T[1]), P(B[0], y, B[1]))
+
     prof = "PL%g*%g" % (FL_T, FL_H)
     for xa, xb in zip(stolpar, stolpar[1:]):
         fa, fb = xa + ST_A / 2, xb - ST_A / 2
-        ok_a, ok_b = hl_uk(fa) - mellan, hl_uk(fb, hoger=False) - mellan          # följarnas överkant
-        tf = (ok_b - ok_a) / (fb - fa)
-        cf = cos(tf)
-        f_ok = lambda x: ok_a + (x - fa) * tf
-        f_mitt = lambda x: f_ok(x) - FL_H / 2 / cf
-        ua, ub = nos(fa) + under, nos(fb) + under                                 # underliggarnas mitt
-        tu = (ub - ua) / (fb - fa)
-        cu = cos(tu)
-        u_mitt = lambda x: ua + (x - fa) * tu
-        u_uk = lambda x: u_mitt(x) - FL_H / 2 / cu
-        # följare och underliggare: 2 st PL5*20 på högkant, lodräta ändar mot stolparna
-        for mitt_, t_, c_ in ((f_mitt, tf, cf), (u_mitt, tu, cu)):
-            L = (fb - fa - 2 * SPALT) / c_
-            pos = nr(lpos, "l", (round(L, 1), round(t_, 3)))
-            for y in (-Y_FL, Y_FL):
-                fl = k.balk(pos, prof, P(fa + SPALT, y, mitt_(fa + SPALT)), P(fb - SPALT, y, mitt_(fb - SPALT)), upp=D(0, 1, 0), material=STAL)
-                if abs(t_) > 1e-4:
-                    for xf in (fa + SPALT, fb - SPALT):
-                        gera(k, fl, P(xf, y, mitt_(xf) - 40), P(xf, y, mitt_(xf) + 40))
+        pl_f = mittlinje(fa + SPALT, fb - SPALT, lambda x, h: hl_uk(x, h) - mellan - FL_H / 2 / cos(nos.lutning(x, h)))
+        pl_u = mittlinje(fa + SPALT, fb - SPALT, lambda x, h: nos(x) + under)
+        plattstal(pl_f, lambda L, t_: nr(lpos, "l", (L, t_)))
+        plattstal(pl_u, lambda L, t_: nr(lpos, "l", (L, t_)))
         # spjälor FS12 mellan följarna, kant i kant med följarnas överkant och underliggarnas underkant
         w = fb - fa
         m = max(1, int(math.ceil((w - 100.0) / (100.0 + SPJ_A))))
         fri = (w - m * SPJ_A) / (m + 1)
-        fack.append(dict(fri=fri, cc=fri + SPJ_A, antal=m, lutning=math.degrees(math.atan(tf))))
+        tf0 = segment(pl_f, fa + 1)[0]
+        fack.append(dict(fri=fri, cc=fri + SPJ_A, antal=m, lutning=math.degrees(math.atan(tf0))))
         r = SPJ_A / 2
         for j in range(m):
             x = fa + fri * (j + 1) + SPJ_A * (j + 0.5)
             if snitt_x is None and j == 1:
                 snitt_x = x
+            tf, zf = segment(pl_f, x)
+            tu, zu = segment(pl_u, x)
+            if abs(tf) < 2e-3:                  # plant parti (knäckens linje ger en lutning på några tusendelar)
+                tf, zf = 0.0, (lambda xx, z0_=zf(x): z0_)
+            if abs(tu) < 2e-3:
+                tu, zu = 0.0, (lambda xx, z0_=zu(x): z0_)
+            f_ok = lambda xx: zf(xx) + FL_H / 2 / cos(tf)
+            u_uk = lambda xx: zu(xx) - FL_H / 2 / cos(tu)
             zb_, zt_ = u_uk(x) - r * abs(tu), f_ok(x) + r * abs(tf)
             Ls = zt_ - zb_
             if abs(tu) > 1e-4:                  # snedkapad nedtill: hel mm, kapet tar bort överskottet
@@ -263,11 +312,13 @@ def bygg_racke(k, v, nos_pkt, yta, stolpar, hl_x, start="snacka", ursprung=(0, 0
                 gera(k, sp, P(x - r, 0, u_uk(x - r)), P(x + r, 0, u_uk(x + r)))
             if abs(tf) > 1e-4:
                 gera(k, sp, P(x - r, 0, f_ok(x - r)), P(x + r, 0, f_ok(x + r)))
-        if len(fack) == 1:                      # snittet A går genom första fackets andra spjäla
+        if len(fack) == 1:                      # vy E längs handledaren genom första facket
             xs = snitt_x if snitt_x is not None else fa + 60
-            xm = (fa + fb) / 2                  # snitt E vinkelrätt mot handledaren genom fackets mitt
-            f1 = dict(x=xs, zfl=f_ok(xs) - FL_H / cf, zu=u_mitt(xs), fa=fa, fb=fb, t=tf,
-                      e_origo=P(xm, 0, (f_ok(xm) + u_mitt(xm)) / 2))
+            tf, zf = segment(pl_f, xs)
+            tu, zu = segment(pl_u, xs)
+            xm = (fa + fb) / 2
+            f1 = dict(x=xs, zfl=zf(xs) - FL_H / 2 / cos(tf), zu=zu(xs), fa=fa, fb=fb, t=tf,
+                      e_origo=P(xm, 0, (segment(pl_f, xm)[1](xm) + segment(pl_u, xm)[1](xm)) / 2))
     snitt = round(f1["x"], 1)
 
     # ---- detaljer i 1:2 (ritas av egna/ritning_detaljer.py): punkter i modellen, radie i modellmått
@@ -332,7 +383,7 @@ def noter(beskr, v, info, start, slut_text, extra=()):
                      % " / ".join("%s %s" % (b["pos"], "PLAN" if abs(b["lutning"]) < 0.05 else "%.1f°" % b["lutning"]) for b in bitar))
     rader.append(slut_text)
     rader += list(extra)
-    rader += ["FÖLJARE OCH UNDERLIGGARE l: 2 st PL5*20 PÅ HÖGKANT, ETT PÅ VAR SIDA OM SPJÄLORNA",
+    rader += ["FÖLJARE OCH UNDERLIGGARE l: 2 st PL5*20 PÅ HÖGKANT, ETT PÅ VAR SIDA OM SPJÄLORNA, BOCKAS/GERAS I KNÄCKEN",
               "SPJÄLOR sp FS12 MELLAN FÖLJARNA, c/c MAX %.0f, FRI ÖPPNING MIN %.0f (< 100)" % (cc, fri),
               "SVETS: STOLPAR MOT HANDLEDARE a4, FÖLJARE MOT STOLPAR OCH SPJÄLOR a3 – DETALJER SE BLAD 2",
               "YTBEHANDLING: VARMFÖRZINKAD OCH PULVERLACKAD SVART RAL 9005 (ANTAGET, ENLIGT BESTÄLLNING)"]

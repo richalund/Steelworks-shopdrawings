@@ -1,6 +1,6 @@
 #!/bin/bash
 # Bygger P. Hellstones räcken, grind och översikt, ritar sammanställningarna, efterbehandlar (korta
-# hänvisningar, detaljblad 1:2) och renderar 3D-bilder. Kör från repots rot: bash egna/bygg_hellstone.sh
+# hänvisningar, detaljblad 1:2), renderar 3D-bilder och ritar planritningen R-101. Kör från repots rot: bash egna/bygg_hellstone.sh
 set -e
 S=.claude/skills/freecad-styrning/scripts/sammanstallning.py
 OBJ=("Patrik Hellstone, 0733 41 42 21" "Adress enligt beställare")
@@ -17,3 +17,4 @@ kor grind G1_Grind "GRIND VID ENTRÉTRAPPA, VILLA"
 echo "== T1"
 python3 $S bygg egna/konstruktioner/trappa_oversikt.py ut/T1_Trappa_oversikt.FCStd | grep -E "^Delar|Krock|Skisser|OBS|rror" || true
 python3 egna/rendera.py ut/T1_Trappa_oversikt.FCStd | grep -E "PNG|rror" || true
+python3 egna/planritning.py ut/T1_Trappa_oversikt.FCStd | grep -E "Planritning|PDF|OBS|rror" || true

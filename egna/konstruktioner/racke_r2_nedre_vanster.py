@@ -1,5 +1,6 @@
 """Räcke R/2 längs nedre trapploppets vänstra sida (mot innergården) hos P. Hellstone, se
-egna/trappa_hellstone.py: rakt nedför de 5 stegen från R/1:s hörnstolpe på vilplanet, med snäcka nedtill. De
+egna/trappa_hellstone.py: rakt nedför de 5 stegen från R/1:s hörnstolpe på vilplanet (gemensam stolpe i innerhörnet), med snäcka
+nedtill. De
 nedre stegen breddas förbi räcket ut mot innergården; räcket står på stegen i linje med vilplanets kant."""
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
@@ -15,11 +16,13 @@ def parametrar():
     g = T.G_NEDRE
     y_horn = T.BREDD - T.KANT                          # R/1:s hörnstolpe (global y)
     x_topp = T.Y_FRAM - (y_horn + racke_bas.ST_A / 2 + 2)       # handledaren mot hörnstolpens sida
-    stolpar = [0.5 * g, 2.5 * g, T.L_NEDRE - 40]
-    return dict(nos_pkt=nos, yta=yta, stolpar=stolpar, hl_x=(stolpar[0] - racke_bas.SNACKA_RAK, x_topp), start="snacka")
+    x_horn = T.Y_FRAM - y_horn                         # R/1:s hörnstolpe: gemensam, byggs inte här
+    stolpar = [0.5 * g, 2.5 * g, x_horn]
+    return dict(nos_pkt=nos, yta=yta, stolpar=stolpar, hl_x=(stolpar[0] - racke_bas.SNACKA_RAK, x_topp), start="snacka",
+                extern=(2,))
 
 
 def bygg(k, v):
     info = racke_bas.bygg_racke(k, v, **parametrar())
     racke_bas.ritning(k, info, racke_bas.noter("RÄCKE R/2 LÄNGS NEDRE LOPPETS VÄNSTRA SIDA MOT INNERGÅRDEN, GÅNG ±0 – VILPLAN +%g" % T.Z_VILPLAN,
-                                    v, info, "snacka", "HANDLEDARENS ÖVRE ÄNDE SVETSAS MOT R/1:S HÖRNSTOLPE PÅ VILPLANET (FRITT 80 TILL ÖVERSTA STOLPEN)"))
+                                    v, info, "snacka", "ÖVRE ÄNDEN: HANDLEDARE OCH FÖLJARE SVETSAS MOT R/1:S HÖRNSTOLPE PÅ VILPLANET (INGEN EGEN STOLPE I HÖRNET)"))
