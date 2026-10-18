@@ -253,6 +253,19 @@ allt i globala koordinater: kroppens placering är noll, skissernas lägen och P
 - Lambdas i en loop binder variabeln sent: spara talen i en dict eller som standardargument
   (`lambda x, z0=z0: ...`), annars får alla detaljer sista värdet.
 
+## Balkar på pelare (primarbalk.py, 2026-10-18)
+- **Livavstyvning i en I-profil:** plåtens hörn mot livet ska rundas med profilens livradie r (IPE220: 12), annars
+  krockar fyrkantiga hörn med radien. I `k.egen`: `d.avrunda(r, {"parallell": "Z", "lada": ["xmin", "y"]})` när
+  skissens x pekar ut från livet. Plåtens höjd = livets fria höjd (h - 2tf) avrundad nedåt.
+- **Hål i underflänsen** syns inte som cirklar i planvyn ovanifrån (de är dolda bakom överflänsen): rita
+  `vyer=["fram", "under"]`. Ge `k.hal(..., langd=2 * tf)` så att fickan bara går genom underflänsen.
+- **Detaljmått** (`detaljer[...]["matt"]`) mäter bara kanter och bågar med rätt längd: c/c mellan hål blir inget
+  mått i detaljen. Skriv hålbilden i detaljens `text` (`4*Ø11 c/c 150 x 70, 25 FRÅN BALKÄNDE`); kedjorna på blad 1
+  har hålens lägen.
+- **KKR och VKR:** svensk beteckning som i katalogerna och konstruktörens handlingar: VKR = varmformade
+  konstruktionsrör (EN 10210, yttre radie ca 1,5t), KKR = kallformade (EN 10219, 2-3t). Före 2026-10-18 var de
+  omkastade i stal.py/kallor.py; KKR100x6,3 väger 17,5 kg/m, VKR100x6,3 18,2 kg/m.
+
 ## Underlag från kunden
 - Bilagor i Gmail-trådar går inte alltid att hämta som bilaga via connectorn: hämta meddelandet i RAW-format,
   spara JSON:en och packa upp den med Pythons `email`-modul till egna filer.

@@ -9,7 +9,7 @@ Material; samma positionsnummer på flera delar = samma position (de ska vara li
 
 | Metod | Ger |
 |---|---|
-| `k.balk(pos, profil, start, slut, upp=, oppning=)` | profil/stång längs linjen (UPE, IPE, HEA, HEB, VKR, KKR, RÖR, D, FL, FS, L) |
+| `k.balk(pos, profil, start, slut, upp=, oppning=)` | profil/stång längs linjen (UPE, IPE, HEA, HEB, VKR, KKR, RÖR, D, FL, FS, L); VKR = varmformad EN 10210, KKR = kallformad EN 10219 |
 | `k.plat(pos, "PL10*110", mitt=, langd=, lriktning=, briktning=)` | rektangulär plåt |
 | `k.skiva(pos, text, langd, bredd, t, mitt=, form="ellips"\|"rektangel")` | liggande skiva (bordsskiva, lock) |
 | `k.egen(pos, text, bygg, mitt=, rot=, material=)` | egen Part Design-kropp, `bygg(d)` med pd-API:t |

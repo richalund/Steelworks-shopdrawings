@@ -9,7 +9,8 @@ ifrån (källa, standard, hämtdatum), så att ritningen kan ange vad måtten oc
 
 Källor (alla läses med vanlig HTTPS, inga nycklar eller konton):
   profiler   Steel_Section_Database (github.com/ulmewix, MIT): EN 10365:2017 (IPE, HEA, HEB, HEM, UPE, UPN, IPN),
-             EN 10219-2:2006 (kallformade VKR/RHS/SHS/CHS), EN 10210-2:2006 (varmformade KKR/CHS), EN 10056-1 (L).
+             EN 10219-2:2006 (kallformade KKR/RHS/SHS/KCKR/CHS), EN 10210-2:2006 (varmformade VKR/VKCKR),
+             EN 10056-1 (L).
              Reserv: FreeCAD:s BIM-profiltabell profiles.csv (lokalt i installationen eller från FreeCAD:s repo).
   material   eurocodeapplied.com, tabellen med nominellt fy/fu per EN 1993-1-1 tab. 3.1 (EN 10025-2..6,
              EN 10210-1, EN 10219-1), per tjockleksområde. Reserv: FreeCAD:s materialkort (Steel-S235JR.FCMat ...).
@@ -141,7 +142,7 @@ def _serie(p):
         a1, a2, a3 = float(m.group(2)), float(m.group(3)), m.group(4)
         h, b, t = (a1, a2, float(a3)) if a3 else (a1, a1, a2)
         h, b = max(h, b), min(h, b)
-        varm = m.group(1) == "KKR"
+        varm = m.group(1) == "VKR"                 # VKR varmformad EN 10210, KKR kallformad EN 10219
         if h == b:
             s, alt = ("SHS-HF", "SHS-CF") if varm else ("SHS-CF", "SHS-HF")
             return s, "SHS %sx%sx%s" % (_num(b), _num(b), _num(t)), "R", alt
@@ -149,7 +150,7 @@ def _serie(p):
         return s, "RHS %sx%sx%s" % (_num(h), _num(b), _num(t)), "R", alt
     m = re.fullmatch(r"(RÖR|ROR|CHS|VKCKR|KCKR)" + NUM + r"\*" + NUM, p)
     if m:
-        varm = m.group(1) == "KCKR"
+        varm = m.group(1) == "VKCKR"               # VKCKR varmformad, KCKR kallformad
         s, alt = ("CHS-HF", "CHS-CF") if varm else ("CHS-CF", "CHS-HF")
         return s, "CHS %sx%s" % (_num(m.group(2)), _num(m.group(3))), "O", alt
     m = re.fullmatch(r"L" + NUM + r"\*" + NUM + r"(?:\*" + NUM + r")?", p)
@@ -559,7 +560,7 @@ def main(argv=None):
     ap.add_argument("lage", choices=["profil", "material", "motsvarighet", "uppdatera", "status"])
     ap.add_argument("namn", nargs="*")
     ap.add_argument("--t", type=float, default=None, help="godstjocklek (mm) för fy/fu-området")
-    ap.add_argument("--varmformad", action="store_true", help="hålprofil enligt EN 10210 (KKR) i stället för EN 10219")
+    ap.add_argument("--varmformad", action="store_true", help="hålprofil enligt EN 10210 (VKR) i stället för EN 10219 (KKR)")
     a = ap.parse_args(argv)
     if a.lage == "uppdatera":
         return uppdatera()

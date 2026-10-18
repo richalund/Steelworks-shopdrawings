@@ -874,7 +874,7 @@ def _jobb():
                     continue
                 t = kallor.tjocklek(r["profil"])
                 tjock[r["material"]] = max(tjock.get(r["material"], 0.0), t or 0.0)      # 0 = okänd (egen profiltext)
-                varm[r["material"]] = varm.get(r["material"], False) or r["profil"].upper().startswith(("KKR", "KCKR"))
+                varm[r["material"]] = varm.get(r["material"], False) or r["profil"].upper().startswith(("VKR", "VKCKR"))
             mat = {m: kallor.material(m, tjock[m] or None, varm[m]) for m in tjock}
             kallrader = kallor.noter(kl, mat, bredd=10000)            # en not per mening; brytningen görs vid ritningen
             for s_ in kallrader:

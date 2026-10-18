@@ -70,7 +70,8 @@ filen i ett eget privat repo). Loggan läggs i en kopia av mallen i utmappen (`_
 en cache (`~/.cache/freecad-styrning/kallor`, 30 dagar). Varje uppgift bär källa, standard och hämtdatum, och
 ritningarna anger var måtten och materialet är verifierade (A2 i noterna, A3 efter "Material:").
 - Profilmått: Steel_Section_Database (github.com/ulmewix, MIT): EN 10365 (IPE, HEA, HEB, HEM, UPE), EN 10219-2
-  (VKR/RHS/SHS/rör), EN 10210-2 (KKR), EN 10056-1 (L). Reserv FreeCAD:s `profiles.csv`, sist de inbyggda tabellerna
+  (KKR/RHS/SHS, kallformade rör), EN 10210-2 (VKR, varmformade rör), EN 10056-1 (L). Svensk beteckning som i
+  katalogerna: VKR = varmformade konstruktionsrör, KKR = kallformade. Reserv FreeCAD:s `profiles.csv`, sist de inbyggda tabellerna
   i `stal.py` ("ej verifierade" på ritningen).
 - Materialkvaliteter: eurocodeapplied.com (EN 1993-1-1 tab. 3.1) per tjockleksområde; reserv FreeCAD:s materialkort.
 - Motsvarande kvaliteter i andra standarder (t.ex. kinesisk GB): `kallor.py motsvarighet S355J2` ger bara rader
@@ -172,7 +173,8 @@ Modellen byggs med ett konstruktionsskript (API i `scripts/stal.py`, se `referen
 `REGLER`, och `bygg(k, v)` med bl.a. `k.balk`, `k.plat`, `k.hal`, `k.gera`, `k.skiva`, `k.egen`, `k.referens`,
 `k.bockad`, `k.trag`, `k.glas`, `k.inkop`, `k.rorelse` och `k.utseende`. Varje del blir en Part Design-kropp (eller
 SheetMetal-del) med egenskaperna Pos/Profil/Material. Koordinater och längder får vara uttryck mot Variabler.
-Mönster: `konstruktioner/balkongram.py`, `pelare.py`, `soffbord.py`, `trappracke.py`, `grind.py`, `handdukstork.py`
+Mönster: `konstruktioner/balkongram.py`, `pelare.py`, `primarbalk.py` (IPE på pelare med livavstyvningar,
+hål i underflänsen och undervy), `soffbord.py`, `trappracke.py`, `grind.py`, `handdukstork.py`
 (rör med gerade knän, fiskmunskapade pinnar, väggfästen i snitt), `skap.py` (plåtskåp på en stomme av VKR),
 `solgaller.py` (plattstänger i strålmönster med bockade fötter och skruvhål) och `racke_ovaler.py` (ornament av
 bockat plattstål som stadionformad skiss, ovalernas delning med `kedjor`).
