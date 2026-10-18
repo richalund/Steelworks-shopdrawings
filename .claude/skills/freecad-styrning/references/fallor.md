@@ -274,6 +274,16 @@ allt i globala koordinater: kroppens placering är noll, skissernas lägen och P
   basens mått, `length` och placeringen (stal.trag). Utan `SMViewProviderTree` på objektet syns det inte i GUI:t
   och inte i 3D-bilderna; dölj basen.
 - SheetMetal-delar är compounds: `Shape.CenterOfMass` finns inte, räkna tyngdpunkten per solid.
+- **Tråg som flyttas efter bygget** (stal.trag): formen följer skissen, så lådan mätt i skissens system ändras inte
+  när skissen flyttas. Flyttningen ska räknas från ursprungsläget (`mitt`), inte från förra varvets läge: annars
+  dubblerades den och tråget hamnade en plåttjocklek fel när bara en eller två sidor bockades eller delens z pekade
+  i negativ riktning (lock och hyllor med kanterna nedåt). Måtten var rätt, bara läget fel – syns som krockar.
+- Ett lock med bockade kanter mot en stomme av VKR: bockens inre radie ligger mot rörets kant. Mot en rörände som
+  kapats rakt blir det en krock på några mm3; låt locket ligga mot rörens rundade längskanter (hörnstolparna slutar
+  under ett övre rör som går hela djupet, konstruktioner/skap.py) eller låt ryggen täcka lockets bakkant.
+- **Snitten på sammanställningsritningen** staplades i en kolumn som bara slutade ovanför materiallistan och kunde
+  hamna över noterna nere till vänster. Snitten läggs nu i kolumner (sammanstallning.py `packa`): en ny kolumn till
+  höger när nästa snitt inte ryms ovanför noterna eller materiallistan där kolumnen står.
 - `importSVG` vänder redan SVG:ns y-axel uppåt: vänd den inte en gång till.
 - `Part.makeWireString(text, typsnitt, storlek, spärrning)` ger textens konturer utan Draft-objekt; osifont följer med
   FreeCAD (`Mod/TechDraw/Resources/fonts`).

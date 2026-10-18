@@ -27,7 +27,9 @@ Material; samma positionsnummer på flera delar = samma position (de ska vara li
 - `k.bockad`: punkterna är plåtens ena sida; materialet ligger till vänster om profilens riktning (moturs profil =
   yttermått). Inre radien standard = t. Profiltext `PL<t> BOCKAD`, längd = utdragslängden.
 - `k.trag`: yttermått langd x bredd x kant; `mitt` = bottens undersida i mitten; kanterna bockas uppåt längs delens
-  +z. Justeras efter bygget så att yttermåtten stämmer (OBS-rad i loggen om inte).
+  +z. Justeras efter bygget så att yttermåtten stämmer (OBS-rad i loggen om inte), även med kanter på bara några
+  sidor och med delens z i negativ riktning (lock och hyllor med kanterna nedåt: `rot=((1,0,0),(0,-1,0),(0,0,-1))`,
+  `mitt` = ovansidan). Exempel med lock, gavlar, mellanväggar, hyllor, fronter och lådor: `konstruktioner/skap.py`.
 - `k.glas`: rutan = öppningen minus glipan, centrerad i öppningens plan (+ `djup` längs normalen); vikt 2500 kg/m3.
 - `k.inkop`: mått och vikt ur leverantörens datablad, helst via komponentregistret (`komponent="id"`, se
   komponenter.py). Material "INKÖP"; räknas inte i kap, yta eller laser men i vikten, krockar och rörelsen; listas

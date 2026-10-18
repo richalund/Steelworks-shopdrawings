@@ -687,14 +687,20 @@ class Konstruktion:
         w.length, w.radius = K, R
         self.doc.recompute()
         # bocken lägger kanten utanför botten och flänsen blir något högre: mät och justera till yttermåtten
-        for _ in range(2):
+        p0 = sk.obj.Placement                        # skissens läge i mitt
+        for _ in range(3):
             bb = w.Shape.transformed(inv.toMatrix()).BoundBox
             q = lambda x: App.Units.Quantity(x, App.Units.Length)
             sk.obj.setDatum("Langd", q(sk.obj.getDatum("Langd").Value - (bb.XLength - L)))
             sk.obj.setDatum("Bredd", q(sk.obj.getDatum("Bredd").Value - (bb.YLength - B)))
             w.length = getattr(w.length, "Value", w.length) - (bb.ZLength - K)
-            pl = sk.obj.Placement                    # centrerat kring mitt (även när bara några sidor bockas), undersidan i mitt
-            sk.obj.Placement = App.Placement(pl.Base - pl.Rotation.multVec(V((bb.XMin + bb.XMax) / 2, (bb.YMin + bb.YMax) / 2, bb.ZMin)), pl.Rotation)
+            self.doc.recompute()
+            # centrerat kring mitt (även när bara några sidor bockas), undersidan i mitt. Formen följer skissen, så
+            # lådan mäts i skissens system och flyttningen räknas från ursprungsläget p0 (inte från förra varvets
+            # läge: då dubblerades flyttningen och tråget hamnade en plåttjocklek fel när bara en sida bockades
+            # eller delens z pekade i negativ riktning).
+            bb = w.Shape.transformed(inv.toMatrix()).BoundBox
+            sk.obj.Placement = App.Placement(p0.Base - p0.Rotation.multVec(V((bb.XMin + bb.XMax) / 2, (bb.YMin + bb.YMax) / 2, bb.ZMin)), p0.Rotation)
             inv = sk.obj.Placement.inverse()
             self.doc.recompute()
         bb = w.Shape.transformed(inv.toMatrix()).BoundBox
