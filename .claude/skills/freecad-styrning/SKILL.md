@@ -173,7 +173,9 @@ Modellen byggs med ett konstruktionsskript (API i `scripts/stal.py`, se `referen
 `k.bockad`, `k.trag`, `k.glas`, `k.inkop`, `k.rorelse` och `k.utseende`. Varje del blir en Part Design-kropp (eller
 SheetMetal-del) med egenskaperna Pos/Profil/Material. Koordinater och längder får vara uttryck mot Variabler.
 Mönster: `konstruktioner/balkongram.py`, `pelare.py`, `soffbord.py`, `trappracke.py`, `grind.py`, `handdukstork.py`
-(rör med gerade knän, fiskmunskapade pinnar, väggfästen i snitt), `skap.py` (plåtskåp på en stomme av VKR).
+(rör med gerade knän, fiskmunskapade pinnar, väggfästen i snitt), `skap.py` (plåtskåp på en stomme av VKR),
+`solgaller.py` (plattstänger i strålmönster med bockade fötter och skruvhål) och `racke_ovaler.py` (ornament av
+bockat plattstål som stadionformad skiss, ovalernas delning med `kedjor`).
 ```
 python3 scripts/sammanstallning.py bygg konstruktioner/balkongram.py ut/B1.FCStd [--var Langd=2400] --png --step
 python3 scripts/sammanstallning.py ritning ut/B1.FCStd --uppdrag 2026-001 --objekt "KV EXEMPEL 1" "Byggbolaget AB" "Exempelgatan 1"
