@@ -93,7 +93,7 @@ egna/                            – verkstadens och uppdragens egna filer
   scripts/                       – kommandona (sammanstallning, ritning, oversikt, rendera, export, dxf, mangder,
                                    komponenter, regler, paket, rorelse, hallfasthet, underlag, testa ...) och modulerna
   delar/, konstruktioner/        – exempel: fotplatta, konsol, hylsa, H-profil; balkongram, pelare, soffbord,
-                                   trappräcke, grind
+                                   trappräcke, grind, handdukstork
   mallar/                        – titelblock A3.svg och A2.svg, verkstad.json, leverans.json
   references/                    – verktygen, ritningskonventioner, Part Design-API, fällor i FreeCAD
   tester/referens/               – referensbilder för testerna
