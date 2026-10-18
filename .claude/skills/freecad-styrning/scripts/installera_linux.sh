@@ -1,8 +1,9 @@
 #!/bin/bash
 # Installerar det freecad-styrning behöver på Linux (t.ex. en Claude Code-molnsession):
-#   FreeCAD 1.1.3 från conda-forge (via micromamba) i /opt/freecad, SheetMetal 0.7.24
-#   (samma version som skillen är testad med på Windows), Xvfb för TechDraw utan skärm,
-#   och PyMuPDF + ezdxf i system-Python för PDF-sammanslagning och DXF-kontroll.
+#   FreeCAD 1.1.3 från conda-forge (via micromamba) i /opt/freecad med CalculiX (FEM, hallfasthet.py),
+#   SheetMetal 0.7.24 (samma version som skillen är testad med på Windows), Xvfb för TechDraw utan skärm,
+#   ifcopenshell i /opt/freecad-extra (IFC-export, export.py), ett typsnitt med kinesiska tecken (ritningar på
+#   kinesiska), och PyMuPDF + ezdxf + Pillow i system-Python för PDF, DXF och bilder.
 #
 # Tar 5–10 minuter första gången och ca 4 GB disk. Idempotent: redan installerat hoppas över.
 # Körs vid behov, inte vid varje sessionsstart:
@@ -30,8 +31,16 @@ else
   fi
   steg "Installerar FreeCAD $FREECAD_VERSION i $PREFIX (tar några minuter)"
   "$MAMBA_DIR/bin/micromamba" create -y -q -p "$PREFIX" -c conda-forge \
-    "freecad=$FREECAD_VERSION" python=3.11 networkx defusedxml
+    "freecad=$FREECAD_VERSION" calculix python=3.11 networkx defusedxml
   "$MAMBA_DIR/bin/micromamba" clean -a -y -q >/dev/null 2>&1 || true
+fi
+
+# 1b. CalculiX i en äldre installation. FreeCAD-versionen låses i samma kommando: annars kan lösaren byta
+#     FreeCAD mot en utvecklingsversion som inte fungerar med skripten.
+if [ ! -x "$PREFIX/bin/ccx" ]; then
+  steg "Installerar CalculiX i $PREFIX"
+  "$MAMBA_DIR/bin/micromamba" install -y -q -p "$PREFIX" -c conda-forge "freecad=$FREECAD_VERSION" calculix || \
+    echo "OBS: CalculiX kunde inte installeras (hallfasthet.py fem fungerar inte)" >&2
 fi
 
 # FreeCAD 1.1 visar en modal migreringsdialog vid start om en annan versions konfiguration finns
@@ -64,12 +73,32 @@ else
   apt-get update -qq >/dev/null && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq xvfb >/dev/null
 fi
 
-# 4. System-Python: PyMuPDF (PDF-blad, PNG) och ezdxf (DXF-kontroll)
-if python3 -c "import pymupdf, ezdxf" >/dev/null 2>&1; then
-  steg "PyMuPDF och ezdxf finns redan"
+# 4. System-Python: PyMuPDF (PDF-blad, PNG), ezdxf (DXF) och Pillow (bilder, underlag.py, testa.py)
+if python3 -c "import pymupdf, ezdxf, PIL" >/dev/null 2>&1; then
+  steg "PyMuPDF, ezdxf och Pillow finns redan"
 else
-  steg "Installerar PyMuPDF och ezdxf"
-  python3 -m pip install -q pymupdf ezdxf 2>/dev/null || python3 -m pip install -q --break-system-packages pymupdf ezdxf
+  steg "Installerar PyMuPDF, ezdxf och Pillow"
+  python3 -m pip install -q pymupdf ezdxf pillow 2>/dev/null || python3 -m pip install -q --break-system-packages pymupdf ezdxf pillow
+fi
+
+# 5. ifcopenshell (IFC-export) i en egen mapp: conda-paketet kräver en annan OCCT än FreeCAD 1.1.3, pip-hjulet
+#    har sin egen och läggs utanför FreeCADs miljö (export.py lägger mappen i sys.path)
+EXTRA="${FREECAD_EXTRA:-/opt/freecad-extra}"
+if [ -d "$EXTRA/ifcopenshell" ]; then
+  steg "ifcopenshell finns redan"
+else
+  steg "Installerar ifcopenshell i $EXTRA"
+  "$PREFIX/bin/pip" install -q --no-deps --target "$EXTRA" ifcopenshell 2>/dev/null || \
+    echo "OBS: ifcopenshell kunde inte installeras (export.py --format ifc fungerar inte)" >&2
+fi
+
+# 6. Typsnitt med kinesiska tecken (ritningar med --sprak zh)
+if fc-list :lang=zh 2>/dev/null | grep -q .; then
+  steg "Typsnitt med kinesiska tecken finns redan"
+else
+  steg "Installerar typsnittet WenQuanYi Zen Hei"
+  (apt-get update -qq >/dev/null && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq fonts-wqy-zenhei >/dev/null) || \
+    echo "OBS: typsnittet kunde inte installeras (kinesiska ritningar visar rutor)" >&2
 fi
 
 "$PREFIX/bin/freecadcmd" --version 2>/dev/null | head -1 || true

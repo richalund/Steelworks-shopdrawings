@@ -223,6 +223,19 @@ class Del:
             self.body.ViewObject.Visibility = True
 
 
+def fri_skiss(doc, namn, placement):
+    """Skiss utanför en kropp (t.ex. profil till en SheetMetal-del i en sammanställning) med samma hjälpare som
+    Skiss: placering `placement` (FreeCAD.Placement), mått mot Variabler."""
+    d = Del.__new__(Del)
+    d.doc, d.sh, d.body = doc, doc.getObject("Variabler"), None
+    d.alias = set(alias_lista(d.sh)) if d.sh else set()
+    sk = Skiss.__new__(Skiss)
+    sk.d, sk.namn_anvanda = d, set()
+    sk.obj = doc.addObject("Sketcher::SketchObject", namn)
+    sk.obj.Placement = placement
+    return sk
+
+
 class Skiss:
     """Skiss med hjälpare som lägger geometri, låser den och sätter namngivna mått mot Variabler."""
 
@@ -437,6 +450,28 @@ class Skiss:
             self.matt("Distance", g[i], varde=v, namn=(namn or {}).get(i))
         if start is not None:
             self.placera(g[0], START, *start, namn="")
+        return g
+
+
+    def linjetag(self, punkter, matt=None, start=None, namn=None):
+        """Öppen polylinje genom punkterna (t.ex. en bockad plåts profil). Varje sträcka får riktning (vågrät,
+        lodrät eller vinkel mot x-axeln) och längd (matt[i] eller den uppmätta), första punkten låses i `start`
+        (standard punkten själv) -> fullt bestämd. Returnerar linjeindex."""
+        g = []
+        for a, b in zip(punkter, punkter[1:]):
+            g.append(self.geo(Part.LineSegment(V(a[0], a[1], 0), V(b[0], b[1], 0))))
+        for i in range(len(g) - 1):
+            self.begr("Coincident", g[i], SLUT, g[i + 1], START)
+        for i, (a, b) in enumerate(zip(punkter, punkter[1:])):
+            dx, dy = b[0] - a[0], b[1] - a[1]
+            if abs(dy) < 1e-9:
+                self.begr("Horizontal", g[i])
+            elif abs(dx) < 1e-9:
+                self.begr("Vertical", g[i])
+            else:
+                self.matt("Angle", g[i], varde=round(math.degrees(math.atan2(dy, dx)), 6), namn="")
+            self.matt("Distance", g[i], varde=(matt or {}).get(i, round(math.hypot(dx, dy), 4)), namn=(namn or {}).get(i))
+        self.placera(g[0], START, *(start if start is not None else punkter[0]), namn="")
         return g
 
 

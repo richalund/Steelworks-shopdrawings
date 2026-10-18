@@ -10,6 +10,7 @@ Modellen är vilken FCStd som helst med kroppar, t.ex. byggd med `sammanstallnin
   NUMMER = "R-101"                        # ritningsnummer i titelblocket
   OBJEKT = ["PLAN ENTRÉTRAPPA, VILLA", "Kund", "Adress"]       # titelblockets tre objektrader (valfritt)
   SKALA = 20                              # standardskala för vyerna
+  SPRAK = "sv"                            # titelblockets språk: sv, en, zh (valfritt, --sprak går före)
   def rita(r):
       plan = r.vy("PLAN", riktning=(0, 0, 1), x=(1, 0, 0), lage=(175, 150))
       fasad = r.vy("FASAD", riktning=(0, -1, 0), x=(1, 0, 0), lage=(175, 330))
@@ -38,6 +39,7 @@ def args(argv=None):
     ap.add_argument("--uppdrag", default="")
     ap.add_argument("--objekt", nargs="*", default=None, help="upp till tre rader (annars ritskriptets OBJEKT)")
     ap.add_argument("--datum", default=None)
+    ap.add_argument("--sprak", choices=["sv", "en", "zh"], default=None, help="titelblockets språk (annars ritskriptets SPRAK eller sv)")
     ap.add_argument("--ut", default=None)
     return ap.parse_args(argv)
 
@@ -78,8 +80,10 @@ def _jobb(a):
     u = foretag.las()
     utmapp = os.path.abspath(a["ut"]) if a.get("ut") else os.path.dirname(a["fil"])
     os.makedirs(utmapp, exist_ok=True)
-    mall = os.path.join(os.path.dirname(os.path.abspath(fcapi.__file__)), "..", "mallar", "A2_tekla.svg")
+    mall = os.path.join(os.path.dirname(os.path.abspath(fcapi.__file__)), "..", "mallar", "A2.svg")
     mall = foretag.mall_med_logga(mall, u.get("logga"), utmapp)
+    import sprak
+    mall = sprak.mallfil(mall, a.get("sprak") or skript.get("SPRAK") or "sv", utmapp)
     tpl = doc.addObject("TechDraw::DrawSVGTemplate", pref + "Mall")
     tpl.Template = mall
     page = doc.addObject("TechDraw::DrawPage", pref + "Blad")
@@ -254,7 +258,7 @@ def _jobb(a):
     skalor = sorted({vy.n for vy in r.vyer})
     et = dict(tpl.EditableTexts)
     et.update(dict(Foretag=u.get("foretag") or "", Adress1=adr[0], Adress2=adr[1], Adress3=adr[2], Uppdrag=a.get("uppdrag", ""),
-                   RitadAv=u.get("ritad_av", ""), Datum=a.get("datum") or time.strftime("%Y-%m-%d"), Handlaggare=u.get("handlaggare", ""),
+                   RitadAv=u.get("ritad_av", ""), Datum=a.get("datum") or os.environ.get("FC_DATUM") or time.strftime("%Y-%m-%d"), Handlaggare=u.get("handlaggare", ""),
                    Ansvarig=u.get("ansvarig", ""), Objekt1=obj[0], Objekt2=obj[1], Objekt3=obj[2],
                    Skala="  ".join("1:%g" % k for k in skalor), Nummer=nummer, Bet="", StomnatNummer=nummer, Systemlinje="",
                    Etapp="1", Antal="1"))

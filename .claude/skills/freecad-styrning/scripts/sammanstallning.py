@@ -1,4 +1,4 @@
-"""Sammanställningsritning för stålkonstruktioner i Tekla-stil (svenska smidesritningar) (A2 liggande).
+"""Sammanställningsritning för stålkonstruktioner och smide: klassisk svensk tillverkningsritning (A2 liggande).
 
   python sammanstallning.py bygg <konstruktion.py> <ut.FCStd> [--var Langd=2400] [--png] [--step]
   python sammanstallning.py ritning <modell.FCStd> --uppdrag 2026-001 --objekt "KV EXEMPEL 1" "Byggbolaget AB" "Exempelgatan 1, Stockholm"
@@ -13,7 +13,7 @@ FC_LOGGA om de inte ges på kommandoraden.
 `bygg` kör ett konstruktionsskript (se ../konstruktioner/ och stal.py) och sparar modellen: delar med
 positionsnummer (Pos), profil, material och längd, hålgrupper och ritningens standardval.
 
-`ritning` lägger ett A2-blad (mallar/A2_tekla.svg) i modellens .FCStd:
+`ritning` lägger ett A2-blad (mallar/A2.svg) i modellens .FCStd:
   - framvy och planvy (E-metoden) till vänster, snitten A-A, B-B ... till höger med egen skala, isometri nere
     till höger;
   - positionsbubblor (pl/3, b/1 ...) - varje positionsnummer en gång, i den vy där delen syns bäst
@@ -71,6 +71,8 @@ def args(argv=None):
     ap.add_argument("--vyer", default=None, help="t.ex. fram,plan")
     ap.add_argument("--skala", type=float, default=None)
     ap.add_argument("--skala-snitt", dest="skala_snitt", type=float, default=None)
+    ap.add_argument("--sprak", choices=["sv", "en", "zh"], default=None,
+                    help="ritningens språk för fasta texter (materiallista, titelblock); standard RITNING['sprak'] eller sv")
     ap.add_argument("--bubblor", choices=["nara", "rad"], default=None,
                     help="positionsbubblor intill delen med kort pil (nara, standard) eller på en rad under vyn (rad)")
     ap.add_argument("--hal", default="22", help="standardhål i ALLMÄNNA NOTERINGAR (mm)")
@@ -119,9 +121,12 @@ def s_txt(x, y, s, h=3.33, anchor="start", font=FONT):
     return '<text x="%g" y="%g" font-family="%s" font-size="%g" fill="#000"%s>%s</text>' % (x, y, font, h, a, esc(s))
 
 
-def materiallista_svg(rader, marke, antal, hal, svets):
-    """Materiallista + ALLMÄNNA NOTERINGAR, mått uppmätta ur Tekla-ritningen (130 mm bred, rader 5 mm).
-    Returnerar (svg, bredd, höjd)."""
+def materiallista_svg(rader, marke, antal, hal, svets, T=None):
+    """Materiallista + ALLMÄNNA NOTERINGAR, mått uppmätta ur en svensk tillverkningsritning (130 mm bred, rader
+    5 mm). T = sprak.oversattare(språk) för texterna. Returnerar (svg, bredd, höjd)."""
+    if T is None:
+        import sprak
+        T = sprak.oversattare("sv")
     n = len(rader)
     W, H = 130.0, 26.0 + 5.0 * n
     e = [s_lin(0, 0, W, 0), s_lin(0, 11, W, 11, 0.3), s_lin(0, 16, W, 16, 0.3), s_lin(0, 21, W, 21, 0.2),
@@ -132,13 +137,15 @@ def materiallista_svg(rader, marke, antal, hal, svets):
         e.append(s_lin(x, 16, x, H, 0.3))
     for i in range(1, n):
         e.append(s_lin(0, 21 + 5 * i, W, 21 + 5 * i, 0.08))
-    e += [s_txt(4.2, 7.4, "ALLMÄNNA NOTERINGAR:", 4.67),
-          s_txt(62, 4.9, "ALLA HÅL ÄR  %s mm OM EJ ANNAT ANGES" % hal),
-          s_txt(62, 9.0, "ALLA SVETSAR ÄR %s mm OM EJ ANNAT ANGES" % svets),
-          s_txt(2.2, 15.0, "MATERIALLISTA FÖR ETT GODS MÄRKT:"), s_txt(62.1, 15.0, marke),
-          s_txt(127, 15.0, "%s  st. TILLVERKAS" % antal, anchor="end")]
+    def ryms(t, w, h=3.33):                       # textstorlek så att t ryms på w mm (kinesiska tecken ~1 em breda)
+        return min(h, w / max(1e-6, sum(1.0 if ord(c) > 0x2E80 else 0.5 for c in t)))
+    t_hal, t_svets = T("ALLA HÅL ÄR %s mm OM EJ ANNAT ANGES", hal), T("ALLA SVETSAR ÄR %s mm OM EJ ANNAT ANGES", svets)
+    e += [s_txt(4.2, 7.4, T("ALLMÄNNA NOTERINGAR:"), 4.67),
+          s_txt(62, 4.9, t_hal, min(ryms(t_hal, 66), ryms(t_svets, 66))), s_txt(62, 9.0, t_svets, min(ryms(t_hal, 66), ryms(t_svets, 66))),
+          s_txt(2.2, 15.0, T("MATERIALLISTA FÖR ETT GODS MÄRKT:")), s_txt(62.1, 15.0, marke),
+          s_txt(127, 15.0, T("%s st. TILLVERKAS", antal), anchor="end")]
     for x, t in ((2, "STYCKLIT."), (23, "PROFIL"), (51, "MATERIAL"), (73, "ANT."), (85, "LÄNGD"), (101.3, "AREA/st"), (118, "VIKT/st")):
-        e.append(s_txt(x, 20.0, t))
+        e.append(s_txt(x, 20.0, T(t)))
     ta = tv = 0.0
     for i, r in enumerate(rader):
         y = 25.0 + 5 * i
@@ -148,7 +155,7 @@ def materiallista_svg(rader, marke, antal, hal, svets):
         ta += r["antal"] * r["area"]
         tv += r["antal"] * r["vikt"]
     y = H - 1.0
-    e += [s_txt(96, y, "TOTALT", anchor="end"), s_txt(109.8, y, "%.1f" % ta, anchor="end"), s_txt(126.1, y, "%.1f" % tv, anchor="end")]
+    e += [s_txt(96, y, T("TOTALT"), anchor="end"), s_txt(109.8, y, "%.1f" % ta, anchor="end"), s_txt(126.1, y, "%.1f" % tv, anchor="end")]
     return svg(W, H, e), W, H, ta, tv
 
 
@@ -159,7 +166,7 @@ def noter_svg(noter, h=4.0, rad=6.0):
 
 
 def rubrik_svg(titel, skala):
-    """'A - A' understruken med skalan under, som Tekla."""
+    """'A - A' understruken med skalan under."""
     w, h = 40.0, 13.0
     tb = len(titel) * 2.4
     return svg(w, h, [s_txt(w / 2, 5.5, titel, 4.67, "middle"), s_lin(w / 2 - tb / 2, 6.6, w / 2 + tb / 2, 6.6, 0.2),
@@ -174,11 +181,11 @@ def _jobb():
     import FreeCAD as App, FreeCADGui as Gui, Part
     from FreeCAD import Vector as V
     from PySide import QtGui
-    import fcapi, stal, foretag
+    import fcapi, stal, foretag, sprak
     from fcapi import logg, pump
 
     skillmapp = os.path.dirname(fcapi.jobb()["skriptmapp"])
-    MALL = os.path.join(skillmapp, "mallar", "A2_tekla.svg")
+    MALL = os.path.join(skillmapp, "mallar", "A2.svg")
 
     def tolka_var(lista):
         ut = {}
@@ -219,11 +226,12 @@ def _jobb():
         ogiltiga = [o.Label for o in ds if not o.Shape.isValid() or len(o.Shape.Solids) != 1]
         if ogiltiga:
             logg("OBS: ogiltig geometri eller inte en solid:", ogiltiga)
-        skisser = [f for o in ds for f in o.Group if f.TypeId == "Sketcher::SketchObject"]
+        skisser = [f for o in ds for f in (o.Group if hasattr(o, "Group") else [getattr(o, "Skiss", None)])
+                   if f is not None and f.TypeId == "Sketcher::SketchObject"]
         for f in skisser:
             f.solve()
-        ej = ["%s/%s" % (f.getParentGeoFeatureGroup().Label, f.Name) for f in skisser if not f.FullyConstrained]
-        fel = ["%s/%s" % (o.Label, f.Name) for o in ds for f in o.Group if "Invalid" in f.State or "Error" in f.State]
+        ej = ["%s/%s" % ((f.getParentGeoFeatureGroup() or f).Label, f.Name) for f in skisser if not f.FullyConstrained]
+        fel = ["%s/%s" % (o.Label, f.Name) for o in ds for f in getattr(o, "Group", [o]) if "Invalid" in f.State or "Error" in f.State]
         logg("Skisser %d, fullt bestämda: %s; features med fel: %s" % (len(skisser), "alla" if not ej else "INTE " + ", ".join(ej), ", ".join(fel) or "inga"))
         krock = []
         for i, o1 in enumerate(ds):
@@ -233,6 +241,12 @@ def _jobb():
                     if c.Volume > 1.0:
                         krock.append("%s/%s %.0f mm3" % (o1.Label, o2.Label, c.Volume))
         logg("Krockar (överlappande delar): %s" % (", ".join(krock) if krock else "inga"))
+        import regler
+        if not hasattr(g, "Regler"):
+            g.addProperty("App::PropertyString", "Regler", "Stal", "produktens regler från konstruktionsskriptet (JSON)")
+        g.Regler = json.dumps(mod.get("REGLER", []), ensure_ascii=False)
+        rk = regler.kontrollera(doc, mod.get("REGLER", []), v, ds, logg=logg)
+        doc.Comment += ", skill %s" % rk["version"]
         fil = os.path.abspath(a["ut_fil"])
         doc.saveAs(fil)
         logg("Sparat:", fil)
@@ -248,7 +262,8 @@ def _jobb():
             pump(0.3)
             gd.ActiveView.saveImage(bas + "_modell.png", 1600, 1200, "White")
             logg("PNG:", bas + "_modell.png")
-        return dict(vikt=tv, rader=len(rader), krockar=krock)
+        return dict(vikt=tv, rader=len(rader), krockar=krock, regelkontroll=rk,
+                    lada=[bb.XLength, bb.YLength, bb.ZLength], delar=len(ds))
 
     # ------------------------------------------------------------------ ritningshjälpare
     def textbredd(s, h):
@@ -348,7 +363,7 @@ def _jobb():
             return stil(d)
 
         def ballong(self, text, origo, lage, form="Inspection", pil=False):
-            """Positionsbubbla (form Inspection = avlång som Tekla) eller hålangivelse (form Line = understruken
+            """Positionsbubbla (form Inspection = avlång) eller hålangivelse (form Line = understruken
             text). Ballongens X/Y och Origin är OSKALADE modellmått relativt vyns mitt (uppmätt). pil = kort
             hänvisningslinje med fylld pil mot delen."""
             b = self.doc.addObject("TechDraw::DrawViewBalloon", "Ballong")
@@ -369,12 +384,12 @@ def _jobb():
             return b
 
     def symbol(doc, page, namn, svgtext, x0, y0, w, h):
-        """SVG-symbol med övre vänstra hörnet i (x0, y0) på papperet (Y uppåt). FreeCAD ritar symbolens mm med
-        faktorn 90/96 - skalan 96/90 ger rätt storlek (uppmätt)."""
+        """SVG-symbol med övre vänstra hörnet i (x0, y0) på papperet (Y uppåt). FreeCAD 1.0 ritar symbolens mm
+        med faktorn 90/96 - skalan 96/90 ger rätt storlek där; 1.1 ritar mm rätt (uppmätt i båda)."""
         s = doc.addObject("TechDraw::DrawViewSymbol", namn)
         s.Symbol = svgtext
         page.addView(s)
-        s.Scale = 96.0 / 90.0
+        s.Scale = 96.0 / 90.0 if tuple(int(x) for x in App.Version()[:2]) < (1, 1) else 1.0
         s.X, s.Y = x0 + w / 2, y0 - h / 2
         return s
 
@@ -410,7 +425,7 @@ def _jobb():
 
     def stall_in():
         """TechDraw-inställningar för jobbet (sparas inte: FreeCAD avslutas med os._exit)."""
-        for grp, typ, k, val in [("Dimensions", "Int", "ArrowStyle", 2),             # snedstreck (tick) som Tekla
+        for grp, typ, k, val in [("Dimensions", "Int", "ArrowStyle", 2),             # snedstreck (tick)
                                  ("Dimensions", "Float", "FontSize", 3.4),           # snittbokstäverna: 1,39 x FontSize em
                                  ("Dimensions", "String", "FontName", FONT),
                                  ("Labels", "String", "LabelFont", FONT),
@@ -419,7 +434,7 @@ def _jobb():
                                  ("General", "Bool", "HandleFaces", False)]:
             pg = App.ParamGet("User parameter:BaseApp/Preferences/Mod/TechDraw/" + grp)
             getattr(pg, "Set" + typ)(k, val)
-        # bubblorna fylls med sidans färg (standard ljusgrå F1F3F5) och linjerna är mörkgrå: svart/vitt som Tekla
+        # bubblorna fylls med sidans färg (standard ljusgrå F1F3F5) och linjerna är mörkgrå: svart/vitt
         pg = App.ParamGet("User parameter:BaseApp/Preferences/Mod/TechDraw/Colors")
         for k in ("PageColor", "FaceColor"):
             pg.SetUnsigned(k, 0xFFFFFFFF)
@@ -624,7 +639,7 @@ def _jobb():
             n += 1
         return n
 
-    def detaljblad(doc, page1, tpl1, marke, vdef, ds, detaljer, delvyer):
+    def detaljblad(doc, page1, tpl1, marke, vdef, ds, detaljer, delvyer, T):
         """Blad 2 i samma FCStd: delvyer (utvalda delar sedda längs en riktning, t.ex. längs en sned balk där
         TechDraws snitt ger fel) till vänster och detaljer (förstoringar, DrawViewDetail) i ett rutnät, med text
         och mått under varje. Detaljcirklarna D1, D2 ... syns i basvyerna på blad 1. Bladens nummer blir
@@ -712,7 +727,7 @@ def _jobb():
             cy = 325.0 if i < kol else 170.0
             dv.X, dv.Y = cx, cy
             gjorda.append((i, d, dv))
-            rader_ = ["DETALJ D%d  %s" % (i + 1, skaltext(sk)), d.get("rubrik", "")] + list(d.get("text", []))
+            rader_ = [T("DETALJ D%s  %s", i + 1, skaltext(sk)), d.get("rubrik", "")] + list(d.get("text", []))
             text(doc, blad2, "DetaljText%d" % (i + 1), rader_, cx, cy - d["radie"] / sk - 8 - 2.2 * len(rader_))
         # detaljvyerna räknas i bakgrunden: vänta in alla (en detalj utan kanter blir tom i PDF:en)
         doc.recompute()
@@ -726,7 +741,7 @@ def _jobb():
                     nm += detaljmatt(doc, blad2, dv, i + 1, d["matt"])
                 except Exception as e:
                     logg("OBS: mått i D%d: %s" % (i + 1, e))
-        text(doc, blad2, "DetaljRubrik", ["DETALJER %s – DETALJERNAS LÄGEN D1 ... VISAS I BLAD %s.1" % (marke, marke)], 230, 402, 3.5)
+        text(doc, blad2, "DetaljRubrik", [T("DETALJER %s – DETALJERNAS LÄGEN D1 ... VISAS I BLAD %s.1", marke, marke)], 230, 402, 3.5)
         et2["Skala"] = "  ".join(skaltext(k_) for k_ in sorted(skalor))
         tpl1.EditableTexts = et1
         tpl2.EditableTexts = et2
@@ -754,6 +769,8 @@ def _jobb():
         snittdef = [tolka_snitt(s) for s in a["snitt"]] if a.get("snitt") else cfg.get("snitt", [])
         noter = a["noter"] if a.get("noter") else cfg.get("noter", [])
         bubbelstil = a.get("bubblor") or cfg.get("bubblor", "nara")
+        lang = a.get("sprak") or cfg.get("sprak", "sv")
+        T = sprak.oversattare(lang)
         detaljer, delvyer = cfg.get("detaljer", []), cfg.get("delvyer", [])
         rader = stal.materiallista(ds)
         for r in rader:
@@ -769,6 +786,8 @@ def _jobb():
                 kl = []
             tjock, varm = {}, {}
             for r in rader:
+                if r["material"].upper() == "INKÖP":         # inköpta detaljer (k.inkop): ingen materialkvalitet
+                    continue
                 t = kallor.tjocklek(r["profil"])
                 tjock[r["material"]] = max(tjock.get(r["material"], 0.0), t or 0.0)      # 0 = okänd (egen profiltext)
                 varm[r["material"]] = varm.get(r["material"], False) or r["profil"].upper().startswith(("KKR", "KCKR"))
@@ -781,6 +800,13 @@ def _jobb():
             for s_ in kallor.fel():
                 logg("Källor FEL:", s_)
             noter = list(noter) + kallrader
+        try:                                          # regelkontrollen från bygget (scripts/regler.py) som not
+            import regler, kallor
+            rk = regler.not_text(json.loads(getattr(g, "Regelkontroll", "") or "null"), T)
+            if rk:
+                noter = list(noter) + kallor.bryt(rk, 70)
+        except ValueError:
+            pass
         alla = [o.Shape for o in ds]
         komp = Part.makeCompound(alla)
         huvud = doc.getObject(g.Huvuddel) if g.Huvuddel else None
@@ -890,7 +916,7 @@ def _jobb():
             vd["botten"] = BUBBEL + (14.0 if vd["snitt"] else 0.0) + vd["extra"]
 
         # ---- hålgrupper som inte syns i någon vy (t.ex. bultförbandet bakom UPE-livet): hålangivelsen i första vyn
-        # där hålen ligger längs blickriktningen, som Teklas ledare till dolda hål, och med i måttkedjorna
+        # där hålen ligger längs blickriktningen, som ledare till dolda hål, och med i måttkedjorna
         anvanda = {gi for vd in vdef for gi in vd["hal"] + vd["skymda"]}
         for gi in range(len(hg)):
             if gi in anvanda:
@@ -924,7 +950,7 @@ def _jobb():
         huvud_v = [vd for vd in vdef if vd["snitt"] is None]
         snitt_v = [vd for vd in vdef if vd["snitt"]]
         # noterna nere till vänster (underkant y = 26) och materiallistan bestämmer hur långt ner vyerna får gå
-        ml, mw, mh, ta, tv = materiallista_svg(rader, marke, a["antal"], a["hal"], a["svets"])
+        ml, mw, mh, ta, tv = materiallista_svg(rader, marke, a["antal"], a["hal"], a["svets"], T)
         nsvg, nw, nh_ = noter_svg(noter) if noter else (None, 0.0, 0.0)
         Y0, X0 = 392.0, 50.0
 
@@ -975,7 +1001,7 @@ def _jobb():
         # ---- blad, mall, vyer
         page = doc.addObject("TechDraw::DrawPage", "Sammanstallningsritning")
         tpl = doc.addObject("TechDraw::DrawSVGTemplate", "Mall")
-        tpl.Template = foretag.mall_med_logga(MALL, a.get("logga"), utmapp)
+        tpl.Template = sprak.mallfil(foretag.mall_med_logga(MALL, a.get("logga"), utmapp), lang, utmapp)
         if a.get("logga"):
             logg("Logga i titelblocket:", a["logga"])
         page.Template = tpl
@@ -1212,7 +1238,7 @@ def _jobb():
         symbol(doc, page, "Materiallista", ml, ML_X, ML_Y + mh, mw, mh)
         if noter:
             symbol(doc, page, "Noter", nsvg, X0, 26.0 + nh_, nw, nh_)
-        skalor = sorted({n} | ({ns} if ns else set()))          # som Tekla: huvudvyer och snitt (inte isometrin)
+        skalor = sorted({n} | ({ns} if ns else set()))          # huvudvyer och snitt (inte isometrin)
         rev = [s.strip() for s in a["rev"].split("|")] if a.get("rev") else []
         if len(rev) == 4:
             rev = [rev[0], ""] + rev[1:]
@@ -1220,7 +1246,7 @@ def _jobb():
         obj = (a.get("objekt") or []) + ["", "", ""]
         adr = list(a.get("adress") or []) + ["", "", ""]
         falt = dict(Foretag=a.get("foretag") or "", Adress1=adr[0], Adress2=adr[1], Adress3=adr[2],
-                    Uppdrag=a["uppdrag"], RitadAv=a["ritad_av"], Datum=a.get("datum") or time.strftime("%Y-%m-%d"),
+                    Uppdrag=a["uppdrag"], RitadAv=a["ritad_av"], Datum=a.get("datum") or os.environ.get("FC_DATUM") or time.strftime("%Y-%m-%d"),
                     Handlaggare=a["handlaggare"], Ansvarig=a["ansvarig"], Objekt1=obj[0], Objekt2=obj[1], Objekt3=obj[2],
                     Skala="  ".join(skaltext(k) for k in skalor), Nummer=marke, Bet=a["bet"],
                     RevBet=rev[0], RevAnt=rev[1], RevText=rev[2], RevDatum=rev[3], RevSign=rev[4],
@@ -1233,20 +1259,20 @@ def _jobb():
         pump(1.0)
         blad = [page]
         if detaljer or delvyer:
-            blad.append(detaljblad(doc, page, tpl, marke, vdef, ds, detaljer, delvyer))
+            blad.append(detaljblad(doc, page, tpl, marke, vdef, ds, detaljer, delvyer, T))
 
         # ---- kontroll och export
         fel = [o.Name for o in doc.Objects if "Invalid" in o.State or "Error" in o.State]
         if fel:
             logg("OBS: objekt med fel:", fel)
         with open(bas + "_materiallista.csv", "w", encoding="utf-8-sig") as f:
-            f.write("STYCKLIT.;PROFIL;MATERIAL;ANT.;LÄNGD;AREA/st;VIKT/st\n")
+            f.write(";".join(T(x) for x in ("STYCKLIT.", "PROFIL", "MATERIAL", "ANT.", "LÄNGD", "AREA/st", "VIKT/st")) + "\n")
             for r in rader:
                 f.write("%s;%s;%s;%d;%s;%s;%s\n" % (r["pos"], r["profil"], r["material"], r["antal"], fmt(r["langd"]),
                                                   ("%.2f" % r["area"]).replace(".", ","), ("%.1f" % r["vikt"]).replace(".", ",")))
-            f.write(";;;;TOTALT;%s;%s\n" % (("%.1f" % ta).replace(".", ","), ("%.1f" % tv).replace(".", ",")))
+            f.write(";;;;%s;%s;%s\n" % (T("TOTALT"), ("%.1f" % ta).replace(".", ","), ("%.1f" % tv).replace(".", ",")))
             for s_ in kallrader:
-                f.write("KÄLLA;%s\n" % s_)
+                f.write("%s;%s\n" % (T("KÄLLA"), s_))
         doc.saveAs(bas + ".FCStd")
         logg("Sparat:", bas + ".FCStd")
         import TechDrawGui
