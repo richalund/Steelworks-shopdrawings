@@ -138,7 +138,7 @@ def materiallista_svg(rader, marke, antal, hal, svets, T=None):
     for i in range(1, n):
         e.append(s_lin(0, 21 + 5 * i, W, 21 + 5 * i, 0.08))
     def ryms(t, w, h=3.33):                       # textstorlek så att t ryms på w mm (kinesiska tecken ~1 em breda)
-        return min(h, w / max(1e-6, sum(1.0 if ord(c) > 0x2E80 else 0.5 for c in t)))
+        return min(h, w / max(1e-6, sum(1.0 if ord(c) > 0x2E80 else 0.56 for c in t)))
     t_hal, t_svets = T("ALLA HÅL ÄR %s mm OM EJ ANNAT ANGES", hal), T("ALLA SVETSAR ÄR %s mm OM EJ ANNAT ANGES", svets)
     e += [s_txt(4.2, 7.4, T("ALLMÄNNA NOTERINGAR:"), 4.67),
           s_txt(62, 4.9, t_hal, min(ryms(t_hal, 66), ryms(t_svets, 66))), s_txt(62, 9.0, t_svets, min(ryms(t_hal, 66), ryms(t_svets, 66))),
