@@ -45,10 +45,29 @@ def nedre_steg():
     return ut
 
 
-# ---- räckeslinjer i räckenas lokala x (uppför): framkantslinjens knäckpunkter och ytan under en stolpe
+# ---- räckeslinjer i räckenas lokala x (uppför): framkantslinjens knäckpunkter och ytan under en stolpe.
+# Handledarens knäck läggs mitt över knäckstolpen, KANT in på podesten/vilplanet: handledaren fortsätter i
+# trappans lutning fram till stolpen och går plant därefter (KANT x lutningen högre än över stegen).
+def knack_ovre():
+    return X_PODEST + KANT
+
+
+def knack_nedre():
+    return L_NEDRE + KANT
+
+
+def mitt_steg(x, g, n_steg):
+    """Närmaste stegmitt (stolpläge i ett lopp med n_steg steg à g från x = 0); utanför loppet x själv."""
+    if x < 0 or x >= n_steg * g:
+        return x
+    return (math.floor(x / g) + 0.5) * g
+
+
 def linje_ovre():
     """R/1 längs övre loppets utsida, lokal x = global x."""
-    nos = [(-G_OVRE, Z_VILPLAN), (X_PODEST, Z_PODEST), (X_VAGG + 1000, Z_PODEST)]
+    t = R / G_OVRE
+    xk = knack_ovre()
+    nos = [(-G_OVRE, Z_VILPLAN), (xk, Z_PODEST + KANT * t), (X_VAGG + 1000, Z_PODEST + KANT * t)]
 
     def yta(x):
         if x < 0:
@@ -61,9 +80,11 @@ def linje_ovre():
 
 def linje_nedre(med_vilplan):
     """R/2 och R/3 längs nedre loppet, lokal x = Y_FRAM - global y (x = 0 vid nedersta stegets framkant)."""
+    t = R / G_NEDRE
     nos = [(-G_NEDRE, 0.0), (L_NEDRE, Z_VILPLAN)]
     if med_vilplan:
-        nos.append((L_NEDRE + BREDD + 1000, Z_VILPLAN))
+        xk = knack_nedre()
+        nos = [(-G_NEDRE, 0.0), (xk, Z_VILPLAN + KANT * t), (L_NEDRE + BREDD + 1000, Z_VILPLAN + KANT * t)]
 
     def yta(x):
         if x < 0:

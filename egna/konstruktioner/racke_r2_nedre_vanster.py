@@ -17,7 +17,7 @@ def parametrar():
     y_horn = T.BREDD - T.KANT                          # R/1:s hörnstolpe (global y)
     x_topp = T.Y_FRAM - (y_horn + racke_bas.ST_A / 2 + 2)       # handledaren mot hörnstolpens sida
     x_horn = T.Y_FRAM - y_horn                         # R/1:s hörnstolpe: gemensam, byggs inte här
-    stolpar = [0.5 * g, 2.5 * g, x_horn]
+    stolpar = racke_bas.fordela([0.5 * g, x_horn], lambda x: T.mitt_steg(x, g, T.N_NEDRE - 1))
     return dict(nos_pkt=nos, yta=yta, stolpar=stolpar, hl_x=(stolpar[0] - racke_bas.SNACKA_RAK, x_topp), start="snacka",
                 extern=(2,))
 

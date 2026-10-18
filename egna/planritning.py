@@ -188,7 +188,7 @@ def _jobb(a):
     plan.kedja("DistanceY", sorted(st2, key=lambda p: p[1]), plan.papper((xr2, 0, 0))[0], -9)  # mot innergården
     plan.kedja("DistanceY", sorted(st3, key=lambda p: p[1]), plan.papper((xv, 0, 0))[0], 10)   # utanför R/3
     # ---- märkning och nivåer
-    plan.bubbla("R/1", (xp - 300, y1, Zp), -6, -14)
+    plan.bubbla("R/1", (xp + 600, y1, Zp), -6, -24)          # under stolpkedjan, fritt från måtten
     plan.bubbla("R/2", (xr2, Yf - 900, Zv), -12, -6)
     plan.bubbla("R/3", (xr3, 450, Zv), -14, -8)
     fasad.bubbla("R/1", (xp - 300, y1, Zp + 900 - 400), 10, 16)
@@ -210,7 +210,7 @@ def _jobb(a):
              "STEG %g/%g (ÖVRE LOPP) OCH %g/%g (NEDRE LOPP), RÄCKENA %g IN FRÅN STENKANT" % (T.R, T.G_OVRE, T.R, T.G_NEDRE, T.KANT),
              "STOLPAR FS20 NEDGJUTNA 100 I KÄRNBORRADE HÅL Ø40, c/c MAX 1300, MÅTT c/c STOLPE",
              "R/1 OCH R/2 HAR GEMENSAM HÖRNSTOLPE PÅ VILPLANET",
-             "RÄCKESHÖJD 900 ÖVER STEGFRAMKANT OCH PLAN YTA",
+             "RÄCKESHÖJD 900 ÖVER STEGFRAMKANT, KNÄCKEN MITT ÖVER STOLPE 60 IN PÅ PODEST/VILPLAN",
              "TILLVERKNINGSRITNINGAR: R/1, R/2, R/3 (BLAD .1 OCH .2), GRIND G/1",
              "GRIND G/1 SITTER MELLAN GRANITSTOLPARNA VID GATAN (EJ I PLANEN)",
              "YTBEHANDLING: VARMFÖRZINKAD OCH PULVERLACKAD SVART RAL 9005 (ANTAGET)"]

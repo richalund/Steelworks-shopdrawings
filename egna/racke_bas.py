@@ -139,6 +139,25 @@ def fyrkant(a, L):
     return bygg
 
 
+def fordela(fasta, lage=lambda x: x, max_cc=1300.0):
+    """Stolplägen: de fasta (sektionernas ändar och knäckar) plus jämnt fördelade mellanstolpar så att c/c blir
+    högst max_cc. lage(x) flyttar en mellanstolpe till ett giltigt läge (stegmitt i ett lopp); av grannlägena
+    väljs det som håller c/c och ligger närmast den jämna delningen."""
+    ut = [fasta[0]]
+    for a, b in zip(fasta, fasta[1:]):
+        n = max(1, int(math.ceil((b - a) / max_cc - 1e-9)))
+        prev = a
+        for i in range(1, n):
+            mal = a + (b - a) * i / n
+            kand = sorted({lage(mal), lage(mal - 0.5 * (b - a) / n), lage(mal + 0.5 * (b - a) / n)}, key=lambda x: abs(x - mal))
+            ok = [x for x in kand if prev < x < b and x - prev <= max_cc and (b - x) <= max_cc * (n - i)]
+            x = (ok or kand)[0]
+            ut.append(x)
+            prev = x
+        ut.append(b)
+    return ut
+
+
 class Linje:
     """Framkantslinjen: polylinje genom knäckpunkterna (x, z), förlängd med ändsegmentens lutning."""
 
@@ -206,11 +225,21 @@ def bygg_racke(k, v, nos_pkt, yta, stolpar, hl_x, start="snacka", ursprung=(0, 0
         xa, xb = x - ST_A / 2, x + ST_A / 2
         za, zb = hl_uk(xa), hl_uk(xb, hoger=False)
         z0 = yta(x) - INGJUT
-        Lp = round(max(za, zb) - z0, 1)
-        pos = spos.setdefault((Lp, round(zb - za, 1)), pos_("st/%d" % (len(spos) + 1)))
+        Lp = math.floor((max(za, zb) - z0) * 10 + 1e-6) / 10    # nedåt: toppen får inte gå upp i handledaren
+        knack = nos.knackar(xa, xb)
+        pos = spos.setdefault((Lp, round(zb - za, 1), bool(knack)), pos_("st/%d" % (len(spos) + 1)))
         st = k.egen(pos, "FS%g" % ST_A, fyrkant(ST_A, Lp), mitt=P(x, 0, z0), rot=(ex, ey, ez), material=STAL,
                     huvuddel=(huvuddel and i == 0))
-        if abs(zb - za) > 0.01:
+        if knack:                       # knäckstolpe: toppen kapas i båda lutningarna, möts under handledarens knäck
+            tl, tr = nos.lutning(xa), nos.lutning(xb, False)
+            if tl <= tr:
+                raise ValueError("stolpe x=%g i en inåtknäck (lutningen ökar) stöds inte" % x)
+            xi = xa + (zb - za - tr * (xb - xa)) / (tl - tr)         # underkanternas skärning
+            zi = za + tl * (xi - xa)
+            for (xp, zp, tp) in ((xa, za, tl), (xb, zb, tr)):
+                if Lp + z0 - min(zp, zi) > 0.01 or abs(tp) > 1e-6:
+                    gera(k, st, P(xp, 0, zp), P(xi, 0, zi))
+        elif abs(zb - za) > 0.01:
             gera(k, st, P(xa, 0, za), P(xb, 0, zb))
 
     # ---- följare, underliggare och spjälor per fack mellan stolparna. Följarna följer handledaren och
@@ -277,7 +306,11 @@ def bygg_racke(k, v, nos_pkt, yta, stolpar, hl_x, start="snacka", ursprung=(0, 0
     for xa, xb in zip(stolpar, stolpar[1:]):
         fa, fb = xa + ST_A / 2, xb - ST_A / 2
         pl_f = mittlinje(fa + SPALT, fb - SPALT, lambda x, h: hl_uk(x, h) - mellan - FL_H / 2 / cos(nos.lutning(x, h)))
-        pl_u = mittlinje(fa + SPALT, fb - SPALT, lambda x, h: nos(x) + under)
+        # på ett plant fack utan knäck (podest/vilplan) mäts underliggaren från stenen, inte från linjen som
+        # ligger högre där handledarens knäck flyttats in till stolpen
+        plan = not nos.knackar(fa, fb) and abs(nos.lutning((fa + fb) / 2)) < 1e-6
+        y_plan = yta((fa + fb) / 2)
+        pl_u = mittlinje(fa + SPALT, fb - SPALT, lambda x, h: (y_plan if plan else nos(x)) + under)
         plattstal(pl_f, lambda L, t_: nr(lpos, "l", (L, t_)))
         plattstal(pl_u, lambda L, t_: nr(lpos, "l", (L, t_)))
         # spjälor FS12 mellan följarna, kant i kant med följarnas överkant och underliggarnas underkant
@@ -339,13 +372,16 @@ def bygg_racke(k, v, nos_pkt, yta, stolpar, hl_x, start="snacka", ursprung=(0, 0
         det.append(dict(vy="Framvy", punkt=P(x0 - 30, 0, zc0 - 40), radie=72.0, rubrik="SNÄCKA",
                         text=["SMIDD SNÄCKA 1,5 VARV, R%g/%g/%g (MITTLINJE)" % SNACKA_R, "UTVECKLAD LÄNGD %.0f" % snacka_langd()]))
     for xk in nos.knackar(x0, x1):
+        vid_stolpe = any(abs(xk - xs) < ST_A / 2 for xs in stolpar)
         det.append(dict(vy="Framvy", punkt=P(xk, 0, nos(xk) + H - 35), radie=70.0, rubrik="KNÄCK I HANDLEDAREN",
-                        text=["BOCKAS I ETT STYCKE ELLER SVETSAS OCH SLIPAS"]))
+                        text=["BOCKAS I ETT STYCKE ELLER SVETSAS OCH SLIPAS"]
+                        + (["KNÄCKEN MITT ÖVER STOLPEN, STOLPTOPPEN", "KAPAD I BÅDA LUTNINGARNA, a4"] if vid_stolpe else [])))
         break
     ce, se = cos(f1["t"]), math.sin(math.atan(f1["t"]))
     snitt_e = dict(namn="E", origo=f1["e_origo"], normal=D(-ce, 0, -se), x_omr=[f1["fa"], f1["fb"]],
                    text="TVÄRSNITT: FÖRSTA FACKET SETT LÄNGS HANDLEDAREN")
-    return dict(fack=fack, bitar=bitar, snitt_x=snitt, sp_x=sorted(sp_forst.values()), stolpar=stolpar, detaljer=det, snitt_e=snitt_e,
+    knack_i_fack = any(nos.knackar(a + ST_A / 2, b - ST_A / 2) for a, b in zip(stolpar, stolpar[1:]))
+    return dict(knack_i_fack=knack_i_fack, fack=fack, bitar=bitar, snitt_x=snitt, sp_x=sorted(sp_forst.values()), stolpar=stolpar, detaljer=det, snitt_e=snitt_e,
                 stolp_cc=max(b - a for a, b in zip(stolpar, stolpar[1:])))
 
 
@@ -370,7 +406,7 @@ def noter(beskr, v, info, start, slut_text, extra=()):
              beskr,
              "STEGHÖJD %g, STEGDJUP %g/%g ÄR ANTAGNA UR FOTON – ALLA MÅTT KONTROLLMÄTS PÅ PLATS FÖRE TILLVERKNING"
              % (T.R, T.G_OVRE, T.G_NEDRE),
-             "RÄCKESHÖJD %g LODRÄTT ÖVER STEGFRAMKANT OCH PLAN YTA, ±0 = GÅNGEN VID TRAPPANS FOT" % v["Hojd"],
+             "RÄCKESHÖJD %g LODRÄTT ÖVER STEGFRAMKANT, ±0 = GÅNGEN VID TRAPPANS FOT" % v["Hojd"],
              "STOLPAR st: FS20, %g mm NEDGJUTNA I KÄRNBORRADE HÅL Ø40 I GRANITEN (INGÅR I LÄNGDEN), c/c MAX %.0f"
              % (INGJUT, info["stolp_cc"])]
     if start == "snacka":
@@ -383,7 +419,8 @@ def noter(beskr, v, info, start, slut_text, extra=()):
                      % " / ".join("%s %s" % (b["pos"], "PLAN" if abs(b["lutning"]) < 0.05 else "%.1f°" % b["lutning"]) for b in bitar))
     rader.append(slut_text)
     rader += list(extra)
-    rader += ["FÖLJARE OCH UNDERLIGGARE l: 2 st PL5*20 PÅ HÖGKANT, ETT PÅ VAR SIDA OM SPJÄLORNA, BOCKAS/GERAS I KNÄCKEN",
+    rader += ["FÖLJARE OCH UNDERLIGGARE l: 2 st PL5*20 PÅ HÖGKANT, ETT PÅ VAR SIDA OM SPJÄLORNA, "
+              + ("BOCKAS/GERAS I KNÄCKEN" if info.get("knack_i_fack") else "RAKA MELLAN STOLPARNA"),
               "SPJÄLOR sp FS12 MELLAN FÖLJARNA, c/c MAX %.0f, FRI ÖPPNING MIN %.0f (< 100)" % (cc, fri),
               "SVETS: STOLPAR MOT HANDLEDARE a4, FÖLJARE MOT STOLPAR OCH SPJÄLOR a3 – DETALJER SE BLAD 2",
               "YTBEHANDLING: VARMFÖRZINKAD OCH PULVERLACKAD SVART RAL 9005 (ANTAGET, ENLIGT BESTÄLLNING)"]
