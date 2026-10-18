@@ -9,7 +9,7 @@ granskas innan det blir en del av skillen för alla.
 
 | Roll | Kan | Hur man blir det |
 |---|---|---|
-| **Användare** | rita med skillen i en egen session | GitHub-konto + claude.ai, inget mer (repot är publikt) |
+| **Användare** | rita med skillen i en egen session (se ANVANDA.md) | GitHub-konto + claude.ai, inget mer (repot är publikt) |
 | **Bidragsgivare** | skicka in förbättringar (PR) direkt från sin session | inbjuden som *collaborator* till repot |
 | **Granskare** | godkänna andras PR:er; ett godkännande räcker för att de går in | inbjuden *och* uppskriven i `.github/CODEOWNERS` |
 | **Ägare** | allt ovan, ändra inställningar och granskarlistan | richalund |
@@ -24,7 +24,9 @@ Ingen kan godkänna sin egen PR. När en granskare godkänt och testerna är gr�
      särdrag som val i stället för standard,
    - arbetar på en egen gren `forbattring/<namn>`, uppdaterar dokumentationen och kör `scripts/testa.py`,
    - öppnar PR:en med mallen `.github/pull_request_template.md`, slår på auto-merge och ger dig länken.
-3. GitHub kör testerna igen (Actions: "Testa skillen") och lägger bilderna som nedladdning på PR:en.
+3. GitHub kör testerna igen (Actions: "Testa skillen") och lägger bilderna som nedladdning på PR:en. Testerna
+   jämför ritningarna med referensbilderna i `tester/referens/`; en ändrad ritning ger en diffbild (ändringarna i
+   rött) att titta på. Är ändringen avsedd följer nya referensbilder med i PR:en.
 
 ## Så granskar en granskare
 Öppna PR-länken (GitHub-appen eller webben) och titta på beskrivningen, bilderna och testresultatet. Eller
@@ -45,5 +47,7 @@ Det här görs på GitHub av ägaren, det kan inte Claude göra:
 ## Regler för innehållet
 - Inga kunduppgifter, adresser, priser eller foton från kunder i skillen; uppdragets filer ligger i `egna/`.
 - Allmängiltigt: det som bara gäller ett uppdrag blir ett val med neutralt standardvärde.
-- Testat: `python3 .claude/skills/freecad-styrning/scripts/testa.py` utan FEL, bilderna granskade med ögonen.
-- Dokumenterat: SKILL.md, nya fällor i `references/fallor.md`, konventioner i `references/smidesritningar.md`.
+- Testat: `python3 .claude/skills/freecad-styrning/scripts/testa.py` utan FEL, bilderna och diffbilderna granskade
+  med ögonen.
+- Dokumenterat: SKILL.md, verktyg i `references/verktyg.md`, nya fällor i `references/fallor.md`, konventioner i
+  `references/smidesritningar.md`. Datumet i `VERSION` höjt.
