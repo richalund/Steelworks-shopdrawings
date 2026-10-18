@@ -165,7 +165,9 @@ gjort av skillen, med de prompter som står under underlaget.</p>
 <div class="prompt"><pre id="prompt-a">Jag vill använda verkstadsskillen freecad-styrning för att rita smide. Läs AGENTS.md och .claude/skills/freecad-styrning/SKILL.md. Kontrollera att FreeCAD är installerat (installationen startar av sig själv första gången; kör annars bash .claude/skills/freecad-styrning/scripts/installera_linux.sh och vänta tills den är klar). Fråga mig sedan om företagsuppgifterna till titelblocket och rita en testgrind, 1000 bred och 1100 hög, så att jag ser att allt fungerar. Stoppas något av nätverksinställningarna: säg exakt vilken domän och vilken inställning jag ska ändra.</pre>
 <button class="kopiera" data-mal="prompt-a" type="button">Kopiera</button></div>
 <p>Sedan ritar du som vanligt: beskriv vad du vill ha, bifoga foton eller ritningar och be om ändringar tills du är
-nöjd. Filerna (PDF, DXF, STEP, FreeCAD) laddar du ner ur sessionen.</p>
+nöjd. Filerna (PDF, DXF, STEP, FreeCAD) laddar du ner ur sessionen. Många filer kommer som en PDF och en zip
+som du sparar i telefonen, delar som mail eller lägger i din molntjänst; inget av jobbet sparas i repot, som är
+publikt.</p>
 
 <h3>Vill du spara uppdragen i ett eget repo?</h3>
 <p>Skapa ett eget repo på <a href="https://github.com/new">github.com/new</a> (privat går bra), starta en session i det
@@ -186,16 +188,17 @@ adress som du kan byta mot vilken som helst. Inget skickas utan att du säger ti
 
 <h2>Andra kodagenter</h2>
 <p>Skillen fungerar i alla kodagenter som kan köra Python. De lämnar resultatet som en gren eller en pull request på
-GitHub, så där behöver du en egen kopia av repot: tryck <strong>Fork</strong> → <strong>Create fork</strong> på
-<a href="https://github.com/richalund/Steelworks-shopdrawings">repots sida</a> och välj din fork. Börja sedan med
-prompten ovan.</p>
+GitHub, så där behöver du en egen <strong>privat</strong> kopia av repot (en fork av ett publikt repo är publik, och
+där ska inga kunduppgifter ligga): gå till <a href="https://github.com/new/import">github.com/new/import</a>, klistra
+in <code>https://github.com/richalund/Steelworks-shopdrawings</code>, ge kopian ett namn, välj <strong>Private</strong>
+och tryck <strong>Begin import</strong>. Börja sedan med prompten ovan i ditt repo.</p>
 <p class="under">Menyerna byter ibland namn mellan versioner av apparna; säg gärna till om något inte stämmer.</p>
 
 <details>
   <summary>OpenAI Codex <small>ChatGPT-appen · ChatGPT Plus eller högre</small></summary>
   <div><ol>
-    <li>Gå till <a href="https://chatgpt.com/codex">chatgpt.com/codex</a> och koppla GitHub (ge åtkomst till din fork).</li>
-    <li><strong>Settings</strong> → <strong>Environments</strong> → <strong>Create environment</strong>, välj forken.</li>
+    <li>Gå till <a href="https://chatgpt.com/codex">chatgpt.com/codex</a> och koppla GitHub (ge åtkomst till ditt repo).</li>
+    <li><strong>Settings</strong> → <strong>Environments</strong> → <strong>Create environment</strong>, välj ditt repo.</li>
     <li>Under <strong>Setup script</strong>: <pre>bash .claude/skills/freecad-styrning/scripts/installera_linux.sh</pre></li>
     <li>Under <strong>Agent internet access</strong>: slå på, välj <em>Common dependencies</em> och lägg till domänerna nedan.</li>
     <li>I ChatGPT-appen: <strong>Codex</strong> → välj miljön → skriv uppgiften. Be den lägga PDF:er och bilder i
@@ -206,9 +209,9 @@ prompten ovan.</p>
   <summary>GitHub Copilot <small>GitHub-appen · Copilot Pro eller Pro+</small></summary>
   <div><ol>
     <li>Skaffa Copilot Pro under <a href="https://github.com/settings/copilot">github.com/settings/copilot</a>.</li>
-    <li>I GitHub-appen: <strong>Copilot</strong> → <strong>New session</strong> → välj forken → skriv uppgiften.</li>
+    <li>I GitHub-appen: <strong>Copilot</strong> → <strong>New session</strong> → välj ditt repo → skriv uppgiften.</li>
     <li>Installationen sköts av <code>.github/workflows/copilot-setup-steps.yml</code> i repot. Lägg
-      <code>eurocodeapplied.com</code> och leverantörers webbplatser i forkens <strong>Settings</strong> →
+      <code>eurocodeapplied.com</code> och leverantörers webbplatser i repots <strong>Settings</strong> →
       <strong>Copilot</strong> → <strong>Coding agent</strong> → brandväggens tillåtna lista.</li>
   </ol></div>
 </details>
@@ -216,7 +219,7 @@ prompten ovan.</p>
   <summary>Cursor <small>Cursor-appen (iOS) eller cursor.com/agents · betalt abonnemang med molnagenter</small></summary>
   <div><ol>
     <li>Öppna Cursor-appen eller <a href="https://cursor.com/agents">cursor.com/agents</a> och koppla GitHub.</li>
-    <li>Starta en ny agent på forken och skriv uppgiften; installationen körs från <code>.cursor/environment.json</code>.</li>
+    <li>Starta en ny agent på ditt repo och skriv uppgiften; installationen körs från <code>.cursor/environment.json</code>.</li>
     <li>Be den lägga PDF:er och bilder i <code>leverans/</code>.</li>
   </ol></div>
 </details>

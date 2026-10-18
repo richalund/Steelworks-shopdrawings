@@ -6,6 +6,6 @@
   (10–15 min första gången i en ny container). Vänta på att `/opt/freecad/bin/freecad` finns innan första
   ritningen, eller kör `bash .claude/skills/freecad-styrning/scripts/installera_linux.sh` själv.
 - Frågorna till användaren (företagsuppgifter, leverans) ställs med AskUserQuestion-formuläret.
-- Visa PNG:erna med Read och skicka filerna till användaren med verktyget för att skicka filer om det finns;
-  användaren kan också ladda ner dem ur sessionen, så `leverans/` behövs inte i Claude Code.
+- Visa PNG:erna med Read och lägg upp filerna i chatten med verktyget för att skicka filer (många filer: en PDF
+  och en zip med `paket.py samla`); `leverans/` behövs inte i Claude Code.
 - Leveransmailet: är Gmail kopplat, lägg ett utkast med paketet som bilaga och skicka bara på uttryckligt ja.

@@ -28,8 +28,13 @@ Användarens guide: `ANVANDA.md`. Bidrag: `BIDRA.md`.
 - Lägg allt som genereras (FCStd, PDF, PNG, DXF, STEP) i `ut/` i repot, som är ignorerad av git. Visa PNG:erna för
   användaren efter varje ritning (bifoga eller öppna dem i chatten om agenten kan, annars beskriv dem och se nästa
   punkt). Vill användaren ha filerna någon annanstans, kopiera dit dem efteråt.
-- Kan användaren bara se det som committas (Codex, Copilot, Cursor): kopiera det hen ska ha till
-  `leverans/<uppdrag>/` (undantaget i `.gitignore`), committa på uppdragets gren och ge länken. Aldrig på `main`.
+- Lägg upp filerna i chatten när en ritning är klar: få filer direkt, många som en PDF med alla blad och en zip
+  (`scripts/paket.py samla`, SKILL.md "Filerna till användaren"). Användaren sparar eller delar dem själv;
+  förutsätt ingen viss lagring. Uppdrag och kunduppgifter committas aldrig i ett publikt repo (ingen gren, ingen
+  fork).
+- Kan användaren bara se det som committas (Codex, Copilot, Cursor) och repot är hens eget privata repo: kopiera
+  det hen ska ha till `leverans/<uppdrag>/` (undantaget i `.gitignore`), committa på uppdragets gren och ge
+  länken. Aldrig på `main`, aldrig i ett publikt repo.
 - Frågor till användaren: använd agentens frågeformulär om det finns, annars en kort fråga i chatten med
   numrerade alternativ. Fråga bara om det som avgör utförandet.
 - Företagsuppgifterna i titelblocket saknas som standard. Kör
