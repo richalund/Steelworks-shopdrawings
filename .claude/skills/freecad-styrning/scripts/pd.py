@@ -97,14 +97,23 @@ class Del:
         return f
 
     def _skar(self, f):
-        """Fickor och hål: kontrollera att något skars bort, annars vänd riktningen."""
+        """Fickor och hål: kontrollera att något skars bort, annars vänd riktningen. En symmetrisk ficka "genom
+        allt" som inte skär något (händer i FreeCAD 1.1.3, se references/fallor.md) görs om till en symmetrisk
+        längd som täcker hela kroppen."""
         fore = f.BaseFeature.Shape.Volume if f.BaseFeature else 0.0
         self._rakna(f)
-        if f.Shape.Volume > fore - 1e-6 and not getattr(f, "Midplane", False):
+        if f.Shape.Volume <= fore - 1e-6:
+            return f
+        symmetrisk = getattr(f, "Midplane", False) or getattr(f, "SideType", "") == "Symmetric"
+        if not symmetrisk:
             f.Reversed = not f.Reversed
             self._rakna(f)
-            if f.Shape.Volume > fore - 1e-6:
-                raise RuntimeError("%s skär inte bort något i någon riktning" % f.Name)
+        elif getattr(f, "Type", "") == "ThroughAll" and f.BaseFeature is not None:
+            f.Type = "Length"
+            f.Length = 2 * f.BaseFeature.Shape.BoundBox.DiagonalLength + 10
+            self._rakna(f)
+        if f.Shape.Volume > fore - 1e-6:
+            raise RuntimeError("%s skär inte bort något (kontrollera skissens läge mot kroppen)" % f.Name)
         return f
 
     def kloss(self, sk, langd, namn="Kloss", symmetrisk=False, omvand=False):

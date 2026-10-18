@@ -271,6 +271,9 @@ def tjocklek(namn):
     m = re.fullmatch(r"(VKR|KKR|RHS|SHS|KVR|RÖR|ROR|CHS|VKCKR|KCKR|L)" + NUM + r"\*" + NUM + r"(?:\*" + NUM + r")?", p)
     if m:
         return float(m.group(4) or m.group(3))
+    m = re.fullmatch(r"(FS|FKT|D|RUND|RD)" + NUM, p)              # massiv fyrkant- och rundstång
+    if m:
+        return float(m.group(2))
     return None
 
 

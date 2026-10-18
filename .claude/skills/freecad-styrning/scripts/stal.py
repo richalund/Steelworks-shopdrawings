@@ -120,6 +120,9 @@ def _inbyggd(p):
     if m:
         a1, a2 = float(m.group(2)), float(m.group(3))
         return dict(typ="PL", t=min(a1, a2), b=max(a1, a2))
+    m = re.fullmatch(r"(FS|FKT)" + NUM, p)                          # fyrkantstång a x a (ritas som plåt a*a)
+    if m:
+        return dict(typ="PL", t=float(m.group(2)), b=float(m.group(2)))
     m = re.fullmatch(r"(D|RUND|RD)" + NUM, p)
     if m:
         return dict(typ="D", d=float(m.group(2)))
@@ -131,7 +134,7 @@ def _inbyggd(p):
         a1, a2, a3 = float(m.group(1)), float(m.group(2)), m.group(3)
         h, b, t = (a1, a2, float(a3)) if a3 else (a1, a1, a2)
         return dict(typ="L", h=h, b=b, t=t)
-    raise ValueError("Okänd profil '%s'. Exempel: UPE140, IPE100, HEA160, VKR100*6.3, VKR120*80*5, PL10*150, D20, RÖR48.3*4, L50*5" % p)
+    raise ValueError("Okänd profil '%s'. Exempel: UPE140, IPE100, HEA160, VKR100*6.3, VKR120*80*5, PL10*150, FS20, D20, RÖR48.3*4, L50*5" % p)
 
 
 def bultdiameter(bult):
@@ -442,6 +445,42 @@ class Konstruktion:
         self._placera(d, tuple(V(*r) for r in rot), tuple(mitt))
         return self._ny(d, pos, profil, material, huvuddel)
 
+    def referens(self, namn, lada=None, bygg=None, mitt=(0, 0, 0), rot=((1, 0, 0), (0, 1, 0), (0, 0, 1)),
+                 farg=(0.8, 0.8, 0.78), transparens=0):
+        """Referenskropp för omgivningen (trappsteg, vägg, bjälklag, mark, befintlig stomme): syns i modellen, i
+        3D-bilderna (rendera.py) och på översiktsritningen (oversikt.py), men saknar positionsnummer och kommer
+        därför inte med i materiallistan, bubblorna eller sammanställningsritningens vyer. `lada` = (x0, x1, y0,
+        y1, z0, z1) ger en låda; annars ritar `bygg(d)` kroppen med pd-API:t som i egen(), placerad med mitt/rot.
+        Kropparna samlas i gruppen Omgivning."""
+        import pd
+        import FreeCAD as App
+        from FreeCAD import Vector as V
+        body = self.doc.addObject("PartDesign::Body", re.sub(r"[^A-Za-z0-9_]", "", namn) or "Referens")
+        body.Label = namn
+        d = pd.Del(self.doc, body.Name)
+        if lada is not None:
+            x0, x1, y0, y1, z0, z1 = [float(q) for q in lada]
+            sk = d.skiss("Kontur", "XY")
+            sk.rektangel(round(x1 - x0, 3), round(y1 - y0, 3), namn=("Langd", "Bredd"))
+            d.kloss(sk, round(z1 - z0, 3), "Hojd")
+            body.Placement = App.Placement(V((x0 + x1) / 2, (y0 + y1) / 2, z0), App.Rotation())
+        else:
+            bygg(d)
+            u, v, w = (V(*r) for r in rot)
+            m = App.Matrix(u.x, v.x, w.x, 0, u.y, v.y, w.y, 0, u.z, v.z, w.z, 0, 0, 0, 0, 1)
+            body.Placement = App.Placement(V(*[d.uttryck(c)[1] for c in mitt]), App.Rotation(m))
+        d.stada()
+        g = self.doc.getObject("Omgivning")
+        if g is None:
+            g = self.doc.addObject("App::DocumentObjectGroup", "Omgivning")
+        g.addObject(body)
+        try:
+            body.ViewObject.ShapeColor = tuple(farg)
+            body.ViewObject.Transparency = int(transparens)
+        except Exception:
+            pass
+        return body
+
     def hal(self, delar, punkter, riktning, d=None, bult=None, langd=None):
         """Hål med diametern d (eller bultens: M12 -> Ø14) genom `delar` i punkterna (globala tal), längs
         riktningen: en skiss med cirklarna och en Pocket (genom allt, åt båda hållen) i varje kropp. Med `langd`
@@ -491,11 +530,17 @@ class Konstruktion:
             dd.stada()
 
     # -------------------------------------------------------------- gering
-    def gera(self, o, yttre, inre):
+    def gera(self, o, yttre, inre, riktning=None):
         """Geringskapa änden av profilen `o` (hörn i en ram, 45° när två lika profiler möts): snittplanet går
         genom hörnets yttre och inre punkt (globala koordinater, tal eller uttryck) och profilens höjdriktning.
         Pocket "Gering" genom allt från en sluten skiss i kroppens XZ-plan (fullt bestämd). I slutänden följer
-        skissen Pad-längden (uttryck på AttachmentOffset), så geringen följer med när längden ändras."""
+        skissen Pad-längden (uttryck på AttachmentOffset), så geringen följer med när längden ändras.
+        Kapet tar bara bort det som ligger utanför planet: en profil som slutar innan planet når hela tvärsnittet
+        (t.ex. ett snett plattstål kapat lodrätt i sin ände) blir bara kapad på halva höjden. Bygg den förlängd
+        med (h/2)·|tan v| + några mm och kapa sedan. Skär kapet ingenting blir det fel (RuntimeError).
+        `riktning` (global vektor) = en riktning som ska ligga i kapplanet; den måste vara tvärsnittets bredd- eller
+        höjdriktning. Standard är höjdriktningen (`upp` i balk()); bredden används t.ex. för ett liggande plattstål
+        som kapas lodrätt mot en stolpe."""
         import pd
         import FreeCAD as App
         from FreeCAD import Vector as V
@@ -504,15 +549,23 @@ class Konstruktion:
         self.doc.recompute()
         L = pad.Length.Value
         inv = o.Placement.inverse()
-        p1, p2 = (inv.multVec(V(*[dd.uttryck(c)[1] for c in q])) for q in (yttre, inre))
+        c = 0                                                        # kroppens x i skissen (plan genom kroppens y)
+        if riktning is not None:
+            rl = inv.Rotation.multVec(V(*riktning)).normalize()
+            if abs(abs(rl.x) - 1) < 1e-6:
+                c = 1                                                # planet genom kroppens x: skiss i YZ
+            elif abs(abs(rl.y) - 1) > 1e-6:
+                raise ValueError("gera: riktningen %s är varken tvärsnittets bredd eller höjd i %s" % (tuple(riktning), o.Label))
+        p1, p2 = (inv.multVec(V(*[dd.uttryck(c_)[1] for c_ in q])) for q in (yttre, inre))
         slut = (p1.z + p2.z) / 2 > L / 2
         ze = L if slut else 0.0
-        a, b = (p1.x, p1.z - ze), (p2.x, p2.z - ze)
+        a, b = (p1[c], p1.z - ze), (p2[c], p2.z - ze)
         lb = o.Shape.transformed(inv.toMatrix()).BoundBox            # tvärsnittets utsträckning i kroppen
         W = max(lb.XLength, lb.YLength) + 20
         span = max(abs(a[1]), abs(b[1]))
         z0, z1 = (-W, span + W) if not slut else (-(span + W), W)
-        ruta = [(lb.XMin - 20, z0), (lb.XMax + 20, z0), (lb.XMax + 20, z1), (lb.XMin - 20, z1)]
+        cmin, cmax = (lb.XMin, lb.XMax) if c == 0 else (lb.YMin, lb.YMax)
+        ruta = [(cmin - 20, z0), (cmax + 20, z0), (cmax + 20, z1), (cmin - 20, z1)]
         kors = lambda q: (b[0] - a[0]) * (q[1] - a[1]) - (b[1] - a[1]) * (q[0] - a[0])
         sida = -1 if kors((0.0, L / 2 - ze)) > 0 else 1              # bort: sidan utan balkens mitt
         ut = []
@@ -526,7 +579,7 @@ class Konstruktion:
                 ut.append((P[0] + t * (Q[0] - P[0]), P[1] + t * (Q[1] - P[1])))
         ut = [q for i, q in enumerate(ut) if math.dist(q, ut[i - 1]) > 1e-6]
         nr = sum(1 for f in o.Group if f.Name.startswith("Gering")) // 2 + 1
-        sk = dd.skiss("Gering%d" % nr, "XZ")
+        sk = dd.skiss("Gering%d" % nr, "XZ" if c == 0 else "YZ")
         sk.obj.AttachmentOffset = App.Placement(V(0, ze, 0), App.Rotation())
         if slut:
             sk.obj.setExpression(".AttachmentOffset.Base.y", "%s.Length" % pad.Name)
