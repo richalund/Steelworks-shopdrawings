@@ -26,6 +26,8 @@ REGLER = [dict(villkor="200 <= CC <= 800", text="stolparnas c/c 200–800 mm"),
 RITNING = dict(
     vyer=["fram"],
     noter_blad=True,
+    bubblor="rad",
+    kedjor=[dict(pos="pi/1", vy="fram")],
     snitt=[dict(namn="A", axel="x", varde=-184, mot="-")],     # genom vänstra stolpens axel: väggfästen i snitt
     detaljer=[dict(vy="A", punkt=(-184, -55, 1205), radie=75, rubrik="ÖVRE KNÄ OCH VÄGGFÄSTE vf/1",
                    text=["ARM ar/1 DIREKT MOT VÄGG", "STOPPSKRUV M5 UNDERIFRÅN"], matt=[dict(typ="x", varde=100, lage="over")]),
@@ -36,7 +38,6 @@ RITNING = dict(
            "UNDERLAG: GODSTJOCKLEK 1.5 ANTAGEN (EJ ANGIVEN I FÖREBILDEN) – BEKRÄFTAS MED RÖRLEVERANTÖR",
            "UTFÖRANDE: UTAN VÄRMARE OCH ELANSLUTNING, STOLPAR OCH ARMAR SLUTNA",
            "UTFÖRANDE: KNÄN st/1–ar/1 OCH st/1–ar/2 GERADE 45°",
-           "UTFÖRANDE: 8 PINNAR pi/1 c/c 138, ÖVERSTA PINNENS MITT 101.5 UNDER ÖVERKANT",
            "UTFÖRANDE: PINNAR pi/1 FISKMUNSKAPADE MOT STOLPE Ø32, KAPLÄNGD 342",
            "MONTAGE: ARMARNA TRÄS PÅ VÄGGFÄSTEN vf/1, vf/2 OCH LÅSES MED STOPPSKRUV M5 A4 UNDERIFRÅN",
            "MONTAGE: VÄGGFÄSTEN SKRUVAS MED 1 SKRUV 5 MM A4 + PLUGG ENL. VÄGG, FÖRSÄNKT. ROSETT ro/1 TRÄS PÅ vf/2",
