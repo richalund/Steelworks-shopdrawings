@@ -18,7 +18,8 @@ Kroppen har egenskaperna Pos (positionsnummer, t.ex. "b/1"), Profil (svensk prof
 kroppens Placement och Pad-längden binds då till bladet och följer med när användaren ändrar en variabel.
 Hålens lägen och antalet delar är tal - ändras de: bygg om (`sammanstallning.py bygg ... --var Bjalkar=4`).
 
-Profilerna har verkliga radier (UPE/IPE/HEA/HEB roten, VKR inre och yttre radie enligt EN 10219), så att vikt
+Profilerna har verkliga radier (UPE/IPE/HEA/HEB roten, VKR inre och yttre radie enligt EN 10210,
+KKR/RHS/SHS enligt EN 10219), så att vikt
 och yta stämmer med tabellerna (UPE140 14,5 kg/m). L-profiler ritas utan radier.
 """
 import re, json, math
@@ -115,9 +116,9 @@ def _inbyggd(p):
     if m:
         a1, a2, a3 = float(m.group(2)), float(m.group(3)), m.group(4)
         h, b, t = (a1, a2, float(a3)) if a3 else (a1, a1, a2)
-        if m.group(1) == "KKR":                                   # varmformad: yttre radie 1,5 t
+        if m.group(1) == "VKR":                                   # VKR = varmformad EN 10210: yttre radie 1,5 t
             ro = 1.5 * t
-        else:                                                     # kallformad EN 10219
+        else:                                                     # KKR, RHS, SHS = kallformad EN 10219
             ro = 2.0 * t if t <= 6 else (2.5 * t if t <= 10 else 3.0 * t)
         return dict(typ="R", h=h, b=b, t=t, ro=ro, ri=max(ro - t, 0.0))
     m = re.fullmatch(r"(PL|FL|FLA|PLT)" + NUM + r"\*" + NUM, p)

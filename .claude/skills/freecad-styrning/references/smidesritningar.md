@@ -45,7 +45,7 @@ Ovanför listan **ALLMÄNNA NOTERINGAR**: `ALLA HÅL ÄR 22 mm OM EJ ANNAT ANGES
 `ALLA SVETSAR ÄR 3.0 mm OM EJ ANNAT ANGES` (a-mått 2, 3 eller 4 mm beroende på godstjocklek).
 
 ## Material och infästning som återkommer
-- Stål: S355J2 (balkar, plåt), S355J2H (VKR), S235JR (räcken), S355N. Aluminium 6060-T6 för räcken/grindar.
+- Stål: S355J2 (balkar, plåt), S355J2H (VKR, KKR), S235JR (räcken), S355N. Aluminium 6060-T6 för räcken/grindar.
 - Noterna avslutas med var profilmåtten (standard, databas, datum) och materialkvaliteten (fy/fu enligt
   EN 1993-1-1 tab. 3.1, källa, datum) är verifierade; raderna kommer från `scripts/kallor.py`.
   Trä C24, ek för handledare.
