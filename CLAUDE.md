@@ -1,8 +1,9 @@
 # Steelworks Shopdrawings
 
-Repot innehåller skillen `freecad-styrning` (`.claude/skills/freecad-styrning/SKILL.md`): parametriska
-plåt- och stålkonstruktioner i FreeCAD från Python, med tillverkningsritningar (TechDraw, PDF),
-DXF-utbredning, sammanställningsritningar i Tekla-stil och STEP.
+Repot innehåller skillen `freecad-styrning` (`.claude/skills/freecad-styrning/SKILL.md`): tillverkningsritningar
+för smide och plåt i FreeCAD från Python – från text, foton, mail eller befintliga (även scannade) ritningar –
+med klassiska sammanställningsritningar, DXF, STEP, glTF/IFC, 3D-bilder, prisunderlag och beställningspaket.
+Användning utan att bidra: `ANVANDA.md`. Bidrag: `BIDRA.md`.
 
 - I en molnsession installerar SessionStart-hooken FreeCAD i bakgrunden (10–15 min första gången i en
   ny container). Vänta på att `/opt/freecad/bin/freecad` finns innan första ritningen, eller kör
@@ -20,8 +21,11 @@ DXF-utbredning, sammanställningsritningar i Tekla-stil och STEP.
   profilen eller kvaliteten inte i någon källa, sök efter tabellen, säg till användaren och lägg in måtten
   med källan i en kommentar.
 - Uppdragets filer ändrar inte skillen: egna konstruktionsskript läggs i `egna/konstruktioner/`, delskript i
-  `egna/delar/`, ritskript för översikter i `egna/ritningar/`, företagsuppgifter i `egna/foretag.json`. Se
-  `egna/README.md`.
+  `egna/delar/`, ritskript för översikter i `egna/ritningar/`, motiv och typsnitt i `egna/ornament/`,
+  företagsuppgifter i `egna/foretag.json`, verkstadens gränser i `egna/verkstad.json` och priser i
+  `egna/priser.json`. Se `egna/README.md`. Priser och kunduppgifter läggs aldrig i skillen.
+- Kunden kan ge bara text, foton, mail eller en ritning: läs ritningar (PDF, scannade, DXF) med
+  `scripts/underlag.py` och hitta aldrig på mått som inte går att läsa.
 - Skillen (`.claude/skills/freecad-styrning/`) förbättras bara genom en pull request mot `main`, enligt avsnittet
   "Eget material, och förbättringar av skillen" i SKILL.md: föreslå förbättringen för användaren, gör den
   generell (inga kunduppgifter, kundens särdrag som val), arbeta på en gren `forbattring/<namn>`, kör

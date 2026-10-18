@@ -1,0 +1,24 @@
+{
+  "_info": "Verkstadens priser för kalkyl.py. Kopiera till egna/priser.json och fyll i egna priser (kr, exkl. moms). 0 = räknas inte. Priserna hör till verkstaden och läggs aldrig i skillen.",
+  "material_kr_per_kg": {
+    "_info": "nyckeln jämförs med början av materialtexten (längsta träff gäller), t.ex. S235, S355, 1.4301, CuZn, Glas",
+    "standard": 0,
+    "S235": 0,
+    "S355": 0,
+    "1.4301": 0,
+    "CuZn": 0,
+    "Glas": 0
+  },
+  "yta_standard": null,
+  "yta_kr_per_m2": {"pulverlack": 0, "varmforzinkning": 0, "patinering": 0, "lack": 0},
+  "kap_kr_st": 0,
+  "gering_kr_st": 0,
+  "hal_kr_st": 0,
+  "laser_kr_per_m": 0,
+  "instick_kr_st": 0,
+  "bock_kr_st": 0,
+  "svets_kr_per_m": 0,
+  "del_kr_st": 0,
+  "start_kr": 0,
+  "paslag_procent": 0
+}

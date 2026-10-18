@@ -1,6 +1,6 @@
-# Smidesritningar i Tekla-stil (konventioner)
+# Smidesritningar: klassiska svenska tillverkningsritningar (konventioner)
 
-Konventionerna nedan är uttagna ur ett fyrtiotal svenska Tekla-ritningar (GA och sammanställningar) från ett
+Konventionerna nedan är uttagna ur ett fyrtiotal svenska tillverkningsritningar (GA och sammanställningar) från ett
 smidesföretag, 2026-10: räcken och grindar, balkonger, avväxlingar, pelare och balkar, trappor samt stagningar.
 Använd dem som facit för hur en smidesritning ska se ut när en ritning görs i FreeCAD eller granskas.
 Exempelnummer i texten (`2026-001`, `B/1`) är bara exempel på format.
@@ -39,7 +39,7 @@ V vägg-/vangfäste, L trapplopp, K konsol, T, F, E. Formen är `<prefix><löpnr
 ## Materiallista (nere i mitten, ovanför titelblocket)
 Rubrik `MATERIALLISTA FÖR ETT GODS MÄRKT: B/1` och `1 st. TILLVERKAS`. Kolumner:
 `STYCKLIT. | PROFIL | MATERIAL | ANT. | LÄNGD | AREA/st | VIKT/st`, sorterad efter vikt (tyngst först), sista raden
-`TOTALT` med area (m²) och vikt (kg). Profilnamn som i den svenska Tekla-katalogen: `VKR70*5`, `VKR100*6.3`,
+`TOTALT` med area (m²) och vikt (kg). Profilnamn som i svenska profilkataloger: `VKR70*5`, `VKR100*6.3`,
 `UPE140`, `IPE100`, `PL10*150` (tjocklek*bredd), `RHS20*20*2`, `D80`.
 Ovanför listan **ALLMÄNNA NOTERINGAR**: `ALLA HÅL ÄR 22 mm OM EJ ANNAT ANGES` och
 `ALLA SVETSAR ÄR 3.0 mm OM EJ ANNAT ANGES` (a-mått 2, 3 eller 4 mm beroende på godstjocklek).
@@ -77,14 +77,14 @@ Företagets logga eller namn med adressrader; fält UPPDRAG NR (t.ex. `2026-001`
 DATUM, HANDLÄGGARE, ANSVARIG, objekt i tre rader (fastighet/projekt, kund, adress), SKALA (flera skalor om
 snitten har annan: `1:10 1:20`), NUMMER (märket), BET (revisionsbokstav). Revisionstabell ovanför:
 `BET | ANT | ÄNDRINGEN AVSER | DATUM | SIGN` (t.ex. `A | Bultad anslutning ram–väggfäste, noter | 2026-10-07 | AB`).
-FreeCAD-mallen `mallar/A3.svg` har ett enklare titelblock för enstaka delar (plåt, Part Design). Tekla-blocket
-ovan finns som `mallar/A2_tekla.svg` (med stomnät- och etapprutorna och en revisionsrad) och används av
+FreeCAD-mallen `mallar/A3.svg` har ett enklare titelblock för enstaka delar (plåt, Part Design). A2-blocket
+ovan finns som `mallar/A2.svg` (med stomnät- och etapprutorna och en revisionsrad) och används av
 `scripts/sammanstallning.py`, som också gör materiallistan, ALLMÄNNA NOTERINGAR, positionsbubblorna, snitten
 och hålangivelserna enligt det här dokumentet (se SKILL.md). Företag, adress och signaturer fylls i med
 `--foretag`, `--adress`, `--ritad-av`, `--handlaggare`, `--ansvarig` eller miljövariablerna `FC_FORETAG`,
 `FC_ADRESS`, `FC_RITAD_AV`, `FC_HANDLAGGARE`, `FC_ANSVARIG`; vill man ha en logga byts Foretag-texten i mallen
 mot en `<image>`. Det som inte görs automatiskt: bultar och svetssymboler ritas inte (skriv dem i noterna),
-bara en revisionsrad, varje positionsnummer får en bubbla (Tekla upprepar dem och skriver `3x pl/2 NS`).
+bara en revisionsrad, varje positionsnummer får en bubbla (förlagorna upprepar dem och skriver `3x pl/2 NS`).
 
 ## Räcken och trappräcken
 Uttaget ur räckesritningarna ovan och ett offertuppdrag på en entrétrappa (2026-10). Måtten är vanliga

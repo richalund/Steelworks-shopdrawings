@@ -39,7 +39,8 @@ def args(argv=None):
     ap.add_argument("--ritad-av", dest="ritad_av", default=u["ritad_av"], help="signatur i titelblocket (standard: foretag.json eller FC_RITAD_AV)")
     ap.add_argument("--foretag", default=u["foretag"], help="företagsnamn i titelblocket (standard: foretag.json eller FC_FORETAG)")
     ap.add_argument("--logga", default=u["logga"], help="PNG/JPEG i stället för företagsnamnet (standard: foretag.json eller FC_LOGGA)")
-    ap.add_argument("--ytbehandling", default="Ytbehandling enligt beställning.")
+    ap.add_argument("--ytbehandling", default=None, help="ytbehandlingsraden (standard: 'Ytbehandling enligt beställning.' på ritningens språk)")
+    ap.add_argument("--sprak", choices=["sv", "en", "zh"], default="sv", help="ritningens språk för fasta texter och noter")
     ap.add_argument("--utan-kallor", dest="utan_kallor", action="store_true",
                     help="ingen not om var materialkvaliteten är verifierad (kallor.py)")
     ap.add_argument("--v-oppning", dest="v_oppning", type=float, default=None, help="kantpressens V-öppning för granskningen (standard: minsta V >= 8 t)")
@@ -65,9 +66,10 @@ def _jobb():
     from FreeCAD import Vector as V
     import TechDrawGui
     from PySide import QtGui
-    import fcapi, plat, dfm, foretag
+    import fcapi, plat, dfm, foretag, sprak
     import pd as pdm
     from fcapi import logg, pump
+    T = sprak.oversattare(fcapi.jobb()["args"].get("sprak") or "sv")
 
     mall = [os.path.join(os.path.dirname(fcapi.jobb()["skriptmapp"]), "mallar", "A3.svg")]   # byts mot kopia med logga i huvud()
 
@@ -184,7 +186,7 @@ def _jobb():
 
     def materialrader(a, tjocklek=None):
         """Material-raden i noterna och, om inte --utan-kallor, var kvaliteten är verifierad (kallor.py)."""
-        rader = ["Material: %s" % a["material"]]
+        rader = [T("Material: %s", a["material"])]
         if a.get("utan_kallor"):
             return rader
         import kallor
@@ -361,13 +363,12 @@ def _jobb():
         L, W = pd["utbredning"]
         n2 = valj_skala([(L, 375.0), (W, 180.0)], a.get("skala_ut"))
         rader = materialrader(a, pd["tjocklek"]) + [
-                 "Plåttjocklek %s mm, bockradie (inre) %s mm" % (fmt(pd["tjocklek"]), fmt(radie)),
-                 "Utbredd plåt ca %.0f x %.0f mm, se blad 2" % pd["utbredning"],
-                 "Vikt ca %s kg" % ("%.1f" % pd["massa"]).replace(".", ","),
-                 "Mått i mm. Skala 1:%s (isometri 1:%s), blad 2 1:%s." % (fmt(n), fmt(ni), fmt(n2)),
-                 a["ytbehandling"]]
-        if hornr > 0:
-            rader.insert(next(i for i, r in enumerate(rader) if r.startswith("Plåttjocklek")) + 1, "Hörnradier R%s (4 st)" % fmt(hornr))
+                 T("Plåttjocklek %s mm, bockradie (inre) %s mm", fmt(pd["tjocklek"]), fmt(radie))] + (
+                [T("Hörnradier R%s (4 st)", fmt(hornr))] if hornr > 0 else []) + [
+                 T("Utbredd plåt ca %s x %s mm, se blad 2", *("%.0f" % x for x in pd["utbredning"])),
+                 T("Vikt ca %s kg", ("%.1f" % pd["massa"]).replace(".", ",")),
+                 T("Mått i mm. Skala %s (isometri %s), blad 2 %s.", "1:" + fmt(n), "1:" + fmt(ni), "1:" + fmt(n2)),
+                 a["ytbehandling"] or T("Ytbehandling enligt beställning.")]
         textblock(doc, page1, rader, 20, 14)
         doc.recompute()
 
@@ -453,7 +454,7 @@ def _jobb():
                 q1, q2 = q2, q1
             ux, uy = math.cos(math.radians(vk)), math.sin(math.radians(vk))
             m = ((q1[0] + q2[0]) / 2 - uy * 3.0, (q1[1] + q2[1]) / 2 + ux * 3.0)
-            t = text(doc, page2, plat.bocknot(b), m[0], m[1], 3.5, vk, MORK, vanster=False)
+            t = text(doc, page2, plat.bocknot(dict(b, riktning=T(b["riktning"]))), m[0], m[1], 3.5, vk, MORK, vanster=False)
             t.Y = m[1]
         # totalmått och bocklinjernas lägen (kedja längs underkanten)
         sida = d_ut.cross(lang)                       # papperets y-riktning i modellen
@@ -505,10 +506,10 @@ def _jobb():
                 logg("Hörnradie R%s satt på Edge%d i utbredningen" % (fmt(hornr), k))
             else:
                 logg("Obs: hörnradiens båge hittades inte i utbredningsvyn")
-        textblock(doc, page2, ["Utbredning %s, plåt %s mm. Utbredd storlek ca %.0f x %.0f mm." % (a["namn"], fmt(pd["tjocklek"]), L, W),
-                               "Bockradie inre %s mm. Bocknoter: riktning och vinkel vid varje bocklinje (NED streckad)." % fmt(radie),
-                               "DXF för laser: %s, för bockning: %s" % (os.path.basename(bas + "_kontur.dxf"), os.path.basename(bas + "_utbredning.dxf")),
-                               "Tillverkningsgranskning: %s, se %s" % (sam, os.path.basename(bas + "_granskning.txt"))],
+        textblock(doc, page2, [T("Utbredning %s, plåt %s mm. Utbredd storlek ca %s x %s mm.", a["namn"], fmt(pd["tjocklek"]), "%.0f" % L, "%.0f" % W),
+                               T("Bockradie inre %s mm. Bocknoter: riktning och vinkel vid varje bocklinje (NED streckad).", fmt(radie)),
+                               T("DXF för laser: %s, för bockning: %s", os.path.basename(bas + "_kontur.dxf"), os.path.basename(bas + "_utbredning.dxf")),
+                               T("Tillverkningsgranskning: %s, se %s", sam, os.path.basename(bas + "_granskning.txt"))],
                   20, min(flat.papper(vu)[1] - 24, 70) - 18)          # sista radens baslinje (fyra rader)
         doc.recompute()
         pump(1.0)
@@ -855,17 +856,17 @@ def _jobb():
         if pl:
             antal, (lx, ly) = kontur_dxf(pl[2], pl[0], bas + "_kontur.dxf")
             logg("DXF: %s %d entiteter, %.1f x %.1f mm" % (os.path.basename(bas + "_kontur.dxf"), antal, lx, ly))
-            rader.append("Plåttjocklek %s mm. Kontur för laser: %s" % (fmt(pl[1]), os.path.basename(bas + "_kontur.dxf")))
+            rader.append(T("Plåttjocklek %s mm. Kontur för laser: %s", fmt(pl[1]), os.path.basename(bas + "_kontur.dxf")))
         fasar = sorted({f.Size.Value for f in body.Group if f.TypeId == "PartDesign::Chamfer"})
         if fasar:
-            rader.append("Fasade kanter %s mm" % ", ".join(fmt(x) for x in fasar))
+            rader.append(T("Fasade kanter %s mm", ", ".join(fmt(x) for x in fasar)))
         gangor = sorted({f.ThreadSize for f in body.Group if f.TypeId == "PartDesign::Hole" and f.Threaded})
         if gangor:
-            rader.append("Gängade hål %s (gängan inte ritad)" % ", ".join(gangor))
+            rader.append(T("Gängade hål %s (gängan inte ritad)", ", ".join(gangor)))
         massa = s.Volume * 1e-9 * pdm.STAL_DENSITET
-        rader += ["Vikt ca %s kg (stål)" % ("%.1f" % massa).replace(".", ","),
-                  "Mått i mm. Skala %s%s. Projektionsmetod E." % (skaltext(n), " (isometri %s)" % skaltext(ni) if ni else ""),
-                  a["ytbehandling"]]
+        rader += [T("Vikt ca %s kg (stål)", ("%.1f" % massa).replace(".", ",")),
+                  T("Mått i mm. Skala %s%s. Projektionsmetod E.", skaltext(n), T(" (isometri %s)", skaltext(ni)) if ni else ""),
+                  a["ytbehandling"] or T("Ytbehandling enligt beställning.")]
         textblock(doc, page, rader, 20, 14)
         return [page], dict(skala=n, massa=massa, platta=bool(pl))
 
@@ -879,7 +880,7 @@ def _jobb():
         if a.get("logga"):
             mall[0] = foretag.mall_med_logga(mall[0], a["logga"], utmapp)
             logg("Logga i titelblocket:", a["logga"])
-        falt = dict(Namn=a["namn"], Ritningsnummer=a["nummer"], Datum=time.strftime("%Y-%m-%d"), RitadAv=a["ritad_av"],
+        falt = dict(Namn=a["namn"], Ritningsnummer=a["nummer"], Datum=os.environ.get("FC_DATUM") or time.strftime("%Y-%m-%d"), RitadAv=a["ritad_av"],
                     Filnamn=os.path.basename(bas), Foretag=a.get("foretag") or "")
         u = doc.getObject("Utbredning")
         if u is not None:

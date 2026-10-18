@@ -115,16 +115,16 @@ FreeCAD 1.0.1 (rev 39285, Python 3.11 i FreeCAD), SheetMetal-tillägget 0.7.24, 
   på bladet. Materiallistan, noterna och snittrubrikerna (`A - A` med skalan) är symboler: exakt geometri,
   ingen gissning av textbredder som med DrawViewAnnotation.
 - **Ballong (DrawViewBalloon):** `X`, `Y`, `OriginX`, `OriginY` är OSKALADE modellmått relativt vyns mitt,
-  Y uppåt (på papperet = vyns X/Y + Scale × värdet). `BubbleShape` "Inspection" = Teklas avlånga bubbla,
+  Y uppåt (på papperet = vyns X/Y + Scale × värdet). `BubbleShape` "Inspection" = den avlånga bubblan på svenska tillverkningsritningar, bubbla,
   "Line" = understruken text med ledare (hålangivelsen `4*Ø14 - M12x44`). `EndType` "None", `KinkLength` 0.
   Utan `ViewObject.Font/Fontsize` blir texten 13,7 mm Tahoma.
 - Ballongerna fylls med inställningen `Mod/TechDraw/Colors/PageColor` (ljusgrå F1F3F5 på testdatorn) och
   linjerna ritas i `NormalColor` (mörkgrå 212529). Jobbet sätter PageColor/FaceColor vita och Normal-,
   Hidden-, Section-, Center- och VertexColor svarta (sparas inte: FreeCAD avslutas med os._exit).
 - **Måttpilar:** `ArrowStyle` finns inte på måttets ViewObject i 1.0.1. Inställningen
-  `Mod/TechDraw/Dimensions/ArrowStyle` = 2 ger snedstreck (tick) som Tekla.
+  `Mod/TechDraw/Dimensions/ArrowStyle` = 2 ger snedstreck (tick) som på svenska tillverkningsritningar.
 - **Snittbokstäverna** (A, B i basvyn) får teckenhöjden 1,39 × `Mod/TechDraw/Dimensions/FontSize` (em) och
-  typsnittet `Mod/TechDraw/Labels/LabelFont`. FontSize 3,4 ger 4,7 mm som Tekla. Bokstäverna hamnar strax
+  typsnittet `Mod/TechDraw/Labels/LabelFont`. FontSize 3,4 ger 4,7 mm som på förlagorna. Bokstäverna hamnar strax
   utanför vyn: måtten och bubblorna i en vy med snittlinjer läggs 6 mm längre ut.
 - **DrawViewSection:** `SectionNormal` n behåller materialet på -n-sidan; `Direction` = n (betraktaren på
   +n-sidan), `XDirection` = Z × n (Z uppåt i snittet), `SectionDirection` "Right"/"Left"/"Up"/"Down" = n
@@ -256,3 +256,29 @@ allt i globala koordinater: kroppens placering är noll, skissernas lägen och P
 ## Underlag från kunden
 - Bilagor i Gmail-trådar går inte alltid att hämta som bilaga via connectorn: hämta meddelandet i RAW-format,
   spara JSON:en och packa upp den med Pythons `email`-modul till egna filer.
+- Scannade PDF:er har ingen text: läs bilderna (underlag.py ger rutor i 300 dpi med höjd kontrast). En sida i
+  hög upplösning som en enda bild skalas ner av bildvisningen och små mått blir oläsliga – läs rutorna eller zooma.
+
+## Installation (conda-forge, micromamba)
+- `micromamba install` av ett extra paket (calculix, ifcopenshell) utan att låsa FreeCAD kan byta FreeCAD 1.1.3 mot
+  en utvecklingsversion (freecad-2026.x med OCCT 8) som inte startar: jobben hänger utan logg. Lås alltid
+  `freecad=1.1.3` i samma kommando. Återställ med `micromamba install -p /opt/freecad freecad=1.1.3 occt=7.9.3`.
+- conda-paketet ifcopenshell kräver OCCT 8 och går inte ihop med FreeCAD 1.1.3. Pip-hjulet har eget OCCT: lägg
+  det i en egen mapp (`pip install --no-deps --target /opt/freecad-extra ifcopenshell`) och lägg mappen i sys.path
+  i jobbet (export.py).
+
+## TechDraw, SheetMetal, FEM och jobben (1.1.3)
+- `DrawViewSymbol` ritar SVG-symbolens mm rätt i 1.1 men med faktorn 90/96 i 1.0: skala 96/90 bara i 1.0
+  (sammanstallning.py `symbol`), annars blir materiallistan 6 % för stor och hamnar utanför ramen.
+- `SMBendWall` lägger kanten utanför basplåten och flänsens höjd räknas inte från undersidan: mät lådan och justera
+  basens mått, `length` och placeringen (stal.trag). Utan `SMViewProviderTree` på objektet syns det inte i GUI:t
+  och inte i 3D-bilderna; dölj basen.
+- SheetMetal-delar är compounds: `Shape.CenterOfMass` finns inte, räkna tyngdpunkten per solid.
+- `importSVG` vänder redan SVG:ns y-axel uppåt: vänd den inte en gång till.
+- `Part.makeWireString(text, typsnitt, storlek, spärrning)` ger textens konturer utan Draft-objekt; osifont följer med
+  FreeCAD (`Mod/TechDraw/Resources/fonts`).
+- FEM: `makeConstraintForce.Direction` är en referens (yta eller kant), inte en vektor; `Reversed` vänder den.
+  `FemToolsCcx`: `update_objects`, `setup_working_dir`, `setup_ccx`, `check_prerequisites`, `write_inp_file`,
+  `ccx_run`, `load_results`; resultatet har `vonMises` och `DisplacementLengths`.
+- Jobbets resultat-dict får inte ha nyckeln `ok` (krockar med `fcapi.avsluta(ok, ...)`): använd t.ex. `godkand`.
+- argparse tolkar ett värde som börjar med `-` som en flagga: skriv `--fast=-z`, inte `--fast -z`.
