@@ -20,6 +20,9 @@ in förbättringar (se BIDRA.md).
    du kan skriva direkt, Claude väntar in installationen.
 3. Svara på frågorna om företagsnamn och signatur till titelblocket (en gång per session).
 4. Titta på bilderna Claude visar och be om ändringar. Ladda ner filerna när du är nöjd.
+5. Claude lägger upp filerna i chatten: ritningarna som en PDF och, när det är många filer, allt annat (3D,
+   modeller, DXF, materiallistor, skript) i en zip. Spara dem i telefonen, dela dem som mail eller lägg dem i din
+   molntjänst eller projektmapp. Inget av jobbet sparas i repot, som är publikt.
 
 Starta en ny session för varje nytt jobb. Då blir det snabbare och billigare än att fortsätta i en lång session.
 
