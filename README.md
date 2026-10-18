@@ -19,15 +19,27 @@ att redigera vidare för hand. Språket i skill, skript och ritningar är svensk
 Skillen ligger i `.claude/skills/freecad-styrning/` så att den laddas automatiskt när repot öppnas i
 Claude Code, lokalt eller i molnet.
 
-## Kom igång
+## Kom igång (ingen datavana behövs)
 
-Två sätt, båda utan att du behöver kunna git eller Python:
+Du pratar med Claude på vanlig svenska; Claude sköter FreeCAD, filer och git.
 
-1. **I molnet, ingen installation.** Koppla ditt GitHub-konto till Claude och starta en session på
-   https://claude.ai/code (eller i Claude-appen på telefonen) med repot `richalund/Steelworks-shopdrawings`.
-   Se nästa avsnitt.
-2. **På egen dator.** Öppna en tom mapp i Claude Code och klistra in prompten i `INSTALLATION.md`. Claude Code
-   hämtar skillen, installerar FreeCAD och gör en testritning. Se `INSTALLATION.md`.
+1. **Konto:** logga in på https://claude.ai (ett abonnemang med Claude Code) och koppla ditt GitHub-konto på
+   https://claude.ai/connect-github. Har du inget GitHub-konto: skapa ett gratis på https://github.com.
+2. **Starta:** öppna https://claude.ai/code (eller Claude-appen på telefonen, fliken **Code**), välj repot
+   `richalund/Steelworks-shopdrawings` och starta en ny session.
+3. **Beskriv vad du vill ha** och bifoga gärna foton och mått, t.ex. *"Här är tre foton på ett trappräcke jag
+   vill offerera. Trappan har 6 steg, ca 1,2 m bred. Rita räcket, gör en ritning och 3D-bilder."* Första gången
+   frågar Claude efter företagsnamn, adress och signatur till titelblocket. FreeCAD installeras i bakgrunden
+   första gången (10–15 minuter); Claude väntar in det.
+4. **Titta på bilderna** Claude visar och be om ändringar som till en ritare: *"stolparna ska stå mitt på
+   stegen"*, *"gör handledaren i rör 42"*. Filerna (PDF, DXF, STEP, FreeCAD) kan laddas ner från sessionen.
+5. **Blev något bättre?** Skriv *"skicka in förbättringen"*. Claude gör det allmängiltigt, testar det och
+   skickar ett förslag (en *pull request*) till repot, som granskas innan det blir en del av skillen för alla.
+   För det behöver ditt GitHub-konto vara inbjudet till repot (be Richard), annars gör Claude en egen kopia
+   (fork) åt dig.
+
+Vill du köra på egen dator i stället: öppna en tom mapp i Claude Code och klistra in prompten i
+`INSTALLATION.md`. Claude Code hämtar skillen, installerar FreeCAD och gör en testritning.
 
 ## Registrera skillen så den finns i alla dina repon
 
@@ -69,11 +81,16 @@ Ingen FreeCAD-installation behövs på egen dator. Allt körs i Claude Codes mol
 5. Första gången frågar Claude efter företagsnamn, adress, signatur och logga till titelblocket och sparar
    dem för resten av sessionen (`scripts/foretag.py`).
 
-## Egna skript: skillen rörs inte
+## Egna skript och förbättringar av skillen
 
-Skillen är generisk och ska kunna uppdateras från det här repot. Eget material ligger därför utanför den, i
-`egna/`: konstruktionsskript i `egna/konstruktioner/`, delskript i `egna/delar/`, företagsuppgifter och logga i
-`egna/foretag.json`. Hjälpfunktioner som skillen saknar skrivs i det egna skriptet. Se `egna/README.md`.
+Skillen är generisk och ska kunna uppdateras från det här repot. Det som görs för ett uppdrag ligger därför
+utanför den, i `egna/`: konstruktionsskript i `egna/konstruktioner/`, delskript i `egna/delar/`, ritskript för
+översikter i `egna/ritningar/`, företagsuppgifter och logga i `egna/foretag.json`. Se `egna/README.md`.
+
+Det som fler har nytta av (en buggfix, ett nytt verktyg, en ny fälla, en ritningskonvention) skickas in till
+skillen som en pull request: Claude gör det allmängiltigt på en egen gren, kör `scripts/testa.py` (bygger och
+ritar alla exempel) och öppnar PR:en med mallen i `.github/pull_request_template.md`. Det bästa sättet att
+utveckla skillen är att använda den på riktiga jobb – rita något du har fotat – och skicka in det som saknades.
 I en fork följer `egna/` med mellan sessionerna, och skillen uppdateras genom att hämta in `main` från det här
 repot utan konflikter.
 
@@ -174,6 +191,7 @@ INSTALLATION.md                  – installera på egen dator med en prompt (in
 CLAUDE.md                        – instruktioner till Claude Code för repot
 .claude-plugin/                  – plugin- och marketplace-manifest (installera som plugin lokalt)
 .github/workflows/skill-zip.yml  – bygger freecad-styrning.zip till claude.ai vid push
+.github/pull_request_template.md – mall för bidrag till skillen
 egna/                            – användarens egna konstruktioner, delar och företagsuppgifter
 .claude/settings.json            – SessionStart-hook som installerar FreeCAD i molnsessioner
 .claude/hooks/session-start.sh
@@ -185,16 +203,20 @@ egna/                            – användarens egna konstruktioner, delar och
   scripts/stal.py                – profiltabeller, Konstruktion, hålgrupper, gering, materiallista
   scripts/kallor.py              – profilmått och materialkvaliteter ur öppna källor, cache, källangivelse
   scripts/foretag.py             – företagsuppgifter och logga till titelblocket (foretag.json)
-  scripts/sammanstallning.py     – bygg konstruktion + A2-sammanställningsritning
+  scripts/sammanstallning.py     – bygg konstruktion + A2-sammanställningsritning med detaljblad
+  scripts/racke.py               – räcken och trappräcken (stolpar, handledare, följare, spjälor, snäcka)
+  scripts/rendera.py             – 3D-bilder från flera håll
+  scripts/oversikt.py            – översikts- och planritning (GA) med ritskript
+  scripts/testa.py               – bygger och ritar alla exempel (kör före en pull request)
   scripts/plat.py, datastall.py  – SheetMetal, utbredning, DXF, exempeldel
   scripts/ritning.py             – A3-ritning för plåt och Part Design, DXF-utbredning
   scripts/dfm.py, granska.py     – tillverkningsgranskning för kantpress och laser
   scripts/rendera_pdf.py         – PDF till PNG för granskning
   scripts/installera_linux.sh    – installation på Linux / molnsession
   delar/                         – delskript: fotplatta, konsol, hylsa, H-profil
-  konstruktioner/                – konstruktionsskript: balkongram, pelare
+  konstruktioner/                – konstruktionsskript: balkongram, pelare, soffbord, trappräcke
   mallar/                        – A3.svg och A2_tekla.svg (TechDraw-mallar, redigerbara fält)
-  references/                    – ritningskonventioner, Part Design-API, fällor i FreeCAD 1.0.1
+  references/                    – ritningskonventioner (även räcken), Part Design-API, fällor i FreeCAD
 ut/                              – genererade filer (ignoreras av git)
 ```
 

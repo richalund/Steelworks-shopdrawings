@@ -19,6 +19,11 @@ DXF-utbredning, sammanställningsritningar i Tekla-stil och STEP.
   `~/.cache/freecad-styrning/kallor`) och ritningen anger var de är verifierade. Hitta aldrig på mått: finns
   profilen eller kvaliteten inte i någon källa, sök efter tabellen, säg till användaren och lägg in måtten
   med källan i en kommentar.
-- Ändra inte skillens filer i `.claude/skills/freecad-styrning/`. Egna konstruktionsskript läggs i
-  `egna/konstruktioner/`, delskript i `egna/delar/`, företagsuppgifter i `egna/foretag.json`, hjälpfunktioner
-  som saknas i det egna skriptet. Se `egna/README.md`.
+- Uppdragets filer ändrar inte skillen: egna konstruktionsskript läggs i `egna/konstruktioner/`, delskript i
+  `egna/delar/`, ritskript för översikter i `egna/ritningar/`, företagsuppgifter i `egna/foretag.json`. Se
+  `egna/README.md`.
+- Skillen (`.claude/skills/freecad-styrning/`) förbättras bara genom en pull request mot `main`, enligt avsnittet
+  "Eget material, och förbättringar av skillen" i SKILL.md: föreslå förbättringen för användaren, gör den
+  generell (inga kunduppgifter, kundens särdrag som val), arbeta på en gren `forbattring/<namn>`, kör
+  `python3 .claude/skills/freecad-styrning/scripts/testa.py` och öppna PR:en med `.github/pull_request_template.md`.
+  Användaren behöver inte kunna git: "skicka in förbättringen" räcker.
