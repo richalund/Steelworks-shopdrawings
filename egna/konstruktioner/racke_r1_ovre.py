@@ -2,7 +2,7 @@
 från vilplanets hörn vid nedre loppet, uppför de 4 stegen och längs dörrpodesten fram till husets utbyggnad.
 Hörnstolpen på vilplanet delas med R/2, vars handledare svetsas mot den."""
 import os, sys
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))    # egna/ (skillens scripts/ finns redan)
 import racke_bas, trappa_hellstone as T
 
 NAMN = "Räcke övre lopp"

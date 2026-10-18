@@ -5,7 +5,7 @@ och räckena är med (inget hus eller mark). Stenen är referenskroppar utan pos
 inte i materiallistan); bara räckena får positionsnummer.
 
 Bygg: sammanstallning.py bygg egna/konstruktioner/trappa_oversikt.py ut/T1_Trappa_oversikt.FCStd --png
-Bilder från fler håll: python3 egna/rendera.py ut/T1_Trappa_oversikt.FCStd
+Bilder från fler håll: python3 .claude/skills/freecad-styrning/scripts/rendera.py ut/T1_Trappa_oversikt.FCStd --vy ...
 """
 import os, sys, importlib.util
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
@@ -21,22 +21,8 @@ SLAB = 130.0                    # granitstegens tjocklek (= steghöjden)
 
 
 def referens(k, namn, x0, x1, y0, y1, z0, z1, farg, transparens=0):
-    """Referenskropp (låda) utanför sammanställningen: syns i 3D men saknar positionsnummer."""
-    import pd
-    import FreeCAD as App
-    body = k.doc.addObject("PartDesign::Body", namn)
-    d = pd.Del(k.doc, body.Name)
-    sk = d.skiss("Kontur", "XY")
-    sk.rektangel(round(x1 - x0, 3), round(y1 - y0, 3))
-    d.kloss(sk, round(z1 - z0, 3), "Hojd")
-    body.Placement = App.Placement(App.Vector((x0 + x1) / 2, (y0 + y1) / 2, z0), App.Rotation())
-    d.stada()
-    try:
-        body.ViewObject.ShapeColor = farg
-        body.ViewObject.Transparency = transparens
-    except Exception:
-        pass
-    return body
+    """Referenskropp (låda) i omgivningen: syns i 3D och på planen men saknar positionsnummer."""
+    return k.referens(namn, lada=(x0, x1, y0, y1, z0, z1), farg=farg, transparens=transparens)
 
 
 def racke(modul):

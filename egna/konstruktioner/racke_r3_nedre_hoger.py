@@ -2,7 +2,7 @@
 egna/trappa_hellstone.py: nedre loppet och vilplanets gavel ligger i linje, så räcket går uppför de 5 stegen
 och sedan plant över vilplanet fram till fasaden, med snäcka nedtill och knäck vid vilplanets kant."""
 import os, sys
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))    # egna/ (skillens scripts/ finns redan)
 import racke_bas, trappa_hellstone as T
 
 NAMN = "Räcke nedre lopp höger och vilplan"

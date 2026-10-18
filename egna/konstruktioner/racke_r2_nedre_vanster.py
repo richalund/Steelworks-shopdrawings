@@ -3,7 +3,7 @@ egna/trappa_hellstone.py: rakt nedför de 5 stegen från R/1:s hörnstolpe på v
 nedtill. De
 nedre stegen breddas förbi räcket ut mot innergården; räcket står på stegen i linje med vilplanets kant."""
 import os, sys
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))    # egna/ (skillens scripts/ finns redan)
 import racke_bas, trappa_hellstone as T
 
 NAMN = "Räcke nedre lopp vänster"
