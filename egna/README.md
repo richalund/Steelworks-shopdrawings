@@ -35,6 +35,6 @@ def bygg(k, v):
 används i flera egna skript läggs i en egen modul i `egna/`, t.ex. `egna/hjalp.py`, och importeras därifrån.
 
 `foretag.json` och uppdragens skript (`konstruktioner/`, `delar/`, `ritningar/`) är ignorerade av git. Ett
-uppdrag sparas i sin projektmapp (SKILL.md, "Spara uppdraget i projektmappen"), inte i repot. Verkstadens egna
+uppdrag lämnas i chatten som en PDF och en zip (SKILL.md, "Filerna till användaren"), inte i repot. Verkstadens egna
 filer (`foretag.json`, `verkstad.json`, `komponenter.json`) kan committas i ett eget privat repo (en importerad
 kopia, inte en fork: en fork av ett publikt repo är publik).

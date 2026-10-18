@@ -4,6 +4,7 @@ paket som kommer in.
   python3 paket.py skapa <modell.FCStd> [--skript egna/konstruktioner/x.py] [--antal 1] [--ut <mapp>]
   python3 paket.py kontrollera <paket.zip> [--ut <mapp>]
   python3 paket.py skicka <paket.zip> [--till anbud@smide.com] [--avsandare "Namn, telefon"] [--meddelande "..."]
+  python3 paket.py samla <filer eller mappar...> --namn <uppdrag> [--skript egna/konstruktioner/x.py ...] [--ut <mapp>]
 
 `skapa` samlar modellens filer i samma mapp (FCStd, PDF, PNG, DXF, STEP, materiallista, mängdunderlag), skriptet
 modellen byggdes från och de egna moduler det importerar (med sina sökvägar), kör mängdunderlaget (mangder.py) om
@@ -21,6 +22,13 @@ Outlook och Thunderbird; skicka därifrån) och en mailto-länk med ämne och te
 mottagare står i `egna/leverans.json` eller `mallar/leverans.json` (anbud@smide.com); användaren kan ange vilken
 adress som helst. Inget skickas av skriptet. Finns ett mailverktyg i agenten (t.ex. Gmail) kan agenten i stället
 lägga ett utkast med bilagan – och skickar bara när användaren uttryckligen säger till.
+
+`samla` gör det användaren får i chatten när ett uppdrag är klart: `<uppdrag> ritningar.pdf` (alla PDF:er i den
+ordning de ges, ihop till en fil med pdfunite eller pypdf) och, när det är fler filer, `<uppdrag> underlag.zip`
+med ritningar/ (PDF, PNG), 3d/ (3D-bilder, glb), modeller/ (FCStd, STEP, IFC), dxf/, materiallistor/ (CSV,
+mängdunderlag), skript/ (skripten och de egna moduler de importerar) och LASMIG.md (innehåll, skillens version,
+hur ritningarna byggs om). En mapp tar med filerna direkt i mappen. Inget förutsätter en viss lagring: användaren
+sparar filerna i telefonen, delar dem som mail eller lägger dem i valfri molntjänst.
 """
 import os, re, sys, json, time, shutil, hashlib, zipfile, argparse, tempfile, subprocess
 import xml.etree.ElementTree as ET
@@ -246,6 +254,80 @@ def kontrollera(a):
     return not avvik
 
 
+MAPPAR = (("3d", lambda n: "_3d_" in n or n.endswith(".glb")),
+          ("ritningar", lambda n: n.endswith((".pdf", ".png", ".svg"))),
+          ("modeller", lambda n: n.endswith((".fcstd", ".step", ".stp", ".ifc", ".stl"))),
+          ("dxf", lambda n: n.endswith(".dxf")),
+          ("materiallistor", lambda n: n.endswith(".csv") or n.endswith("_mangder.json")))
+
+
+def sla_ihop_pdf(pdfer, ut):
+    """PDF:erna i en fil (pdfunite, annars pypdf). Ger sökvägen eller None om inget verktyg finns."""
+    if len(pdfer) == 1:
+        shutil.copyfile(pdfer[0], ut)
+        return ut
+    if shutil.which("pdfunite"):
+        subprocess.run(["pdfunite"] + pdfer + [ut], check=True)
+        return ut
+    try:
+        import pypdf
+    except ImportError:
+        return None
+    w = pypdf.PdfWriter()
+    for f in pdfer:
+        w.append(f)
+    with open(ut, "wb") as fh:
+        w.write(fh)
+    return ut
+
+
+def samla(a):
+    import regler
+    filer = []
+    for x in a.fil:
+        x = os.path.abspath(x)
+        lst = sorted(os.path.join(x, n) for n in os.listdir(x)) if os.path.isdir(x) else [x]
+        for f in lst:
+            n = os.path.basename(f).lower()
+            if (os.path.isfile(f) and f not in filer and any(t(n) for _, t in MAPPAR)
+                    and "_zoom_" not in n and not n.endswith("_diff.png") and not n.startswith("_") and n != "manifest.json"):
+                filer.append(f)
+    if not filer:
+        raise SystemExit("Inga ritningar eller modeller i %s" % " ".join(a.fil))
+    ut = os.path.abspath(a.ut or os.path.dirname(filer[0]))
+    os.makedirs(ut, exist_ok=True)
+    pdfer = [f for f in filer if f.lower().endswith(".pdf")]
+    pdf = sla_ihop_pdf(pdfer, os.path.join(ut, a.namn + " ritningar.pdf")) if pdfer else None
+    if pdfer and not pdf:
+        print("OBS: varken pdfunite eller pypdf finns; PDF:erna ligger var för sig i zip-filen.")
+    skript = []
+    for sk in a.skript or []:
+        for f in [os.path.abspath(sk)] + moduler(sk):
+            if f not in skript:
+                skript.append(f)
+    zipnamn = os.path.join(ut, a.namn + " underlag.zip")
+    innehall = {}
+    with zipfile.ZipFile(zipnamn, "w", zipfile.ZIP_DEFLATED) as z:
+        for f in filer:
+            mapp = next(m for m, t in MAPPAR if t(os.path.basename(f).lower()))
+            z.write(f, mapp + "/" + os.path.basename(f))
+            innehall.setdefault(mapp, []).append(os.path.basename(f))
+        for f in skript:
+            z.write(f, "skript/" + relativ(f))
+            innehall.setdefault("skript", []).append(relativ(f))
+        z.writestr("LASMIG.md", "\n".join(
+            ["# %s" % a.namn, "", "Gjort %s med skillen freecad-styrning %s." % (time.strftime("%Y-%m-%d"), regler.skillversion()), ""]
+            + ["- %s/: %s" % (m, ", ".join(innehall[m])) for m in [m for m, _ in MAPPAR] + ["skript"] if m in innehall]
+            + ["", "Bygg om: lägg skripten (mappen skript/) i ett repo med skillen och kör samma kommandon som första gången,",
+               "t.ex. `python3 .claude/skills/freecad-styrning/scripts/sammanstallning.py bygg <skript> ut/<modell>.FCStd`.",
+               "Mått som är antagna står i ritningarnas noteringar och kontrollmäts innan tillverkning.", ""]))
+    for f in [pdf, zipnamn]:
+        if f:
+            print("%s: %s (%.1f MB)" % ("PDF" if f.endswith(".pdf") else "Zip", f, os.path.getsize(f) / 1e6))
+    print("%d filer, %d skript. Lägg upp PDF:en och zip-filen i chatten." % (len(filer), len(skript)))
+    return pdf, zipnamn
+
+
 def leverans():
     """Förifylld mottagare: egna/leverans.json, annars skillens mallar/leverans.json."""
     for f in (os.path.join(os.getcwd(), "egna", "leverans.json"), os.path.join(SKILL, "mallar", "leverans.json")):
@@ -296,9 +378,10 @@ def skicka(a):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("lage", choices=["skapa", "kontrollera", "skicka"])
-    ap.add_argument("fil")
-    ap.add_argument("--skript", default=None)
+    ap.add_argument("lage", choices=["skapa", "kontrollera", "skicka", "samla"])
+    ap.add_argument("fil", nargs="+")
+    ap.add_argument("--skript", action="append", default=None, help="skriptet (samla: flera --skript går bra)")
+    ap.add_argument("--namn", default=None, help="samla: uppdragets namn eller nummer i filnamnen")
     ap.add_argument("--antal", type=int, default=1)
     ap.add_argument("--ut", default=None)
     ap.add_argument("--till", default=None, help="mottagare (standard: leverans.json, anbud@smide.com)")
@@ -306,6 +389,12 @@ def main(argv=None):
     ap.add_argument("--meddelande", default="", help="egen rad i mailet")
     a = ap.parse_args(argv)
     sys.path.insert(0, HIT)
+    if a.lage == "samla":
+        a.namn = a.namn or os.path.splitext(os.path.basename(a.fil[0].rstrip("/")))[0]
+        return samla(a)
+    if len(a.fil) > 1:
+        ap.error("%s tar en fil" % a.lage)
+    a.fil, a.skript = a.fil[0], (a.skript[-1] if a.skript else None)
     if a.lage == "skapa":
         skapa(a)
     elif a.lage == "skicka":

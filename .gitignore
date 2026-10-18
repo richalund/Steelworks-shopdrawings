@@ -16,7 +16,7 @@ foretag.json
 !.claude/skills/freecad-styrning/tester/referens/*.png
 # leveranser som agenter utan filnedladdning committar på uppdragets gren i ett eget privat repo (leverans/README.md)
 !leverans/**
-# uppdragens skript sparas i jobbets projektmapp, inte i repot (SKILL.md, "Spara uppdraget i projektmappen")
+# uppdragens skript lämnas i chatten (paket.py samla), inte i repot (SKILL.md, "Filerna till användaren")
 egna/konstruktioner/*
 egna/delar/*
 egna/ritningar/*

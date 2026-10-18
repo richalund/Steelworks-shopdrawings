@@ -65,9 +65,9 @@ Skillen är gemensam och generell. Det som hör till en verkstad eller ett uppdr
 - `egna/leverans.json` – förifylld mottagare när underlaget skickas (mall: `.../mallar/leverans.json`).
 - `egna/konstruktioner/`, `egna/delar/`, `egna/ritningar/`, `egna/ornament/` – uppdragets skript och motiv.
 
-I en molnsession försvinner allt när sessionen stängs. Uppdraget sparas därför i jobbets projektmapp (Claude
-letar upp den i Google Drive om den är kopplad), inte på en gren: repot är publikt. Företagsuppgifterna kan
-läggas som miljövariabler i molnmiljöns inställningar.
+I en molnsession försvinner allt när sessionen stängs. Claude lägger därför upp ritningarna i chatten (en PDF och,
+vid många filer, en zip) som du sparar eller delar där du vill. Uppdrag läggs aldrig på en gren: repot är publikt.
+Företagsuppgifterna kan läggas som miljövariabler i molnmiljöns inställningar.
 
 ## Profilmått och materialkvaliteter verifieras mot öppna källor
 

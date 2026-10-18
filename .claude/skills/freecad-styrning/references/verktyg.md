@@ -65,6 +65,7 @@ hål. Pad (relief), Pocket med djup (gravyr) eller "genom" (genombrytning).
 | `komponenter.py visa/lagg-till/ta-bort` | register över inköpta komponenter med datablad och källa | `egna/komponenter.json` |
 | `regler.py <modell>` | produktregler och verkstadsgränser | rad i loggen, not på ritningen |
 | `paket.py skapa <modell>` / `kontrollera <zip>` / `skicka <zip> [--till]` | beställningspaket / mottagarens kontroll / mail till tillverkaren (skickas inte) | `_bestallning.zip`, `_mail.eml` |
+| `paket.py samla <pdf:er> <filer/mapp> --namn <uppdrag> --skript <x.py>` | filerna till chatten: alla blad i en PDF, resten i en zip med LASMIG | `<uppdrag> ritningar.pdf`, `<uppdrag> underlag.zip` |
 | `rorelse.py <modell> [--oppen v --ut fil]` | krock genom öppningen, tyngdpunkt, gångjärnslast | rad i loggen, öppen kopia |
 | `hallfasthet.py balk/fem` | balköverslag / FEM med CalculiX | rad i loggen, `_fem.FCStd` |
 | `kallor.py profil/material/motsvarighet` | profilmått, fy/fu, motsvarande kvaliteter | utskrift |
