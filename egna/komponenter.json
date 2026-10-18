@@ -1,0 +1,39 @@
+{
+ "gj-blum-70t3550": {
+  "typ": "gångjärn",
+  "benamning": "GÅNGJÄRN CLIP TOP 110° UTAN FJÄDER (TIP-ON)",
+  "tillverkare": "Blum",
+  "artikel": "70T3550",
+  "matt": {
+   "cylinder": [
+    35.0,
+    13.0
+   ]
+  },
+  "vikt_kg": 0.0,
+  "last": "",
+  "kalla": "https://www.richardhoimprovement.com/products/blum-clip-top-standard-hinge-110-unsprung-full-overlay-screw-on-70t3550-use-with-tip-on-for-doors",
+  "land": "SE",
+  "hamtad": "2026-10-18",
+  "anteckning": "skål Ø35 djup 13, hålbild 45/9,5, borravstånd 3-7, armhöjd 21,5; arm och montageplatta ej i utrymmesmodellen; vikt ej angiven i källan"
+ },
+ "skena-accuride-3832tr-350": {
+  "typ": "lådskena",
+  "benamning": "TELESKOPSKENA PUSH-OPEN 350",
+  "tillverkare": "Accuride",
+  "artikel": "DZ3832-0035TR",
+  "matt": {
+   "lada": [
+    350.0,
+    12.7,
+    45.7
+   ]
+  },
+  "vikt_kg": 0.49,
+  "last": "43 kg/par",
+  "kalla": "https://hs-europe.accuride.com/hubfs/Datasheets/3832TR_de.pdf",
+  "land": "SE",
+  "hamtad": "2026-10-18",
+  "anteckning": "SL 350, TR 356, 100 % utdrag, touch release 22 N, M4-skruv max skallhöjd 2,5, 0,98 kg/par"
+ }
+}
