@@ -27,6 +27,7 @@ apt_installera() {   # paket...
 PREFIX="${FREECAD_PREFIX:-$OPT/freecad}"
 FREECAD_VERSION="1.1.3"
 SHEETMETAL_TAG="V0.7.24-beta"
+SHEETMETAL_URL="${SHEETMETAL_URL:-https://github.com/richalund/Steelworks-shopdrawings/releases/download/verktyg/FreeCAD_SheetMetal-$SHEETMETAL_TAG.tar.gz}"
 MAMBA_DIR="${MAMBA_DIR:-$OPT/micromamba}"
 export MAMBA_ROOT_PREFIX="$MAMBA_DIR/root"
 
@@ -39,7 +40,12 @@ else
   if [ ! -x "$MAMBA_DIR/bin/micromamba" ]; then
     steg "Hämtar micromamba"
     mkdir -p "$MAMBA_DIR"
-    curl -sSfL https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xj -C "$MAMBA_DIR" bin/micromamba
+    mkdir -p "$MAMBA_DIR/bin"
+    # GitHub-releasen först (ingår i Claude Codes standardnät "Trusted"), micro.mamba.pm som reserv
+    curl -sSfL --retry 3 -o "$MAMBA_DIR/bin/micromamba" \
+         https://github.com/mamba-org/micromamba-releases/releases/latest/download/micromamba-linux-64 \
+      && chmod +x "$MAMBA_DIR/bin/micromamba" && "$MAMBA_DIR/bin/micromamba" --version >/dev/null 2>&1 \
+      || curl -sSfL https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xj -C "$MAMBA_DIR" bin/micromamba
   fi
   steg "Installerar FreeCAD $FREECAD_VERSION i $PREFIX (tar några minuter)"
   "$MAMBA_DIR/bin/micromamba" create -y -q -p "$PREFIX" -c conda-forge \
@@ -67,12 +73,20 @@ if grep -q "<version>0.7.24<" "$SM/package.xml" 2>/dev/null; then
 else
   steg "Installerar SheetMetal $SHEETMETAL_TAG"
   rm -rf "$SM.tmp" && mkdir -p "$SM.tmp"
-  lista=$(curl -sSf "https://data.jsdelivr.com/v1/package/gh/shaise/FreeCAD_SheetMetal@$SHEETMETAL_TAG/flat")
-  echo "$lista" | python3 -c 'import json,sys; [print(f["name"]) for f in json.load(sys.stdin)["files"]]' \
-    | grep -vE '^/(\.github|SMTests)/|\.pdf$' | while read -r f; do
-      mkdir -p "$SM.tmp$(dirname "$f")"
-      curl -sSf --retry 3 "https://cdn.jsdelivr.net/gh/shaise/FreeCAD_SheetMetal@$SHEETMETAL_TAG$f" -o "$SM.tmp$f"
-    done
+  # 1) oförändrad kopia av taggens källkod som release-fil i det här repot (GitHub-releaser ingår i standardnätet
+  #    "Trusted"; källarkiv från andra repon släpps inte alltid igenom), 2) jsDelivr-spegeln av repot
+  if curl -sSfL --retry 3 "$SHEETMETAL_URL" -o "$SM.tmp.tar.gz" \
+     && tar -xzf "$SM.tmp.tar.gz" -C "$SM.tmp" --strip-components=1 --exclude='*/SMTests' --exclude='*/.github' --exclude='*.pdf'; then
+    rm -f "$SM.tmp.tar.gz"
+  else
+    rm -rf "$SM.tmp" "$SM.tmp.tar.gz" && mkdir -p "$SM.tmp"
+    lista=$(curl -sSf "https://data.jsdelivr.com/v1/package/gh/shaise/FreeCAD_SheetMetal@$SHEETMETAL_TAG/flat")
+    echo "$lista" | python3 -c 'import json,sys; [print(f["name"]) for f in json.load(sys.stdin)["files"]]' \
+      | grep -vE '^/(\.github|SMTests)/|\.pdf$' | while read -r f; do
+        mkdir -p "$SM.tmp$(dirname "$f")"
+        curl -sSf --retry 3 "https://cdn.jsdelivr.net/gh/shaise/FreeCAD_SheetMetal@$SHEETMETAL_TAG$f" -o "$SM.tmp$f"
+      done
+  fi
   grep -q "<version>0.7.24<" "$SM.tmp/package.xml" || { echo "SheetMetal-nedladdningen är ofullständig" >&2; exit 1; }
   rm -rf "$SM" && mv "$SM.tmp" "$SM"
 fi

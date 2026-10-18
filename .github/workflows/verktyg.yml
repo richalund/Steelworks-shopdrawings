@@ -1,0 +1,35 @@
+name: Verktyg till installationen
+
+# Lägger en oförändrad kopia av SheetMetal-tilläggets källkod (taggen i installera_linux.sh, LGPL-2.1, licensen
+# ingår i arkivet) som fil på releasen "verktyg". Installationen hämtar den därifrån: GitHub-releaser ingår i
+# Claude Codes standardnät "Trusted", det gör inte jsDelivr. Körs när filen ändras på main eller för hand.
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/verktyg.yml"
+      - ".claude/skills/freecad-styrning/scripts/installera_linux.sh"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sheetmetal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Hämta SheetMetal-taggen
+        run: |
+          TAG=$(grep -oP '^SHEETMETAL_TAG="\K[^"]+' .claude/skills/freecad-styrning/scripts/installera_linux.sh)
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          curl -sSfL "https://codeload.github.com/shaise/FreeCAD_SheetMetal/tar.gz/refs/tags/$TAG" -o "FreeCAD_SheetMetal-$TAG.tar.gz"
+          tar -tzf "FreeCAD_SheetMetal-$TAG.tar.gz" | grep -q "package.xml"
+          ls -l "FreeCAD_SheetMetal-$TAG.tar.gz"
+      - name: Lägg den på releasen verktyg
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view verktyg >/dev/null 2>&1 || gh release create verktyg --title "Verktyg till installationen" \
+            --notes "Oförändrade kopior av det installera_linux.sh hämtar, för nät där bara GitHub är tillåtet (Claude Codes standardnät Trusted). SheetMetal: https://github.com/shaise/FreeCAD_SheetMetal (LGPL-2.1)."
+          gh release upload verktyg "FreeCAD_SheetMetal-$TAG.tar.gz" --clobber

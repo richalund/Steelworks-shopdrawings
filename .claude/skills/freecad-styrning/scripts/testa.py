@@ -8,7 +8,8 @@ sammanstallning.py ritning) och kontrolleras: skisserna fullt bestämda, inga fe
 regelkontrollen utan FEL, PDF och PNG skapade. Sammanställningarna får dessutom 3D-bild (rendera.py),
 mängdunderlag (mangder.py) och DXF (dxf.py); exempel med k.rorelse rörelsekontroll (rorelse.py); grinden även
 export (export.py), beställningspaket och leveransmail (paket.py skapa/kontrollera/skicka); trappräcket balkkontroll och konsolen FEM
-(hallfasthet.py); balkongramens PDF läses av underlag.py. --snabb hoppar över allt utom bygget.
+(hallfasthet.py), noteringarna på eget blad och projektets noteringsritning (sammanstallning.py noteringar);
+balkongramens PDF läses av underlag.py. --snabb hoppar över allt utom bygget.
 
 Bildjämförelse: ritningens PNG (för enstaka delar blad 1) jämförs med `tester/referens/<exempel>.png` (gråskala, 1000 px bred). Skiljer sig
 mer än 0,5 % av pixlarna står det ÄNDRAD x % i tabellen och `<exempel>_diff.png` (ändringarna i rött) läggs i
@@ -61,6 +62,12 @@ def fall(ut):
                      [s("paket.py"), "skicka", f(namn + "_bestallning.zip"), "--avsandare", "Test"]]
         if namn == "trappracke":
             rita.append([s("hallfasthet.py"), "balk", m, "--pos", "hl/1", "--q", "0.5", "--spann", "860", "--riktning", "sida"])
+            # noteringarna på eget blad (kopia, så att bladet som jämförs med referensen är det vanliga) och
+            # projektets gemensamma noteringsritning
+            rita += [[s("sammanstallning.py"), "ritning", m, "--uppdrag", "TEST", "--utan-kallor", "--noter-blad",
+                      "--noter-ref", "N-01", "--ut", f("noterblad")],
+                     [s("sammanstallning.py"), "noteringar", os.path.join(SKILL, "mallar", "noter_projekt.py"),
+                      f("N-01.FCStd"), "--nummer", "N-01", "--uppdrag", "TEST"]]
         if namn == "balkongram":
             rita.append([s("underlag.py"), "las", f("balkongram.pdf"), "--ut", f("underlag")])
         ut_.append((namn, [[s("sammanstallning.py"), "bygg", skript, m]], rita))

@@ -20,10 +20,11 @@ skärm), kör samma fil som jobb inne i FreeCAD, skriver ut jobbets logg löpand
   miljöns installationssteg (se repots `AGENTS.md`). Utan root och sudo installeras det i `~/.local/opt`.
   Vänta på att FreeCAD finns (`/opt/freecad/bin/freecad` eller `~/.local/opt/freecad/bin/freecad`) innan första
   ritningen, eller kör skriptet själv. Starta skripten med system-`python3`, inte FreeCADs Python.
-- Nätet: installationen hämtar från micro.mamba.pm, github.com och objects.githubusercontent.com (micromamba),
-  conda.anaconda.org, cdn.jsdelivr.net, data.jsdelivr.com, pypi.org, files.pythonhosted.org och Ubuntus
-  paketarkiv (apt); källorna (kallor.py) från raw.githubusercontent.com och eurocodeapplied.com. Är nätet
-  begränsat i agentens miljö ska de domänerna vara tillåtna. Komponenter söks på leverantörers webbplatser
+- Nätet: installationen hämtar från GitHub-releaser (micromamba, och SheetMetal från repots release
+  "verktyg"), conda.anaconda.org, pypi.org, files.pythonhosted.org och Ubuntus paketarkiv – allt ingår i Claude
+  Codes standardnät "Trusted". Reserver: micro.mamba.pm och cdn.jsdelivr.net/data.jsdelivr.com. Källorna
+  (kallor.py) hämtas från raw.githubusercontent.com (Trusted) och eurocodeapplied.com (inte i Trusted: lägg till
+  domänen för att materialkvaliteterna ska stå som verifierade). Komponenter söks på leverantörers webbplatser
   (webbsök).
 - Frågor till användaren: använd agentens frågeformulär om det finns (i Claude Code AskUserQuestion), annars en
   kort fråga i chatten med numrerade alternativ.
@@ -186,6 +187,16 @@ python3 scripts/sammanstallning.py ritning ut/B1.FCStd --uppdrag 2026-001 --obje
   ett snitt eller en vy (`--vyer fram,plan,vanster`).
 - Noterna skrivs som de står (versaler, men `pl/3` och `a4` med gemener). Bultar, svetssymboler och mer än en
   revisionsrad ritas inte – skriv dem i noterna.
+- **Noteringarna grupperas** under rubriker i två spalter (`scripts/noter.py`): STATUS (överst, utan rubrik),
+  UNDERLAG OCH ANTAGANDEN, UTFÖRANDE, MONTAGE OCH INFÄSTNING, SVETS, YTBEHANDLING, MATERIAL OCH KÄLLOR, INKÖPTA
+  KOMPONENTER, KONTROLL. Rubriken väljs ur notens början (`"SVETS: ..."`, `"YTBEHANDLING: ..."`, `"UNDERLAG: ..."`)
+  eller nyckelord (ANTAGNA, NEDGJUTNA, FÖRZINKAD ...); allt annat blir UTFÖRANDE. Ange rubriken själv med prefixet
+  eller med `RITNING["noter"] = {"SVETS": [...], "MONTAGE": [...]}`. Ryms noterna inte på blad 1 (eller med
+  `--noter-blad`/`RITNING["noter_blad"] = True`) får de ett eget blad NOTERINGAR.
+- **Projekt med många ritningar:** lägg de gemensamma noterna på en noteringsritning,
+  `python3 scripts/sammanstallning.py noteringar egna/<uppdrag>_noter.py ut/N-01.FCStd --nummer N-01 --uppdrag ...`
+  (filen har `NOTER = {...}` eller är en .json), och rita varje sammanställning med `--noter-ref N-01`
+  (statusraden GEMENSAMMA NOTERINGAR SE RITNING N-01) och bara sina egna noter.
 - **Språk**: `--sprak en|zh` (eller `RITNING["sprak"]`) ger materiallistans, titelblockets och detaljbladets fasta
   texter på engelska eller kinesiska (`scripts/sprak.py`). Noterna skrivs på ritningens språk av den som skriver
   skriptet; källnoterna och racke.noter är svenska (använd `--utan-kallor` och egna noter vid behov).
@@ -343,9 +354,10 @@ ritningsnummer, material, ytbehandling, beslag och antagna mått.
 - Kommandon: `partdesign.py`, `datastall.py`, `ritning.py` (A3), `sammanstallning.py` (A2), `oversikt.py`,
   `rendera.py`, `export.py`, `dxf.py`, `mangder.py`, `regler.py`, `paket.py`, `rorelse.py`, `hallfasthet.py`,
   `underlag.py`, `granska.py`, `foretag.py`, `komponenter.py`, `kallor.py`, `testa.py`.
-- Moduler: `racke.py` (räcken), `ornament.py`, `sprak.py`, `plat.py` (utbredning, DXF), `dfm.py`.
+- Moduler: `racke.py` (räcken), `ornament.py`, `sprak.py`, `noter.py` (noteringarnas rubriker och spalter),
+  `plat.py` (utbredning, DXF), `dfm.py`.
 - `delar/`, `konstruktioner/` exempel; `mallar/A3.svg`, `mallar/A2.svg` (titelblock med stomnät, etapp och
-  revisionsrad), `mallar/verkstad.json`, `mallar/leverans.json`; `tester/referens/` referensbilder; `VERSION`.
+  revisionsrad), `mallar/verkstad.json`, `mallar/leverans.json`, `mallar/noter_projekt.py`; `tester/referens/` referensbilder; `VERSION`.
 - `references/verktyg.md` verktygens API, `references/smidesritningar.md` ritningskonventionerna,
   `references/partdesign.md` Part Design-API:t, `references/fallor.md` kända fällor i FreeCAD 1.0.1 och 1.1.3.
 
