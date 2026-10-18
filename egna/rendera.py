@@ -1,10 +1,10 @@
 """3D-bilder av en FCStd från flera håll (översikter, modeller): python3 egna/rendera.py <fil.FCStd> [--ut mapp]
-Bilder: <fil>_3d_gard.png (snett från gården, nedifrån trappan), _3d_trappa.png (snett från gården mot plattan, trappräcket närmast),
-_3d_fram.png (rakt från gården), _3d_plan.png (uppifrån). Kör FreeCAD med GUI via skillens fcapi."""
+Bilder: <fil>_3d_innergard.png (snett från innergården), _3d_tradgard.png (snett från trädgårdssidan),
+_3d_fram.png (rakt framifrån), _3d_plan.png (uppifrån, fasaden överst). Kör FreeCAD med GUI via skillens fcapi."""
 import os, sys, argparse
 
 SKILL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".claude", "skills", "freecad-styrning", "scripts")
-VYER = [("gard", (0.55, 0.70, -0.45)), ("trappa", (-0.60, 0.65, -0.35)), ("fram", (0.0, 1.0, -0.15)), ("plan", (0.0, 0.0, -1.0))]
+VYER = [("innergard", (-0.40, -0.82, -0.42)), ("tradgard", (0.65, -0.65, -0.38)), ("fram", (0.0, -1.0, -0.12)), ("plan", (0.0, 0.0, -1.0))]
 
 if __name__ == "__fcjobb__":
     sys.path.insert(0, SKILL)
@@ -35,7 +35,7 @@ if __name__ == "__fcjobb__":
         for namn, d in VYER:
             # kameran tittar längs -z_kam med y_kam uppåt: bygg rotationen ur blickriktningen och lodlinjen
             f = App.Vector(*d).normalize()
-            upp = App.Vector(0, 1, 0) if abs(f.z) > 0.99 else App.Vector(0, 0, 1)
+            upp = App.Vector(0, -1, 0) if abs(f.z) > 0.99 else App.Vector(0, 0, 1)
             hoger = f.cross(upp).normalize()
             upp2 = hoger.cross(f).normalize()
             zk = f.negative()
