@@ -180,7 +180,7 @@ bockat plattstål som stadionformad skiss, ovalernas delning med `kedjor`).
 python3 scripts/sammanstallning.py bygg konstruktioner/balkongram.py ut/B1.FCStd [--var Langd=2400] --png --step
 python3 scripts/sammanstallning.py ritning ut/B1.FCStd --uppdrag 2026-001 --objekt "KV EXEMPEL 1" "Byggbolaget AB" "Exempelgatan 1"
        [--bet A --rev "A|Bultad anslutning|2026-10-07|AB"] [--stomnat A-B/2] [--antal 1] [--not "PRELIMINÄR ..." ...]
-       [--snitt A:x=300:-] [--vyer fram,plan] [--skala 10] [--hal 22] [--svets 3.0] [--sprak sv|en|zh] [--bubblor nara|rad]
+       [--snitt A:x=300:-] [--vyer fram,plan] [--skala 10] [--hal 22] [--svets 3.0|ingen] [--sprak sv|en|zh] [--bubblor nara|rad]
 ```
 - `bygg` skriver materiallistan, vikt, låda, "Skisser N, fullt bestämda: alla", krockar och regelkontrollen.
   Krockar ska vara "inga" och regelkontrollen utan FEL.
@@ -188,6 +188,10 @@ python3 scripts/sammanstallning.py ritning ut/B1.FCStd --uppdrag 2026-001 --obje
   måttkedjor, positionsbubblor intill delen, hålangivelser `4*Ø14 - M12x44`, materiallista med ALLMÄNNA
   NOTERINGAR, noterna och titelblocket. `RITNING["detaljer"]`/`["delvyer"]` ger detaljblad (blad 2). Ger
   `<modell>.pdf`, `<modell>.png` (och `_detaljer.png`) och `_materiallista.csv`.
+- **Små delar och beslag** (skjutregel, gångjärn, konsol under ca 150 mm): `--skala 0.5` ger 2:1 och
+  `--skala-snitt 0.25` snitten i 4:1 (skalorna under 1:1 väljs inte automatiskt). `--svets ingen` (och `--hal
+  ingen`) utelämnar raden i ALLMÄNNA NOTERINGAR för delar utan svets; skriv hur delarna hålls ihop (nit, flikar,
+  skruv) i noterna. Vikt och area under 0.05 visas med två värdesiffror (0.024, under 0.001 som <0.001) i stället för 0.0.
 - Snitt `A:x=300:-` = planet x = 300, blicken mot -x. Lägg snittet genom en hålrad för att få hålens lägen.
   Ett vågrätt snitt (`C:z=645:-`, blicken nedåt) visar inredning och beslag i plan. Snitten läggs uppifrån och ner
   till höger om huvudvyerna och fortsätter i en ny kolumn när nästa snitt inte ryms ovanför noterna och

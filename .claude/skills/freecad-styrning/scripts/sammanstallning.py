@@ -82,8 +82,8 @@ def args(argv=None):
                     help="ritningens språk för fasta texter (materiallista, titelblock); standard RITNING['sprak'] eller sv")
     ap.add_argument("--bubblor", choices=["nara", "rad"], default=None,
                     help="positionsbubblor intill delen med kort pil (nara, standard) eller på en rad under vyn (rad)")
-    ap.add_argument("--hal", default="22", help="standardhål i ALLMÄNNA NOTERINGAR (mm)")
-    ap.add_argument("--svets", default="3.0", help="standardsvets a-mått i ALLMÄNNA NOTERINGAR (mm)")
+    ap.add_argument("--hal", default="22", help="standardhål i ALLMÄNNA NOTERINGAR (mm); 'ingen' utelämnar raden")
+    ap.add_argument("--svets", default="3.0", help="standardsvets a-mått i ALLMÄNNA NOTERINGAR (mm); 'ingen' utelämnar raden (beslag, skruvade delar)")
     ap.add_argument("--utan-kallor", dest="utan_kallor", action="store_true",
                     help="inga noter om var profilmåtten och materialkvaliteterna är verifierade (kallor.py)")
     ap.add_argument("--ut", default=None)
@@ -103,6 +103,20 @@ def tolka_snitt(s):
 def fmt(x, dec=1):
     s = ("%." + str(dec) + "f") % x
     return s.rstrip("0").rstrip(".") if "." in s else s
+
+
+def litet(x, dec=1, minst=0.001):
+    """Tal i materiallistan med `dec` decimaler, men små tal (beslag, små plåtar) med två värdesiffror i stället
+    för 0.0: 0.024 -> 0.024, 0.0031 -> 0.0031, och under `minst` "<0.001" (ryms i kolumnen; minst=0 i CSV:n).
+    Tal som avrundas till minst en enhet i sista decimalen är oförändrade."""
+    if 0 < abs(x) < 0.5 * 10 ** -dec:
+        return "<%g" % minst if abs(x) < minst else "%.2g" % x
+    return ("%." + str(dec) + "f") % x
+
+
+def utan_rad(v):
+    """--hal/--svets ingen (eller tomt, -): raden i ALLMÄNNA NOTERINGAR utelämnas, t.ex. för beslag utan svets."""
+    return str(v).strip().lower() in ("", "-", "ingen", "inga", "none", "no")
 
 
 def skaltext(n):
@@ -146,9 +160,12 @@ def materiallista_svg(rader, marke, antal, hal, svets, T=None):
         e.append(s_lin(0, 21 + 5 * i, W, 21 + 5 * i, 0.08))
     def ryms(t, w, h=3.33):                       # textstorlek så att t ryms på w mm (kinesiska tecken ~1 em breda)
         return min(h, w / max(1e-6, sum(1.0 if ord(c) > 0x2E80 else 0.56 for c in t)))
-    t_hal, t_svets = T("ALLA HÅL ÄR %s mm OM EJ ANNAT ANGES", hal), T("ALLA SVETSAR ÄR %s mm OM EJ ANNAT ANGES", svets)
-    e += [s_txt(4.2, 7.4, T("ALLMÄNNA NOTERINGAR:"), 4.67),
-          s_txt(62, 4.9, t_hal, min(ryms(t_hal, 66), ryms(t_svets, 66))), s_txt(62, 9.0, t_svets, min(ryms(t_hal, 66), ryms(t_svets, 66))),
+    allm = [T(mall, v) for v, mall in ((hal, "ALLA HÅL ÄR %s mm OM EJ ANNAT ANGES"), (svets, "ALLA SVETSAR ÄR %s mm OM EJ ANNAT ANGES"))
+            if not utan_rad(v)]
+    h_allm = min([ryms(t, 66) for t in allm] or [3.33])
+    e += [s_txt(4.2, 7.4, T("ALLMÄNNA NOTERINGAR:"), 4.67)]
+    e += [s_txt(62, y_, t, h_allm) for y_, t in zip((4.9, 9.0) if len(allm) > 1 else (6.95,), allm)]
+    e += [
           s_txt(2.2, 15.0, T("MATERIALLISTA FÖR ETT GODS MÄRKT:")), s_txt(62.1, 15.0, marke),
           s_txt(127, 15.0, T("%s st. TILLVERKAS", antal), anchor="end")]
     for x, t in ((2, "STYCKLIT."), (23, "PROFIL"), (51, "MATERIAL"), (73, "ANT."), (85, "LÄNGD"), (101.3, "AREA/st"), (118, "VIKT/st")):
@@ -158,11 +175,11 @@ def materiallista_svg(rader, marke, antal, hal, svets, T=None):
         y = 25.0 + 5 * i
         e += [s_txt(2, y, r["pos"]), s_txt(23, y, r["profil"]), s_txt(53.2, y, r["material"]),
               s_txt(79, y, str(r["antal"]), anchor="end"), s_txt(93.8, y, fmt(r["langd"], 0), anchor="end"),
-              s_txt(109.8, y, "%.1f" % r["area"], anchor="end"), s_txt(126.2, y, "%.1f" % r["vikt"], anchor="end")]
+              s_txt(109.8, y, litet(r["area"]), anchor="end"), s_txt(126.2, y, litet(r["vikt"]), anchor="end")]
         ta += r["antal"] * r["area"]
         tv += r["antal"] * r["vikt"]
     y = H - 1.0
-    e += [s_txt(96, y, T("TOTALT"), anchor="end"), s_txt(109.8, y, "%.1f" % ta, anchor="end"), s_txt(126.1, y, "%.1f" % tv, anchor="end")]
+    e += [s_txt(96, y, T("TOTALT"), anchor="end"), s_txt(109.8, y, litet(ta), anchor="end"), s_txt(126.1, y, litet(tv), anchor="end")]
     return svg(W, H, e), W, H, ta, tv
 
 
@@ -1426,8 +1443,8 @@ def _jobb():
             f.write(";".join(T(x) for x in ("STYCKLIT.", "PROFIL", "MATERIAL", "ANT.", "LÄNGD", "AREA/st", "VIKT/st")) + "\n")
             for r in rader:
                 f.write("%s;%s;%s;%d;%s;%s;%s\n" % (r["pos"], r["profil"], r["material"], r["antal"], fmt(r["langd"]),
-                                                  ("%.2f" % r["area"]).replace(".", ","), ("%.1f" % r["vikt"]).replace(".", ",")))
-            f.write(";;;;%s;%s;%s\n" % (T("TOTALT"), ("%.1f" % ta).replace(".", ","), ("%.1f" % tv).replace(".", ",")))
+                                                  litet(r["area"], 2, 0).replace(".", ","), litet(r["vikt"], 1, 0).replace(".", ",")))
+            f.write(";;;;%s;%s;%s\n" % (T("TOTALT"), litet(ta, 1, 0).replace(".", ","), litet(tv, 1, 0).replace(".", ",")))
             for s_ in kallrader:
                 f.write("%s;%s\n" % (T("KÄLLA"), s_))
         doc.saveAs(bas + ".FCStd")
