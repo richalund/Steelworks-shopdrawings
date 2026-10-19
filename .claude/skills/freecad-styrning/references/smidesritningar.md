@@ -42,7 +42,9 @@ Rubrik `MATERIALLISTA FÖR ETT GODS MÄRKT: B/1` och `1 st. TILLVERKAS`. Kolumne
 `TOTALT` med area (m²) och vikt (kg). Profilnamn som i svenska profilkataloger: `VKR70*5`, `VKR100*6.3`,
 `UPE140`, `IPE100`, `PL10*150` (tjocklek*bredd), `RHS20*20*2`, `D80`.
 Ovanför listan **ALLMÄNNA NOTERINGAR**: `ALLA HÅL ÄR 22 mm OM EJ ANNAT ANGES` och
-`ALLA SVETSAR ÄR 3.0 mm OM EJ ANNAT ANGES` (a-mått 2, 3 eller 4 mm beroende på godstjocklek).
+`ALLA SVETSAR ÄR 3.0 mm OM EJ ANNAT ANGES` (a-mått 2, 3 eller 4 mm beroende på godstjocklek). Delar utan svets
+(beslag, skruvade eller nitade delar) ritas utan svetsraden (`--svets ingen`). Små delar får vikt och area med två
+värdesiffror (`0.024`) i stället för `0.0`.
 
 ## Material och infästning som återkommer
 - Stål: S355J2 (balkar, plåt), S355J2H (VKR), S235JR (räcken), S355N. Aluminium 6060-T6 för räcken/grindar.
