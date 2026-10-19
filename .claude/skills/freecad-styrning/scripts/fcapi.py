@@ -116,6 +116,24 @@ def logg(*a):
     print(*a, flush=True)
 
 
+def mm_enheter(doc=None):
+    """Längder i mm oavsett storlek: enhetsschemat "MmMin" för sessionen och för dokumentet. Med standardschemat
+    skriver FreeCAD längder från 10 m i meter, och TechDraw-mått med "%.1w" blir då "10.5" i stället för 10530.
+    Dokumentets egenskap UnitSystem går före användarinställningen när dokumentet är aktivt, så den sätts också
+    (och sparas med filen)."""
+    import FreeCAD as App
+    namn = [str(s) for s in App.Units.listSchemas()]
+    i = next((n for n, s in enumerate(namn) if "MmMin" in s or "mm/min" in s), 6)
+    App.ParamGet("User parameter:BaseApp/Preferences/Units").SetInt("UserSchema", i)
+    App.Units.setSchema(i)
+    if doc is not None and "UnitSystem" in doc.PropertiesList:
+        try:
+            doc.UnitSystem = i
+        except Exception as e:
+            logg("OBS: enhetsschemat kunde inte sättas på dokumentet (%s)" % e)
+    return doc
+
+
 def har_gui():
     try:
         import FreeCADGui

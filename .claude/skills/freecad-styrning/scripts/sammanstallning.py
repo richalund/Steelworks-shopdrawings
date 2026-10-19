@@ -240,7 +240,7 @@ def _jobb():
         if okanda:
             raise RuntimeError("Okända variabler %s. Skriptet har: %s" % (sorted(okanda), ", ".join(v)))
         v.update(nya)
-        doc = App.newDocument("".join(c for c in namn if c.isalnum()) or "Konstruktion")
+        doc = fcapi.mm_enheter(App.newDocument("".join(c for c in namn if c.isalnum()) or "Konstruktion"))
         beskr = {k_: b_ for k_, _, b_ in mod.get("VARIABLER", [])}
         k = stal.Konstruktion(doc, marke, namn, logg=logg, variabler=[(k_, fmt(x, 4), beskr.get(k_, "")) for k_, x in v.items()])
         mod["bygg"](k, v)
@@ -842,7 +842,7 @@ def _jobb():
         utmapp = os.path.abspath(a["ut"]) if a.get("ut") else os.path.dirname(fil)
         os.makedirs(utmapp, exist_ok=True)
         bas = os.path.join(utmapp, os.path.splitext(os.path.basename(fil))[0])
-        doc = App.openDocument(fil)
+        doc = fcapi.mm_enheter(App.openDocument(fil))
         logg("Rensade gamla ritningsobjekt:", rensa(doc))
         g, ds, hg = stal.delar(doc)
         cfg = json.loads(g.Ritning or "{}")
@@ -1458,7 +1458,7 @@ def _jobb():
         ut = os.path.abspath(a["ut_fil"])
         os.makedirs(os.path.dirname(ut), exist_ok=True)
         bas = os.path.splitext(ut)[0]
-        doc = App.newDocument("Noteringar")
+        doc = fcapi.mm_enheter(App.newDocument("Noteringar"))
         page = doc.addObject("TechDraw::DrawPage", "Noteringsblad")
         tpl = doc.addObject("TechDraw::DrawSVGTemplate", "Mall")
         tpl.Template = sprak.mallfil(foretag.mall_med_logga(MALL, a.get("logga"), os.path.dirname(ut)), lang, os.path.dirname(ut))

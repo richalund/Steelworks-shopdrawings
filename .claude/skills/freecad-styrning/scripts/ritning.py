@@ -875,7 +875,7 @@ def _jobb():
         utmapp = os.path.abspath(a["ut"]) if a.get("ut") else os.path.dirname(fil)
         os.makedirs(utmapp, exist_ok=True)
         bas = os.path.join(utmapp, os.path.splitext(os.path.basename(fil))[0])
-        doc = App.openDocument(fil)
+        doc = fcapi.mm_enheter(App.openDocument(fil))
         logg("Rensade gamla ritningsobjekt:", rensa(doc))
         if a.get("logga"):
             mall[0] = foretag.mall_med_logga(mall[0], a["logga"], utmapp)

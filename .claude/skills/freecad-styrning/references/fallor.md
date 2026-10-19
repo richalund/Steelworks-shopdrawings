@@ -63,6 +63,11 @@ FreeCAD 1.0.1 (rev 39285, Python 3.11 i FreeCAD), SheetMetal-tillägget 0.7.24, 
   egna streck (5 mm/2,5 mm på papperet), formaterade tunna och grå. De måste ligga strax OVANFÖR plåtens
   ovansida, annars döljs de i HLR.
 - Radiemått med egen `FormatSpec` tappar R-prefixet: använd `"R%.1w"`. `%.1w` tar bort onödiga nollor.
+- `%w` följer enhetsschemat. Med standardschemat ("Standard (mm, kg, s, °)") skrivs längder från 10 m i
+  meter utan enhet: totalmåttet 10530 blev "10.5" (uppmätt 1.1.3, 2026-10-19). Dokumentets egenskap `UnitSystem`
+  går före användarinställningen och sparas med filen, så en modell byggd med standardschemat fick fel mått även
+  när inställningen ändrats. `fcapi.mm_enheter(doc)` sätter "MmMin" (mm även över 10 m) för sessionen och
+  dokumentet; jobben anropar den när ett dokument skapas eller öppnas för ritning.
 - `DrawViewAnnotation`: `X`/`Y` är textblockets MITT. TextSize 3,5 ritas med 4,8 mm teckenhöjd (×1,371);
   `LineSpace` 100 ger radavstånd 1,69 × TextSize. Noter läggs som ett flerradigt block (raderna
   vänsterjusteras mot varandra) och blockets vänsterkant räknas med Qt-fontmått × 1,371 (±1–2 mm).

@@ -66,7 +66,7 @@ def _jobb(a):
     for k in ("NormalColor", "HiddenColor", "SectionColor", "CenterColor", "VertexColor"):
         pg.SetUnsigned(k, 0x000000FF)
 
-    doc = App.openDocument(a["fil"])
+    doc = fcapi.mm_enheter(App.openDocument(a["fil"]))
     # ta bort bladet från en tidigare körning: vyer först, sedan blad och mall (annars kraschar FreeCAD)
     gamla = [o for o in doc.Objects if o.Name.startswith(pref)]
     ordning = {"TechDraw::DrawViewPart": 1, "TechDraw::DrawPage": 2, "TechDraw::DrawSVGTemplate": 3}
