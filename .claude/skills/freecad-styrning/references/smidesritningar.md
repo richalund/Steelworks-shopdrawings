@@ -40,7 +40,9 @@ V vägg-/vangfäste, L trapplopp, K konsol, T, F, E. Formen är `<prefix><löpnr
 Rubrik `MATERIALLISTA FÖR ETT GODS MÄRKT: B/1` och `1 st. TILLVERKAS`. Kolumner:
 `STYCKLIT. | PROFIL | MATERIAL | ANT. | LÄNGD | AREA/st | VIKT/st`, sorterad efter vikt (tyngst först), sista raden
 `TOTALT` med area (m²) och vikt (kg). Profilnamn som i svenska profilkataloger: `VKR70*5`, `VKR100*6.3`,
-`UPE140`, `IPE100`, `PL10*150` (tjocklek*bredd), `RHS20*20*2`, `D80`.
+`UPE140`, `IPE100`, `PL10*150` (tjocklek*bredd), `RHS20*20*2`, `D80`. Raderna är 5 mm; fler positioner än som
+ryms mellan revisionstabellen och ETAPP-rutan ger tätare rader och mindre text (inte under 3 mm rader), och en
+profiltext som är för lång för kolumnen skrivs mindre.
 Ovanför listan **ALLMÄNNA NOTERINGAR**: `ALLA HÅL ÄR 22 mm OM EJ ANNAT ANGES` och
 `ALLA SVETSAR ÄR 3.0 mm OM EJ ANNAT ANGES` (a-mått 2, 3 eller 4 mm beroende på godstjocklek).
 

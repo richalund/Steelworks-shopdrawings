@@ -289,6 +289,10 @@ allt i globala koordinater: kroppens placering är noll, skissernas lägen och P
 - **Snitten på sammanställningsritningen** staplades i en kolumn som bara slutade ovanför materiallistan och kunde
   hamna över noterna nere till vänster. Snitten läggs nu i kolumner (sammanstallning.py `packa`): en ny kolumn till
   höger när nästa snitt inte ryms ovanför noterna eller materiallistan där kolumnen står.
+- **Materiallistan på A2** hade alltid 5 mm rader och gick vid fler än ca 59 positioner upp genom ETAPP-rutan och
+  ramen. Raderna blir nu tätare när listan annars inte ryms (sammanstallning.py `ml_radhojd`, minst `RAD_MIN` = 3
+  mm). Hålangivelserna och bubblorna i raden under en vy spreds över hela bladets bredd (x 44–570) och kunde hamna
+  ovanpå materiallistan, titelrutan eller noterna; raden kortas nu förbi dem (`radgrans`).
 - `importSVG` vänder redan SVG:ns y-axel uppåt: vänd den inte en gång till.
 - `Part.makeWireString(text, typsnitt, storlek, spärrning)` ger textens konturer utan Draft-objekt; osifont följer med
   FreeCAD (`Mod/TechDraw/Resources/fonts`).

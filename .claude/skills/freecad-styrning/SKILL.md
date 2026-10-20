@@ -187,7 +187,10 @@ python3 scripts/sammanstallning.py ritning ut/B1.FCStd --uppdrag 2026-001 --obje
 - `ritning` lägger bladet i modellens FCStd: framvy och planvy (E-metoden), snitten med egen skala, isometri,
   måttkedjor, positionsbubblor intill delen, hålangivelser `4*Ø14 - M12x44`, materiallista med ALLMÄNNA
   NOTERINGAR, noterna och titelblocket. `RITNING["detaljer"]`/`["delvyer"]` ger detaljblad (blad 2). Ger
-  `<modell>.pdf`, `<modell>.png` (och `_detaljer.png`) och `_materiallista.csv`.
+  `<modell>.pdf`, `<modell>.png` (och `_detaljer.png`) och `_materiallista.csv`. Materiallistan har 5 mm rader upp
+  till ca 59 positioner och tätare rader (ner till 3 mm, ca 98 positioner) när den annars inte ryms; ryms den inte
+  ens då säger `OBS: materiallistan ryms inte`: dela upp ritningen (t.ex. en variabel som väljer vilka delar som
+  byggs, och ett skript per ritning) eller slå ihop positioner.
 - Snitt `A:x=300:-` = planet x = 300, blicken mot -x. Lägg snittet genom en hålrad för att få hålens lägen.
   Ett vågrätt snitt (`C:z=645:-`, blicken nedåt) visar inredning och beslag i plan. Snitten läggs uppifrån och ner
   till höger om huvudvyerna och fortsätter i en ny kolumn när nästa snitt inte ryms ovanför noterna och

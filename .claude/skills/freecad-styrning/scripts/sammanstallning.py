@@ -128,22 +128,35 @@ def s_txt(x, y, s, h=3.33, anchor="start", font=FONT):
     return '<text x="%g" y="%g" font-family="%s" font-size="%g" fill="#000"%s>%s</text>' % (x, y, font, h, a, esc(s))
 
 
-def materiallista_svg(rader, marke, antal, hal, svets, T=None):
+RAD_MIN = 3.0                     # materiallistans minsta radhöjd (mm) när listan annars blir för hög för bladet
+
+
+def ml_radhojd(n, hmax=None):
+    """Materiallistans radhöjd: 5 mm, eller tätare (ner till RAD_MIN) när n rader annars gör listan högre än hmax."""
+    if hmax is None or n == 0 or 26.0 + 5.0 * n <= hmax:
+        return 5.0
+    return max(RAD_MIN, (hmax - 26.0) / n)
+
+
+def materiallista_svg(rader, marke, antal, hal, svets, T=None, hmax=None):
     """Materiallista + ALLMÄNNA NOTERINGAR, mått uppmätta ur en svensk tillverkningsritning (130 mm bred, rader
-    5 mm). T = sprak.oversattare(språk) för texterna. Returnerar (svg, bredd, höjd)."""
+    5 mm). Med hmax (mm) blir raderna tätare, ner till RAD_MIN, och texten mindre när listan annars är högre.
+    T = sprak.oversattare(språk) för texterna. Returnerar (svg, bredd, höjd)."""
     if T is None:
         import sprak
         T = sprak.oversattare("sv")
     n = len(rader)
-    W, H = 130.0, 26.0 + 5.0 * n
+    rh = ml_radhojd(n, hmax)
+    th = min(3.33, rh * 0.68)                    # radtextens höjd: 3.33 mm vid 5 mm rader
+    W, H = 130.0, 26.0 + rh * n
     e = [s_lin(0, 0, W, 0), s_lin(0, 11, W, 11, 0.3), s_lin(0, 16, W, 16, 0.3), s_lin(0, 21, W, 21, 0.2),
-         s_lin(0, 21 + 5 * n, W, 21 + 5 * n, 0.3), s_lin(0, H, W, H), s_lin(0, 0, 0, H), s_lin(W, 0, W, H)]
+         s_lin(0, 21 + rh * n, W, 21 + rh * n, 0.3), s_lin(0, H, W, H), s_lin(0, 0, 0, H), s_lin(W, 0, W, H)]
     for x in (21, 49, 70, 82):
-        e.append(s_lin(x, 16, x, 21 + 5 * n, 0.3))
+        e.append(s_lin(x, 16, x, 21 + rh * n, 0.3))
     for x in (98, 114):
         e.append(s_lin(x, 16, x, H, 0.3))
     for i in range(1, n):
-        e.append(s_lin(0, 21 + 5 * i, W, 21 + 5 * i, 0.08))
+        e.append(s_lin(0, 21 + rh * i, W, 21 + rh * i, 0.08))
     def ryms(t, w, h=3.33):                       # textstorlek så att t ryms på w mm (kinesiska tecken ~1 em breda)
         return min(h, w / max(1e-6, sum(1.0 if ord(c) > 0x2E80 else 0.56 for c in t)))
     t_hal, t_svets = T("ALLA HÅL ÄR %s mm OM EJ ANNAT ANGES", hal), T("ALLA SVETSAR ÄR %s mm OM EJ ANNAT ANGES", svets)
@@ -155,10 +168,10 @@ def materiallista_svg(rader, marke, antal, hal, svets, T=None):
         e.append(s_txt(x, 20.0, T(t)))
     ta = tv = 0.0
     for i, r in enumerate(rader):
-        y = 25.0 + 5 * i
-        e += [s_txt(2, y, r["pos"]), s_txt(23, y, r["profil"]), s_txt(53.2, y, r["material"]),
-              s_txt(79, y, str(r["antal"]), anchor="end"), s_txt(93.8, y, fmt(r["langd"], 0), anchor="end"),
-              s_txt(109.8, y, "%.1f" % r["area"], anchor="end"), s_txt(126.2, y, "%.1f" % r["vikt"], anchor="end")]
+        y = 21.0 + rh * i + rh * 0.8
+        e += [s_txt(2, y, r["pos"], th), s_txt(23, y, r["profil"], ryms(r["profil"], 26.5, th)), s_txt(53.2, y, r["material"], th),
+              s_txt(79, y, str(r["antal"]), th, anchor="end"), s_txt(93.8, y, fmt(r["langd"], 0), th, anchor="end"),
+              s_txt(109.8, y, "%.1f" % r["area"], th, anchor="end"), s_txt(126.2, y, "%.1f" % r["vikt"], th, anchor="end")]
         ta += r["antal"] * r["area"]
         tv += r["antal"] * r["vikt"]
     y = H - 1.0
@@ -1067,14 +1080,20 @@ def _jobb():
         huvud_v = [vd for vd in vdef if vd["snitt"] is None]
         snitt_v = [vd for vd in vdef if vd["snitt"]]
         # noterna nere till vänster (underkant y = 26) och materiallistan bestämmer hur långt ner vyerna får gå
-        ml, mw, mh, ta, tv = materiallista_svg(rader, marke, a["antal"], a["hal"], a["svets"], T)
         Y0, X0 = 392.0, 50.0
+        ML_X, ML_Y = 574.0 - 130.0, 68.0                # materiallistan: högerkant mot titelrutan, ovanför revisionstabellen
+        ml, mw, mh, ta, tv = materiallista_svg(rader, marke, a["antal"], a["hal"], a["svets"], T, hmax=Y0 - ML_Y)
+        rh = ml_radhojd(len(rader), Y0 - ML_Y)
+        if 26.0 + rh * len(rader) > Y0 - ML_Y:
+            logg("OBS: materiallistan ryms inte på bladet (%d positioner, högst %d): dela upp ritningen, t.ex. med en "
+                 "variabel som väljer vilka delar som byggs, eller slå ihop positioner" % (len(rader), int((Y0 - ML_Y - 26.0) / RAD_MIN)))
+        elif rh < 5.0:
+            logg("Materiallistan: %d positioner, radhöjd %.1f mm (5 mm ryms inte på bladet)" % (len(rader), rh))
 
         def kolumn(lst, n):
             hojd = sum(vd["topp"] + vd["h"] / n + vd["botten"] for vd in lst) + 4 * (len(lst) - 1)
             bredd = max(vd["vanster"] for vd in lst) + max(vd["w"] for vd in lst) / n
             return bredd, hojd
-        ML_X, ML_Y = 574.0 - mw, 68.0                   # materiallistan: högerkant mot titelrutan, ovanför revisionstabellen
         def y_min(bredd, nh=None):
             y1 = max(26.0 + (nh_ if nh is None else nh) + 6, 60.0)
             return max(y1, ML_Y + mh + 6) if X0 + bredd > ML_X - 4 else y1
@@ -1268,6 +1287,19 @@ def _jobb():
             hinder.append((X0, 26.0, X0 + nw, 26.0 + nh_))
         if iso:
             hinder.append((iso.v.X.Value - wi / ni / 2, iso.v.Y.Value - hi / ni / 2 - 14, iso.v.X.Value + wi / ni / 2, iso.v.Y.Value + hi / ni / 2))
+        fasta = list(hinder)
+
+        def radgrans(yr, xmin=44.0, xmax=570.0):
+            """x-intervallet för en rad hålangivelser eller bubblor på höjden yr: förbi materiallistan, titelrutan,
+            noterna och isometrin när raden går genom dem (de till höger kortar raden, de till vänster flyttar dess början)."""
+            x0_, x1_ = xmin, xmax
+            for q in fasta:
+                if q[1] - 4.0 < yr < q[3] + 4.0:
+                    if (q[0] + q[2]) / 2 > 297.0:
+                        x1_ = min(x1_, q[0] - 3.0)
+                    else:
+                        x0_ = max(x0_, q[2] + 3.0)
+            return (x0_, x1_) if x1_ - x0_ >= 80.0 else (xmin, xmax)
         for vd in vdef:
             vy = vd["vy"]
             X, Y, w_, h_ = vy.v.X.Value, vy.v.Y.Value, vd["w"] * vy.s, vd["h"] * vy.s
@@ -1329,7 +1361,7 @@ def _jobb():
             for rad, yr, forskj in ((uppe, ytop, 8.0), (nere, ybub, 0.0)):
                 if not rad:
                     continue
-                xs = sprid([(ank[0] + forskj, b) for _, ank, b, _, _ in rad], 44, 570, 3.0)
+                xs = sprid([(ank[0] + forskj, b) for _, ank, b, _, _ in rad], *radgrans(yr), luft=3.0)
                 for (txt, ank, b, form, r), xb in zip(rad, xs):
                     dx, dy = xb - ank[0], yr - ank[1]
                     L = math.hypot(dx, dy) or 1.0
@@ -1370,7 +1402,7 @@ def _jobb():
             vd = lst[0][0]
             vy = vd["vy"]
             ybub = vy.v.Y.Value - vd["h"] * vy.s / 2 - 8.5 - vd["extra"]
-            xs = sprid([(ank[0], w) for _, _, ank, w in lst], 44, 570, 3.0)
+            xs = sprid([(ank[0], w) for _, _, ank, w in lst], *radgrans(ybub), luft=3.0)
             for (_, txt, ank, w), xb in zip(lst, xs):
                 vy.ballong(txt, ank, (xb, ybub))
                 nb += 1
