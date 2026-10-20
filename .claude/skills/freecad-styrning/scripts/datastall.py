@@ -192,7 +192,7 @@ def _jobb():
 
     def bygg(a):
         p = {v: (a.get(v.lower()) if a.get(v.lower()) is not None else DEFAULT[v]) for v in VARS}
-        doc = App.newDocument("Datastall")
+        doc = fcapi.mm_enheter(App.newDocument("Datastall"))
         sh = doc.addObject("Spreadsheet::Sheet", "Variabler")
         sh.set("A1", "Variabel"); sh.set("B1", "Värde"); sh.set("C1", "Beskrivning")
         for i, v in enumerate(VARS, start=2):

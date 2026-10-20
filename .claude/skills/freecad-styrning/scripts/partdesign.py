@@ -75,7 +75,7 @@ def _jobb():
         okanda = set(nya) - set(kanda)
         if okanda:
             raise RuntimeError("Okända variabler %s. Delskriptet har: %s" % (sorted(okanda), ", ".join(kanda)))
-        doc = App.newDocument("".join(c for c in namn if c.isalnum()) or "Del")
+        doc = fcapi.mm_enheter(App.newDocument("".join(c for c in namn if c.isalnum()) or "Del"))
         sh = doc.addObject("Spreadsheet::Sheet", "Variabler")
         sh.set("A1", "Variabel"); sh.set("B1", "Värde"); sh.set("C1", "Beskrivning")
         for i, (v, std, beskr) in enumerate(mod["VARIABLER"], start=2):
