@@ -21,3 +21,7 @@ egna/konstruktioner/*
 egna/delar/*
 egna/ritningar/*
 !egna/*/.gitkeep
+# uppdragets gemensamma moduler (egna/<uppdrag>.py med stomnät, mått och kunduppgifter) och genererade data i egna/
+egna/*.py
+egna/*.csv
+egna/*.xlsx

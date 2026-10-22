@@ -48,6 +48,7 @@ def _platta(s):
 
 
 def mangder(doc, logg=print):
+    import fcapi
     import Part
     import stal
     g = doc.getObject("Sammanstallning")
@@ -111,7 +112,7 @@ def mangder(doc, logg=print):
         kap = 0 if plat else (2 if info is not None and info["typ"] != "PL" or profil.upper().startswith(("FL", "FS", "PL")) else 0)
         kap = max(kap - min(geringar, 2), 0)
         yta = s.Area / 1e6
-        per_del.append(dict(namn=o.Label, pos=getattr(o, "Pos", ""), profil=profil, material=mat, vikt=vikt, yta_m2=yta,
+        per_del.append(dict(namn=fcapi.etikett(o), pos=getattr(o, "Pos", ""), profil=profil, material=mat, vikt=vikt, yta_m2=yta,
                             langd=stal.langd(o) if o.TypeId == "PartDesign::Body" else 0.0, kap=kap, geringar=geringar,
                             hal=hal, laser_m=laser, instick=instick, bockningar=bock))
         vikt_mat[mat] = vikt_mat.get(mat, 0.0) + vikt

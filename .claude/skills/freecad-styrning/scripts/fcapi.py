@@ -195,10 +195,26 @@ def avsluta(ok=True, **data):
     os._exit(0 if ok else 1)
 
 
+def dubbla_etiketter():
+    """Tillåt samma etikett (Label) på flera objekt. Annars räknar FreeCAD upp dubbletter: den andra delen
+    "pl/1 PL10*255" blir "pl/1 PL10*256" och "st/1 KCKR273*12.5" blir "...*12.001", vilket syns i regelkontrollen,
+    mängdunderlaget och glTF-exportens nodnamn. Gäller bara jobbets session (inställningarna sparas inte)."""
+    import FreeCAD as App
+    App.ParamGet("User parameter:BaseApp/Preferences/Document").SetBool("DuplicateLabels", True)
+
+
+def etikett(o):
+    """Delens namn i loggar och listor: "pos profil" ur egenskaperna (oberoende av uppräknade etiketter i äldre
+    filer), annars etiketten."""
+    pos, prof = getattr(o, "Pos", ""), getattr(o, "Profil", "")
+    return ("%s %s" % (pos, prof)).strip() if (pos or prof) else o.Label
+
+
 def kor_jobb(funktion):
     """Kör `funktion(args)` inne i FreeCAD med felhantering; funktionen returnerar en dict med resultat."""
     import traceback
     j = jobb()
+    dubbla_etiketter()
     vakt = start_vakt()
     t0 = time.time()
     try:

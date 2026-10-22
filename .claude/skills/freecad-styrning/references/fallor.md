@@ -258,6 +258,28 @@ allt i globala koordinater: kroppens placering är noll, skissernas lägen och P
 - Lambdas i en loop binder variabeln sent: spara talen i en dict eller som standardargument
   (`lambda x, z0=z0: ...`), annars får alla detaljer sista värdet.
 
+## Stålstomme med svetsade balkar och många sammanställningar (takbjälklag, 2026-10-19)
+- **Dubbla etiketter räknas upp.** FreeCAD tillåter som standard inte samma `Label` på två objekt: den andra
+  delen "pl/1 PL10*255" blev "pl/1 PL10*256" och stubbarna "st/1 KCKR273*12.001", "*12.002". Det syntes som
+  påhittade profiler i regelkontrollen, i mängdunderlagets namn och i glTF-exportens nodnamn. Jobben slår på
+  `DuplicateLabels` (`fcapi.dubbla_etiketter()` i `kor_jobb`), och loggar och listor tar namnet ur egenskaperna
+  Pos och Profil (`fcapi.etikett(o)`), så även äldre filer med uppräknade etiketter blir rätt.
+- **L-profil som kantvinkel** (liggande ben under bjälklaget, stående ben mot väggen): med `upp=(0, 0, 1)` pekar
+  det liggande benet åt `upp x w`, där w är riktningen start -> slut. Ska benet peka åt andra hållet: byt start och
+  slut. Tvärsnittets låda ligger centrerad på linjen, så hälen hamnar b/2 från linjen.
+- **Hål i ett stående ben** (ankare genom en vinkel mot väggen, riktning vinkelrätt mot balken) syns inte som
+  cirklar i fram- eller planvyn och får ingen hålangivelse: lägg till en sidovy, `vyer=["fram", "plan", "vanster"]`.
+- **Långa remsor i svetsade balkar** (flänsar och liv på 10–17 m) gav FEL mot plåtformatet 1500 x 3000.
+  `remsa_langd_mm` i verkstad.json prövar remsor (bredd inom plåtformatets kortsida) mot remslängden i stället,
+  och längre remsor ger VARNING om stumsvetsad skarv.
+- **Uppdragets gemensamma modul** (`egna/<uppdrag>.py` med stomnät, nivåer och kunduppgifter, som både
+  sammanställningarna och översikten importerar) var inte ignorerad av git och syntes som en ny fil att committa.
+  `.gitignore` ignorerar nu `egna/*.py`; kontrollera ändå `git status` innan något committas.
+- Sammanställningar som delar geometri med en översikt: lägg byggfunktionerna (balk, pelare) i uppdragsmodulen
+  med en avbildning lokal -> global (`axel="x"|"-x"|"y"|"-y"`, origo) och låt både sammanställningsskriptet
+  (lokalt) och översikten (globalt) anropa dem. Ge delarna ett prefix per märke i översikten (`pfx="sb11"`), så
+  att samma positionsnummer i olika märken inte krockar.
+
 ## Underlag från kunden
 - Bilagor i Gmail-trådar går inte alltid att hämta som bilaga via connectorn: hämta meddelandet i RAW-format,
   spara JSON:en och packa upp den med Pythons `email`-modul till egna filer.
