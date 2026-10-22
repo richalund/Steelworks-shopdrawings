@@ -48,6 +48,11 @@ Ovanför listan **ALLMÄNNA NOTERINGAR**: `ALLA HÅL ÄR 22 mm OM EJ ANNAT ANGES
 
 ## Material och infästning som återkommer
 - Stål: S355J2 (balkar, plåt), S355J2H (VKR), S235JR (räcken), S355N. Aluminium 6060-T6 för räcken/grindar.
+- Svetsade lådbalkar i stommar: hattbalk HSQ (t.ex. `HSQ H270:B200x450` = höjd 270, bredd över liven 200,
+  underfläns 450) och kepsbalk FSQ (underflänsen i liv med ena livet, brätte på andra sidan). Bjälklaget (KL-trä,
+  håldäck) vilar på underflänsen. Konstruktören anger ofta bara yttermåtten: plåttjocklekarna frågas efter eller
+  antas och märks ANTAGET. I materiallistan står plåtarna var för sig (`b/1 PL15*450` underfläns, `pl/1 PL10*255`
+  liv, `pl/2` överfläns, `pl/3` ändplåtar, `pl/4` livplåtar över pelarna); `k.ladbalk` bygger dem.
 - Noterna avslutas med var profilmåtten (standard, databas, datum) och materialkvaliteten (fy/fu enligt
   EN 1993-1-1 tab. 3.1, källa, datum) är verifierade; raderna kommer från `scripts/kallor.py`.
   Trä C24, ek för handledare.

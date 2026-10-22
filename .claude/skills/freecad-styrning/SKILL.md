@@ -42,6 +42,9 @@ Användaren kan börja hur som helst; fråga bara efter det som avgör utförand
   upplösning per sida, plockar ut texten med läge och talen som ser ut som mått ur vektor-PDF:er, och lager,
   texter och måttvärden ur DXF. Läs översikten och sedan rutorna med Read, zooma med
   `underlag.py zoom <fil> --sida 2 --ruta 0.5,0.6,1,1` och skriv upp varje mått med var det står (sida, ruta).
+  Fotade ritningar ligger ofta på tvären: `--rotera 90` vänder utsnittet, `--forstora 2` förstorar fotot. Saknas
+  ett mått men ritningen är skalenlig: `underlag.py skala --ref x1,y1:x2,y2=4800 --punkt x,y` räknar om pixlar
+  till mm mot två kända stomlinjer; skalade mått skrivs som SKALAT/ANTAGET och de avgörande frågas efter.
   Sätt måtten i skriptets VARIABLER, gör tillverkningsritningen och notera underlaget: `UNDERLAG: ARK RITNING A-40-1-201
   REV C`. Mått som inte går att läsa säkert frågas efter. DWG läses inte: be om DXF eller PDF.
 
@@ -170,12 +173,13 @@ sammanställningsritning från ett smidesföretag. Läs `references/smidesritnin
 Modellen byggs med ett konstruktionsskript (API i `scripts/stal.py`, se `references/verktyg.md`): `NAMN`, `MARKE`
 (sammanställningsmärke, t.ex. `B/1`), `VARIABLER`, `RITNING` (vyer, snitt, noter, detaljer, språk), valfritt
 `REGLER`, och `bygg(k, v)` med bl.a. `k.balk`, `k.plat`, `k.hal`, `k.gera`, `k.skiva`, `k.egen`, `k.referens`,
-`k.bockad`, `k.trag`, `k.glas`, `k.inkop`, `k.rorelse` och `k.utseende`. Varje del blir en Part Design-kropp (eller
+`k.bockad`, `k.trag`, `k.ladbalk`, `k.glas`, `k.inkop`, `k.rorelse` och `k.utseende`. Varje del blir en Part Design-kropp (eller
 SheetMetal-del) med egenskaperna Pos/Profil/Material. Koordinater och längder får vara uttryck mot Variabler.
 Mönster: `konstruktioner/balkongram.py`, `pelare.py`, `soffbord.py`, `trappracke.py`, `grind.py`, `handdukstork.py`
 (rör med gerade knän, fiskmunskapade pinnar, väggfästen i snitt), `skap.py` (plåtskåp på en stomme av VKR),
-`solgaller.py` (plattstänger i strålmönster med bockade fötter och skruvhål) och `racke_ovaler.py` (ornament av
-bockat plattstål som stadionformad skiss, ovalernas delning med `kedjor`).
+`solgaller.py` (plattstänger i strålmönster med bockade fötter och skruvhål), `racke_ovaler.py` (ornament av
+bockat plattstål som stadionformad skiss, ovalernas delning med `kedjor`) och `hattbalk.py` (svetsad hattbalk HSQ
+och kepsbalk FSQ med `k.ladbalk`: flänsar, liv, ändplåtar, livplåtar över pelarna och bulthål vid stöden).
 ```
 python3 scripts/sammanstallning.py bygg konstruktioner/balkongram.py ut/B1.FCStd [--var Langd=2400] --png --step
 python3 scripts/sammanstallning.py ritning ut/B1.FCStd --uppdrag 2026-001 --objekt "KV EXEMPEL 1" "Byggbolaget AB" "Exempelgatan 1"
@@ -296,6 +300,10 @@ glas, bultar) ritas med mått ur en leverantörs datablad, som söks upp på nä
   (`_mangder.csv`, `_mangder.json`). Det är underlag för tillverkarens kalkyl. Skillen sätter inga priser och
   användaren ska inte få några prisuppgifter ur den: prissättningen görs av tillverkaren när underlaget kommit in
   och konstruktionen verifierats.
+- **Projekt med många sammanställningar:** `python3 scripts/mangder.py samla ut/SB1.FCStd:8 ut/SP1.FCStd:32 ...
+  --namn "<projekt>"` ger `<projekt> kalkylunderlag.xlsx`: mängdspec per märke, kaplista för profiler (färdiga
+  längder, antal, löpmeter), plåtlista (tjocklek x bredd x längd) och vikt per material, med en rad om att
+  underlaget ska granskas. Det är underlaget till kalkylatorn tillsammans med frågorna till konstruktören.
 - `python3 scripts/paket.py skapa <modell.FCStd>` samlar ritningar, modell, DXF, STEP, mängdunderlag, skriptet och
   dess egna moduler med skillens version, variablerna, regelkontrollen och kontrollsummor i
   `<modell>_bestallning.zip`. Tillverkaren kör `paket.py kontrollera <zip>`: kontrollsummorna jämförs och modellen
@@ -342,10 +350,12 @@ skillen.
 - `python3 scripts/rendera.py <modell.FCStd> [--vyer iso,iso2,bak,fram,sida,plan] [--vy namn:dx,dy,dz]
   [--utseende "g/=patinerad,st/=svart"] [--utan-omgivning]`: `<modell>_3d_<vy>.png` med material och ytor (mässing,
   patinerad, verdigris, svart, förzinkad, rostfritt, corten, glas …; `k.utseende({...})` i skriptet).
-- `python3 scripts/export.py <modell.FCStd> --format glb,ifc,step,stl`: glTF för webbläsare och mobil, IFC4 för
-  arkitekter (positionsnummer, profil och material som egenskaper), STEP, STL.
+- `python3 scripts/export.py <modell.FCStd> --format glb,html,ifc,step,stl`: glTF för webbläsare och mobil, en
+  fristående 3D-vy (`<modell>.html` med lager, klick på en del för position, profil och vikt, färdiga vyer) att
+  maila till en kund, IFC4 för arkitekter (positionsnummer, profil och material som egenskaper), STEP, STL.
 - `python3 scripts/oversikt.py <modell.FCStd> <ritskript.py> [--uppdrag ...] [--sprak en]`: A2-översikt (plan,
-  fasad, montage) med ritskript (`NUMMER`, `SKALA`, `OBJEKT`, `SPRAK`, `rita(r)`), se docstringen.
+  fasad, montage) med ritskript (`NUMMER`, `SKALA`, `OBJEKT`, `SPRAK`, `rita(r)`), se docstringen. Stomnätet ritas
+  med `plan.stomnat(x={"1": 0, "2": 7200}, y={"A": 0, "B": 4800})` (streckade linjer med namn i cirklar).
 
 ## Hållfasthet (överslag)
 `python3 scripts/hallfasthet.py balk <modell> --pos hl/1 --fall fritt|konsol|fast --q 0.5|--p 1.0 [--riktning sida]`
@@ -387,7 +397,7 @@ ritningsnummer, material, ytbehandling, beslag och antagna mått.
 - Kommandon: `partdesign.py`, `datastall.py`, `ritning.py` (A3), `sammanstallning.py` (A2), `oversikt.py`,
   `rendera.py`, `export.py`, `dxf.py`, `mangder.py`, `regler.py`, `paket.py`, `rorelse.py`, `hallfasthet.py`,
   `underlag.py`, `granska.py`, `foretag.py`, `komponenter.py`, `kallor.py`, `testa.py`.
-- Moduler: `racke.py` (räcken), `ornament.py`, `sprak.py`, `noter.py` (noteringarnas rubriker och spalter),
+- Moduler: `racke.py` (räcken), `webbvy.py` (3D-vy i webbläsaren), `ornament.py`, `sprak.py`, `noter.py` (noteringarnas rubriker och spalter),
   `plat.py` (utbredning, DXF), `dfm.py`.
 - `delar/`, `konstruktioner/` exempel; `mallar/A3.svg`, `mallar/A2.svg` (titelblock med stomnät, etapp och
   revisionsrad), `mallar/verkstad.json`, `mallar/leverans.json`, `mallar/noter_projekt.py`; `tester/referens/` referensbilder; `VERSION`.

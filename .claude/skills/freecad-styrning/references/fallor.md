@@ -285,6 +285,13 @@ allt i globala koordinater: kroppens placering är noll, skissernas lägen och P
   spara JSON:en och packa upp den med Pythons `email`-modul till egna filer.
 - Scannade PDF:er har ingen text: läs bilderna (underlag.py ger rutor i 300 dpi med höjd kontrast). En sida i
   hög upplösning som en enda bild skalas ner av bildvisningen och små mått blir oläsliga – läs rutorna eller zooma.
+- **Fotade ritningar ligger på tvären** (ett liggande A1-blad fotat i porträtt): texten läses nedifrån och upp.
+  `underlag.py zoom ... --rotera 90` vänder utsnittet; rutan anges i originalets läge. Kontrollera vridningen på
+  stomlinjernas siffror och bokstäver innan läget tolkas: fel håll speglar planen.
+- **Mått som bara står "ENL. PLAN"** finns på ett annat blad: be om det bladet (t.ex. stomplanen) innan något
+  skalas. Förklaringsrutan på stomplanen ger ofta profilerna (SP01 = VKR 200x200x8, SB01 = HSQ H270:B200x450).
+- **Skalade mått ur foton** blir ungefärliga (perspektiv, veck, ±2–5 %): mät mot två stomlinjer nära punkten
+  (`underlag.py skala`) och avrunda till rimliga värden; skriv SKALAT/ANTAGET.
 
 ## Installation (conda-forge, micromamba)
 - `micromamba install` av ett extra paket (calculix, ifcopenshell) utan att låsa FreeCAD kan byta FreeCAD 1.1.3 mot

@@ -16,8 +16,18 @@ del (Part Design, SheetMetal):
     kontaktyta). Uppskattning: verkligt svetsomfång bestäms av konstruktören.
   - inköpta detaljer (k.inkop) med antal
 Ger `<modell>_mangder.csv` (öppnas i Excel) och `<modell>_mangder.json` (till beställningspaketet, paket.py).
+
+Kalkylunderlag för ett projekt med många sammanställningar:
+
+  python3 mangder.py samla <modell.FCStd eller _mangder.json>[:antal] ... --namn <projekt> [--ut <mapp>]
+
+samlar mängderna (antalet ur `:antal`, annars ur json-filens antal) i `<projekt> kalkylunderlag.xlsx` med bladen
+Mängdspec (per märke: antal, vikt, yta, svets, hål, laser, kap, delar), Kaplista profiler (färdiga längder med
+antal och löpmeter, summa per profil), Plåtlista (tjocklek x bredd x längd, summa per tjocklek) och Per material.
+Saknas openpyxl blir det tre CSV-filer i stället. Saknas en modells _mangder.json körs mängdberäkningen först.
+Underlaget är maskinellt uttaget ur modellerna och ska granskas: bladen har en rad om det.
 """
-import os, sys, json, argparse
+import os, sys, re, json, argparse, collections
 
 SKILL = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -150,7 +160,8 @@ def mangder(doc, logg=print):
     tot["svets_m"] = svets / 1000.0
     tot["fogar"] = fogar
     tot["inkopta"] = len(inkop)
-    return dict(per_del=per_del, inkop=inkop, totalt=tot, vikt_per_material=vikt_mat, hal_per_diameter={str(k): v for k, v in sorted(halper.items())},
+    return dict(marke=getattr(g, "Marke", "") if g else "", benamning=getattr(g, "Namn", "") if g else "",
+                per_del=per_del, inkop=inkop, totalt=tot, vikt_per_material=vikt_mat, hal_per_diameter={str(k): v for k, v in sorted(halper.items())},
                 **{k: tot[k] for k in tot})
 
 
@@ -206,6 +217,120 @@ def _efterbehandla(m, a):
     return m
 
 
+# ---------------------------------------------------------------- samla (vanlig Python)
+GRANSKA = "Maskinellt uttaget ur modellerna. Granskas före kalkyl och beställning."
+
+
+def samla(filer, namn, ut=None, logg=print):
+    """Kalkylunderlag för flera sammanställningar: filer = ["SB1.FCStd:8", "SP1_mangder.json", ...]."""
+    mangder_ = []
+    for f in filer:
+        antal = None
+        m_ = re.match(r"^(.*?):(\d+)$", f)
+        if m_:
+            f, antal = m_.group(1), int(m_.group(2))
+        f = os.path.abspath(f)
+        js = f if f.endswith(".json") else os.path.splitext(f)[0] + "_mangder.json"
+        if not os.path.exists(js):
+            import fcapi
+            a = dict(fil=f, antal=antal or 1, ut=None)
+            _efterbehandla(fcapi.kor(os.path.abspath(__file__), a), a)
+        d = json.load(open(js, encoding="utf-8"))
+        marke = d.get("marke") or os.path.basename(js).replace("_mangder.json", "")
+        mangder_.append((marke, antal if antal is not None else int(d.get("antal") or 1), d))
+    rader, kap, plat, mat = [], collections.defaultdict(lambda: [0, 0.0, set()]), \
+        collections.defaultdict(lambda: [0, 0.0, set()]), collections.Counter()
+    for marke, n, d in mangder_:
+        t = d["totalt"]
+        rader.append([marke, d.get("benamning", ""), n, round(t["vikt"], 1), round(t["vikt"] * n, 1), round(t["yta_m2"] * n, 2),
+                      round(t["svets_m"] * n, 1), t["hal"] * n, round(t["laser_m"] * n, 2), t["kap"] * n, t["delar"] * n])
+        for k_, v in d["vikt_per_material"].items():
+            mat[k_] += v * n
+        for p in d["per_del"]:
+            ref = "%s %s" % (marke, p["pos"])
+            m2 = re.match(r"^PL([\d.]+)\*([\d.]+)$", p["profil"].upper())
+            if m2 and not p.get("bockningar"):
+                key = (float(m2.group(1)), float(m2.group(2)), round(p["langd"]), p["material"])
+                tab = plat
+            else:
+                key = (p["profil"], p["material"], round(p["langd"]))
+                tab = kap
+            tab[key][0] += n
+            tab[key][1] += p["vikt"] * n
+            tab[key][2].add(ref)
+    tot = [sum(r[i] for r in rader) for i in range(2, 11)]
+    rader.append(["TOTALT", "", tot[0], "", round(tot[2], 1), round(tot[3], 2), round(tot[4], 1), tot[5], round(tot[6], 2), tot[7], tot[8]])
+    rk = [[p, m, L, n, round(L * n / 1000, 2), round(v, 1), ", ".join(sorted(r))]
+          for (p, m, L), (n, v, r) in sorted(kap.items(), key=lambda x: (x[0][0], -x[0][2]))]
+    rp = [["PL%g*%g" % (t_, b), t_, b, L, m, n, round(v, 1), ", ".join(sorted(r))]
+          for (t_, b, L, m), (n, v, r) in sorted(plat.items(), key=lambda x: (x[0][0], x[0][1], -x[0][2]))]
+    perprof = collections.defaultdict(lambda: [0.0, 0.0])
+    for r in rk:
+        perprof[r[0]][0] += r[4]
+        perprof[r[0]][1] += r[5]
+    pertj = collections.defaultdict(lambda: [0.0, 0.0])
+    for r in rp:
+        pertj[r[1]][0] += r[2] * r[3] * r[5] / 1e6
+        pertj[r[1]][1] += r[6]
+    utmapp = os.path.abspath(ut or os.path.dirname(os.path.abspath(filer[0].split(":")[0])))
+    os.makedirs(utmapp, exist_ok=True)
+    blad = [
+        ("Mängdspec", ["Märke", "Benämning", "Antal", "Vikt/st kg", "Vikt tot kg", "Yta tot m²", "Svets ca m", "Hål st",
+                       "Laser m", "Kap st", "Delar st"], rader, []),
+        ("Kaplista profiler", ["Profil", "Material", "Längd mm", "Antal", "Löpmeter", "Vikt kg", "Märke / pos"], rk,
+         [["Summa per profil"]] + [[p, "", "", "", round(lm, 2), round(v, 1)] for p, (lm, v) in sorted(perprof.items())]),
+        ("Plåtlista", ["Plåt", "t mm", "b mm", "L mm", "Material", "Antal", "Vikt kg", "Märke / pos"], rp,
+         [["Summa per tjocklek", "t mm", "", "m²", "", "", "kg"]] +
+         [["", t_, "", round(a_, 2), "", "", round(v, 1)] for t_, (a_, v) in sorted(pertj.items())]),
+        ("Per material", ["Material", "Vikt kg"], [[k_, round(v, 1)] for k_, v in sorted(mat.items())], []),
+    ]
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill
+        from openpyxl.utils import get_column_letter
+    except ImportError:
+        Workbook = None
+    filer_ut = []
+    if Workbook:
+        wb = Workbook()
+        for i, (titel, kol, data, efter) in enumerate(blad):
+            ws = wb.active if i == 0 else wb.create_sheet()
+            ws.title = titel
+            ws.append(["%s – %s" % (titel.upper(), namn)])
+            ws["A1"].font = Font(bold=True, size=12)
+            ws.append([GRANSKA])
+            ws["A2"].font = Font(italic=True, color="AA0000")
+            ws.append([])
+            ws.append(kol)
+            for c in ws[4]:
+                c.font = Font(bold=True)
+                c.fill = PatternFill("solid", fgColor="DDDDDD")
+            for r in data:
+                ws.append(r)
+            if efter:
+                ws.append([])
+                for r in efter:
+                    ws.append(r)
+            for j, k_ in enumerate(kol, 1):
+                bredd = max([len(str(k_))] + [len(str(r[j - 1])) for r in data if len(r) >= j])
+                ws.column_dimensions[get_column_letter(j)].width = min(max(8, bredd + 2), 60)
+            ws.freeze_panes = "A5"
+        fil = os.path.join(utmapp, "%s kalkylunderlag.xlsx" % namn)
+        wb.save(fil)
+        filer_ut.append(fil)
+    else:
+        for titel, kol, data, efter in blad[:3]:
+            fil = os.path.join(utmapp, "%s %s.csv" % (namn, titel.lower()))
+            with open(fil, "w", encoding="utf-8-sig") as f:
+                f.write(GRANSKA + "\n" + ";".join(kol) + "\n")
+                for r in data + ([[]] + efter if efter else []):
+                    f.write(";".join(str(x).replace(".", ",") if isinstance(x, float) else str(x) for x in r) + "\n")
+            filer_ut.append(fil)
+    logg("Kalkylunderlag: %d märken, %d st, %.0f kg, %d kaprader, %d plåtrader -> %s" % (
+        len(mangder_), tot[0], tot[2], len(rk), len(rp), ", ".join(os.path.basename(f) for f in filer_ut)))
+    return filer_ut
+
+
 if __name__ == "__fcjobb__":
     import fcapi
     fcapi.kor_jobb(_jobb)
@@ -213,6 +338,14 @@ elif __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8", line_buffering=True)
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import fcapi
+    if len(sys.argv) > 1 and sys.argv[1] == "samla":
+        ap = argparse.ArgumentParser(description="Kalkylunderlag för flera sammanställningar")
+        ap.add_argument("filer", nargs="+", help="modell.FCStd eller _mangder.json, valfritt :antal")
+        ap.add_argument("--namn", required=True)
+        ap.add_argument("--ut", default=None)
+        a = ap.parse_args(sys.argv[2:])
+        samla(a.filer, a.namn, a.ut)
+        sys.exit(0)
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("fil")
     ap.add_argument("--antal", type=int, default=1)

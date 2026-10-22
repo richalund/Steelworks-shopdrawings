@@ -2,7 +2,8 @@
 bilder, DXF. Körs med system-Python (ingen FreeCAD).
 
   python3 underlag.py las <fil> [<fil> ...] [--ut ut/underlag] [--zoom-dpi 300] [--sidor 1-3]
-  python3 underlag.py zoom <fil> --ruta x0,y0,x1,y1 [--sida 1] [--dpi 400] [--ut ...]
+  python3 underlag.py zoom <fil> --ruta x0,y0,x1,y1 [--sida 1] [--dpi 400] [--rotera 90] [--forstora 2] [--ut ...]
+  python3 underlag.py skala [<bild>] --ref x1,y1:x2,y2=4800 [--punkt x,y ...] [--avstand x1,y1:x2,y2 ...]
 
 `las` gör för varje fil:
   - en översiktsbild per sida (`<namn>_s1.png`, långsidan högst ca 2000 px) och rutor i hög upplösning
@@ -14,7 +15,14 @@ bilder, DXF. Körs med system-Python (ingen FreeCAD).
     (`<namn>_dxf.txt`) och en bild av ritningen (`<namn>_dxf.png` med rutor);
   - en sammanställning `underlag.md` i utmappen med vad som finns och vilka bilder som ska läsas.
 `zoom` gör ett utsnitt i hög upplösning: rutan i bråkdelar av sidan (0,0 = övre vänstra hörnet), t.ex.
-`--ruta 0.55,0.70,1,1` för titelblocket nere till höger.
+`--ruta 0.55,0.70,1,1` för titelblocket nere till höger. Fotade ritningar ligger ofta på tvären: `--rotera 90`
+(eller 180, 270, moturs) vänder utsnittet efter klippningen (rutan anges i originalets läge) så att texten blir
+läsbar, och `--forstora 2` förstorar ett foto så att små siffror går att läsa.
+`skala` räknar om pixlar i en bild till mm när ett mått saknas men ritningen är skalenlig: `--ref` är två punkter
+med känt avstånd (t.ex. två stomlinjer, 4800 mm), `--punkt` ger en punkts läge längs referensen (mm från första
+referenspunkten) och vinkelrätt mot den, `--avstand` avståndet mellan två punkter. Koordinaterna läses i den bild
+som visas (översikt eller utsnitt). Skalade mått är ungefärliga (fotots perspektiv, papperets veck): skriv dem som
+SKALAT/ANTAGET på ritningen och fråga efter de mått som avgör utförandet.
 
 Läs bilderna med Read-verktyget (översikten först, sedan rutorna där måtten står) och skriv upp måtten med
 källa (sida, ruta). Mått som inte går att läsa säkert ska frågas efter, inte gissas. DWG läses inte: be om DXF
@@ -250,23 +258,70 @@ def zoom(a):
         b = ImageOps.exif_transpose(Image.open(a.filer[0])).convert("RGB")
         w, h = b.size
         bild = b.crop((int(x0 * w), int(y0 * h), int(x1 * w), int(y1 * h)))
-    fil = os.path.join(ut, "%s_s%d_zoom_%s.png" % (namn, a.sida, "-".join("%02d" % round(100 * q) for q in (x0, y0, x1, y1))))
+    if a.forstora and a.forstora != 1:
+        bild = bild.resize((int(bild.width * a.forstora), int(bild.height * a.forstora)), Image.LANCZOS)
+    if a.rotera % 360:
+        bild = bild.rotate(a.rotera % 360, expand=True)
+    fil = os.path.join(ut, "%s_s%d_zoom_%s%s.png" % (namn, a.sida, "-".join("%02d" % round(100 * q) for q in (x0, y0, x1, y1)),
+                                                   "_r%d" % (a.rotera % 360) if a.rotera % 360 else ""))
     bild.save(fil)
     print("Utsnitt: %s (%d x %d px)" % (fil, *bild.size))
 
 
+def _xy(t):
+    x, y = (float(q) for q in t.split(","))
+    return x, y
+
+
+def skala(a, logg=print):
+    """Pixlar -> mm ur två referenspunkter med känt avstånd. Returnerar dict(mm_per_px, punkter, avstand)."""
+    m = re.match(r"^\s*([\d.]+,[\d.]+)\s*:\s*([\d.]+,[\d.]+)\s*=\s*([\d.]+)\s*$", a.ref or "")
+    if not m:
+        raise SystemExit("--ref ska vara x1,y1:x2,y2=mm, t.ex. 120,340:520,340=4800")
+    p1, p2, mm = _xy(m.group(1)), _xy(m.group(2)), float(m.group(3))
+    dx, dy = p2[0] - p1[0], p2[1] - p1[1]
+    px = math.hypot(dx, dy)
+    if px == 0:
+        raise SystemExit("--ref: punkterna sammanfaller")
+    k = mm / px
+    ux, uy = dx / px, dy / px
+    logg("Skala: %.2f mm/px (referens %.1f px = %g mm)" % (k, px, mm))
+    res = dict(mm_per_px=k, punkter=[], avstand=[])
+    for t in a.punkt or ():
+        x, y = _xy(t)
+        langs = ((x - p1[0]) * ux + (y - p1[1]) * uy) * k
+        tvars = ((x - p1[0]) * -uy + (y - p1[1]) * ux) * k
+        res["punkter"].append((t, round(langs), round(tvars)))
+        logg("  punkt %-12s längs referensen %7.0f mm, vinkelrätt %7.0f mm" % (t, langs, tvars))
+    for t in a.avstand or ():
+        q1, q2 = (_xy(u) for u in t.split(":"))
+        d = math.hypot(q2[0] - q1[0], q2[1] - q1[1]) * k
+        res["avstand"].append((t, round(d)))
+        logg("  avstånd %-20s %7.0f mm" % (t, d))
+    return res
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("lage", choices=["las", "zoom"])
-    ap.add_argument("filer", nargs="+")
+    ap.add_argument("lage", choices=["las", "zoom", "skala"])
+    ap.add_argument("filer", nargs="*")
     ap.add_argument("--ut", default=os.path.join(os.getcwd(), "ut", "underlag"))
     ap.add_argument("--dpi", type=int, default=400, help="zoom: upplösning")
     ap.add_argument("--zoom-dpi", dest="zoom_dpi", type=int, default=300, help="upplösning för rutorna (scannade ritningar: 300-400)")
     ap.add_argument("--sidor", default="", help="t.ex. 1-3,5 (standard alla)")
     ap.add_argument("--sida", type=int, default=1, help="zoom: sidan")
     ap.add_argument("--ruta", default="0,0,1,1", help="zoom: x0,y0,x1,y1 i bråkdelar av sidan")
+    ap.add_argument("--rotera", type=int, default=0, help="zoom: vrid utsnittet 90/180/270 grader moturs")
+    ap.add_argument("--forstora", type=float, default=1.0, help="zoom: förstoring av fotot (t.ex. 2)")
+    ap.add_argument("--ref", default=None, help="skala: x1,y1:x2,y2=mm, två punkter med känt avstånd")
+    ap.add_argument("--punkt", action="append", help="skala: x,y (flera)")
+    ap.add_argument("--avstand", action="append", help="skala: x1,y1:x2,y2 (flera)")
     a = ap.parse_args(argv)
-    if a.lage == "las":
+    if a.lage == "skala":
+        skala(a)
+    elif not a.filer:
+        ap.error("ange minst en fil")
+    elif a.lage == "las":
         las(a)
     else:
         zoom(a)

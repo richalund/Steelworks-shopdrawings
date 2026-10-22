@@ -104,12 +104,13 @@ if ! ldconfig -p 2>/dev/null | grep -q "libxcb-cursor.so"; then
   apt_installera libgl1 libegl1 libxkbcommon-x11-0 libxcb-cursor0 libfontconfig1 libdbus-1-3 || true
 fi
 
-# 4. System-Python: PyMuPDF (PDF-blad, PNG), ezdxf (DXF) och Pillow (bilder, underlag.py, testa.py)
-if python3 -c "import pymupdf, ezdxf, PIL" >/dev/null 2>&1; then
-  steg "PyMuPDF, ezdxf och Pillow finns redan"
+# 4. System-Python: PyMuPDF (PDF-blad, PNG), ezdxf (DXF), Pillow (bilder, underlag.py, testa.py) och openpyxl
+#    (kalkylunderlag i Excel, mangder.py samla)
+if python3 -c "import pymupdf, ezdxf, PIL, openpyxl" >/dev/null 2>&1; then
+  steg "PyMuPDF, ezdxf, Pillow och openpyxl finns redan"
 else
-  steg "Installerar PyMuPDF, ezdxf och Pillow"
-  python3 -m pip install -q pymupdf ezdxf pillow 2>/dev/null || python3 -m pip install -q --break-system-packages pymupdf ezdxf pillow
+  steg "Installerar PyMuPDF, ezdxf, Pillow och openpyxl"
+  python3 -m pip install -q pymupdf ezdxf pillow openpyxl 2>/dev/null || python3 -m pip install -q --break-system-packages pymupdf ezdxf pillow openpyxl
 fi
 
 # 5. ifcopenshell (IFC-export) i en egen mapp: conda-paketet kräver en annan OCCT än FreeCAD 1.1.3, pip-hjulet

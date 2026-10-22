@@ -9,7 +9,8 @@ regelkontrollen utan FEL, PDF och PNG skapade. Sammanställningarna får dessuto
 mängdunderlag (mangder.py) och DXF (dxf.py); exempel med k.rorelse rörelsekontroll (rorelse.py); grinden även
 export (export.py), beställningspaket, leveransmail och filerna till chatten (paket.py skapa/kontrollera/skicka/samla); trappräcket balkkontroll och konsolen FEM
 (hallfasthet.py), noteringarna på eget blad och projektets noteringsritning (sammanstallning.py noteringar);
-balkongramens PDF läses av underlag.py. --snabb hoppar över allt utom bygget.
+balkongramens PDF läses av underlag.py (las, zoom med vridning, skala); hattbalken exporteras som 3D-vy (html)
+och samlas till kalkylunderlag (mangder.py samla). --snabb hoppar över allt utom bygget.
 
 Bildjämförelse: ritningens PNG (för enstaka delar blad 1) jämförs med `tester/referens/<exempel>.png` (gråskala, 1000 px bred). Skiljer sig
 mer än 0,5 % av pixlarna står det ÄNDRAD x % i tabellen och `<exempel>_diff.png` (ändringarna i rött) läggs i
@@ -71,7 +72,13 @@ def fall(ut):
                      [s("sammanstallning.py"), "noteringar", os.path.join(SKILL, "mallar", "noter_projekt.py"),
                       f("N-01.FCStd"), "--nummer", "N-01", "--uppdrag", "TEST"]]
         if namn == "balkongram":
-            rita.append([s("underlag.py"), "las", f("balkongram.pdf"), "--ut", f("underlag")])
+            rita += [[s("underlag.py"), "las", f("balkongram.pdf"), "--ut", f("underlag")],
+                     [s("underlag.py"), "zoom", f("balkongram.pdf"), "--ruta", "0.5,0.5,1,1", "--rotera", "90", "--ut", f("underlag")],
+                     [s("underlag.py"), "skala", "--ref", "100,100:500,100=4800", "--punkt", "300,150",
+                      "--avstand", "100,100:100,400"]]
+        if namn == "hattbalk":
+            rita += [[s("export.py"), m, "--format", "html"],
+                     [s("mangder.py"), "samla", f("hattbalk_mangder.json") + ":2", "--namn", "hattbalk", "--ut", f("samlat")]]
         ut_.append((namn, [[s("sammanstallning.py"), "bygg", skript, m]], rita))
     return ut_
 
