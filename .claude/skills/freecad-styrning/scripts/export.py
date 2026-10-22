@@ -1,16 +1,18 @@
 """Export av modellen till andra program: glTF (webbläsare, mobil, WeChat), IFC (arkitekter, BIM), STEP, STL.
 
-  python3 export.py <modell.FCStd> [--format glb,ifc,step,stl] [--utan-omgivning] [--ut <mapp>]
+  python3 export.py <modell.FCStd> [--format glb,html,ifc,step,stl] [--utan-omgivning] [--ut <mapp>]
 
 - glb (glTF binär): en fil som öppnas direkt i webbläsaren (t.ex. gltf-viewer.donmccurdy.com, Windows 3D Viewer,
   macOS Förhandsvisning) och går att skicka till en kund, med delarnas färger och utseende (k.utseende).
+- html: en fristående 3D-vy i webbläsaren (webbvy.py, three.js) med glb-filen inbäddad: lager per delgrupp, klick
+  på en del för positionsnummer, profil, material, längd och vikt, färdiga vyer. Kan mailas till en kund.
 - ifc (IFC4): varje del som ett byggelement (IfcMember/IfcPlate/IfcBuildingElementProxy) med positionsnummer,
   profil och material som egenskaper, för arkitektens samordningsmodell. Kräver ifcopenshell
   (installera_linux.sh installerar det i /opt/freecad-extra).
 - step: hela sammanställningen som en STEP-fil (AP214) med en kropp per del.
 - stl: för 3D-utskrift av en modell i skala.
 Standard är glb och step. Referenskropparna (Omgivning) följer med i glb, inte i ifc/step; --utan-omgivning tar
-bort dem ur glb också. Filerna heter <modell>.glb, .ifc, .step och .stl.
+bort dem ur glb också. Filerna heter <modell>.glb, .html, .ifc, .step och .stl.
 """
 import os, sys, argparse
 
@@ -34,6 +36,8 @@ def _jobb(a):
     bas = os.path.join(utmapp, os.path.splitext(os.path.basename(a["fil"]))[0])
     format_ = [f.strip().lower() for f in a["format"].split(",") if f.strip()]
     ut = {}
+    if "html" in format_ and "glb" not in format_:     # webbvyn bäddar in glb-filen
+        format_.append("glb")
     if "glb" in format_ or "gltf" in format_:
         import ImportGui
         try:                                           # utseendet som i 3D-bilderna (rendera.py)
@@ -53,6 +57,23 @@ def _jobb(a):
         ut["glb"] = fil
         logg("glTF: %s (%d delar%s, %.0f kB)" % (fil, len(delar), " + %d referenskroppar" % len(omgivning) if omgivning else "",
                                               os.path.getsize(fil) / 1024))
+    if "html" in format_:
+        import webbvy, stal
+        info = []
+        for o in delar:
+            try:
+                vikt = o.Shape.Volume * 1e-9 * stal.densitet(getattr(o, "Material", "") or "S355J2")
+            except Exception:
+                vikt = None
+            info.append(dict(namn=o.Label, pos=getattr(o, "Pos", ""), profil=getattr(o, "Profil", ""),
+                             material=getattr(o, "Material", ""),
+                             langd=stal.langd(o) if o.TypeId == "PartDesign::Body" else 0, vikt=vikt))
+        marke, benamn = (getattr(grp, "Marke", ""), getattr(grp, "Namn", "")) if grp else ("", "")
+        titel = " ".join(x for x in (marke, benamn) if x) or doc.Label
+        fil = webbvy.skriv(ut["glb"], bas + ".html", titel, "%d delar · %s" % (len(delar), os.path.basename(a["fil"])),
+                           info, [o.Label for o in omgivning])
+        ut["html"] = fil
+        logg("3D-vy (HTML): %s (%.0f kB)" % (fil, os.path.getsize(fil) / 1024))
     if "step" in format_:
         import ImportGui
         fil = bas + ".step"

@@ -712,6 +712,56 @@ class Konstruktion:
             pass
         return self._plat_del(w, pos, profil or "PL%s BOCKAD" % _txt(T), material, huvuddel, sk.obj)
 
+    def ladbalk(self, start, slut, H, Bo, Bu, tu, tw, to, keps=0, upp=(0, 0, 1), stod=(), pelarbredd=200,
+                hal=None, styv_t=10, pos=("b/1", "pl/1", "pl/2", "pl/3", "pl/4"), material=None, huvuddel=True):
+        """Svetsad lådbalk av plåt: hattbalk (HSQ, keps=0) eller kepsbalk (FSQ, keps=+1/-1). `start`/`slut` = lådans
+        centrumlinje i underkant (tal). H = totalhöjd, Bo = bredd över liven, Bu = underflänsens bredd, tu/tw/to =
+        underfläns, liv och överfläns (överflänsen ligger mellan liven, i nivå med livens överkant). Hattbalkens
+        underfläns sticker ut lika på båda sidor; kepsbalkens ligger i liv med ena livet och har brättet åt vänster
+        (keps=+1) eller höger (-1) sett från start mot slut. Ändplåtar sluter lådan; `stod` = avstånd från start till
+        stöden, där svetsas livplåtar in över pelarens väggar (pelarbredd) och hålgruppen `hal` tas upp i underflänsen:
+        dict(bult="M20x60", dx=120, dy=165) ger 4 hål (+-dx längs, +-dy tvärs) i en hattbalk och 2 hål (+-dx) mitt i
+        brättet i en kepsbalk. Returnerar dict(underflans, liv, overflans, andplatar, livplatar)."""
+        from FreeCAD import Vector as V
+        a, b = V(*start), V(*slut)
+        w = b - a
+        L = w.Length
+        w.normalize()
+        z = V(*upp)
+        z = (z - w * z.dot(w)).normalize()
+        y = z.cross(w)
+        P = lambda x, yy, zz: tuple(round(c, 4) for c in (a + w * x + y * yy + z * zz))
+        T = lambda v: tuple(round(c, 6) for c in v)
+        e = keps * (Bu - Bo) / 2.0                      # underflänsens mitt i sidled
+        uf = self.plat(pos[0], "PL%g*%g" % (tu, Bu), mitt=P(L / 2, e, tu / 2), langd=L, lriktning=T(w), briktning=T(y),
+                       material=material, huvuddel=huvuddel)
+        yc = Bo / 2.0 - tw / 2.0
+        liv = [self.plat(pos[1], "PL%g*%g" % (tw, H - tu), mitt=P(L / 2, sgn * yc, tu + (H - tu) / 2), langd=L,
+                         lriktning=T(w), briktning=T(z), material=material) for sgn in (-1, 1)]
+        bi, hi = Bo - 2 * tw, H - tu - to
+        of = self.plat(pos[2], "PL%g*%g" % (to, bi), mitt=P(L / 2, 0, H - to / 2), langd=L, lriktning=T(w), briktning=T(y),
+                       material=material)
+
+        def tvar(p_, x):
+            return self.plat(p_, "PL%g*%g" % (styv_t, bi), mitt=P(x, 0, tu + hi / 2), langd=hi, lriktning=T(z),
+                             briktning=T(y), material=material)
+        andar = [tvar(pos[3], x) for x in (styv_t / 2.0, L - styv_t / 2.0)]
+        styv = []
+        k_ = pelarbredd / 2.0 - 4
+        for s_ in stod:
+            for x in (s_ - k_, s_ + k_):
+                if styv_t < x < L - styv_t:
+                    styv.append(tvar(pos[4], x))
+            if hal:
+                dx, dy = hal.get("dx", 120), hal.get("dy", 165)
+                if keps:
+                    yb = keps * (Bo / 2.0 + (Bu - Bo) / 4.0)
+                    pts = [P(s_ + sx * dx, yb, tu / 2) for sx in (-1, 1)]
+                else:
+                    pts = [P(s_ + sx * dx, sy * dy, tu / 2) for sx in (-1, 1) for sy in (-1, 1)]
+                self.hal([uf], pts, riktning=T(z), bult=hal.get("bult", "M20x60"))
+        return dict(underflans=uf, liv=liv, overflans=of, andplatar=andar, livplatar=styv)
+
     def hal(self, delar, punkter, riktning, d=None, bult=None, langd=None):
         """Hål med diametern d (eller bultens: M12 -> Ø14) genom `delar` i punkterna (globala tal), längs
         riktningen: en skiss med cirklarna och en Pocket (genom allt, åt båda hållen) i varje kropp. Med `langd`

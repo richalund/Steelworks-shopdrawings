@@ -17,6 +17,7 @@ Material; samma positionsnummer på flera delar = samma position (de ska vara li
 | `k.gera(del, yttre, inre, riktning=)` | gering eller plant kap genom två punkter |
 | `k.bockad(pos, t, punkter, langd, mitt=, rot=, radie=, sida="vanster")` | kantvikt plåt (SheetMetal) ur en öppen profil |
 | `k.trag(pos, t, langd, bredd, kant, mitt=, rot=, sidor=("-x","+x","-y","+y"))` | plåttråg, uppbockade kanter, hörnurtag |
+| `k.ladbalk(start, slut, H, Bo, Bu, tu, tw, to, keps=0, stod=, hal=, pos=)` | svetsad lådbalk av plåt: hattbalk (HSQ) eller kepsbalk (FSQ, `keps=±1` = brättets sida), ändplåtar, livplåtar och bulthål vid stöden |
 | `k.glas(pos, horn1, horn2, normal=, t=8, glipa=5, djup=0, list_profil=, list_pos=)` | glasruta i en öppning (+ lister) |
 | `k.inkop(pos, komponent="id" \| text, lada=(x,y,z) \| cylinder=(d,l), mitt=, rot=, vikt=)` | inköpt komponent som utrymmesmodell |
 | `k.referens(namn, lada=(x0,x1,y0,y1,z0,z1) \| bygg=, farg=, transparens=)` | omgivning (inte i materiallistan) |
@@ -58,15 +59,16 @@ hål. Pad (relief), Pocket med djup (gravyr) eller "genom" (genombrytning).
 ## Kommandon
 | Kommando | Gör | Ger |
 |---|---|---|
-| `underlag.py las <filer>` / `zoom <fil> --ruta x0,y0,x1,y1` | läser PDF (vektor/scannad), bilder, DXF | översikt, rutor, text, underlag.md |
+| `underlag.py las <filer>` / `zoom <fil> --ruta x0,y0,x1,y1 [--rotera 90]` / `skala --ref ...=mm` | läser PDF (vektor/scannad), bilder, DXF; vänder fotade blad; pixlar till mm | översikt, rutor, text, underlag.md |
 | `sammanstallning.py bygg/ritning` | bygger, kontrollerar, A2-ritning (`--sprak sv\|en\|zh`, `--noter-blad`, `--noter-ref N-01`) | FCStd, PDF, PNG, CSV |
 | `sammanstallning.py noteringar <noter.py\|json> <ut.FCStd> --nummer N-01` | projektets gemensamma noteringsritning | FCStd, PDF, PNG |
 | `ritning.py <del.FCStd>` | A3-ritning för en del (`--sprak`) | PDF, PNG, DXF |
-| `oversikt.py <modell> <ritskript>` | översikt/plan | PDF, PNG |
+| `oversikt.py <modell> <ritskript>` | översikt/plan (`vy.stomnat(x=, y=)` för stomlinjer) | PDF, PNG |
 | `rendera.py <modell>` | 3D-bilder med utseende | `_3d_<vy>.png` |
-| `export.py <modell> --format glb,ifc,step,stl` | export | .glb .ifc .step .stl |
+| `export.py <modell> --format glb,html,ifc,step,stl` | export, `html` = fristående 3D-vy (webbvy.py) | .glb .html .ifc .step .stl |
 | `dxf.py <modell>` | DXF per plåtposition | `_<pos>_kontur.dxf`, `_utbredning.dxf` |
 | `mangder.py <modell> [--antal]` | mängdunderlag (inga priser) | `_mangder.csv/.json` |
+| `mangder.py samla <modell>:antal ... --namn` | kalkylunderlag för flera märken: mängdspec, kaplista, plåtlista | `<namn> kalkylunderlag.xlsx` |
 | `komponenter.py visa/lagg-till/ta-bort` | register över inköpta komponenter med datablad och källa | `egna/komponenter.json` |
 | `regler.py <modell>` | produktregler och verkstadsgränser | rad i loggen, not på ritningen |
 | `paket.py skapa <modell>` / `kontrollera <zip>` / `skicka <zip> [--till]` | beställningspaket / mottagarens kontroll / mail till tillverkaren (skickas inte) | `_bestallning.zip`, `_mail.eml` |

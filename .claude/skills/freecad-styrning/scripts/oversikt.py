@@ -19,6 +19,7 @@ Modellen är vilken FCStd som helst med kroppar, t.ex. byggd med `sammanstallnin
       plan.bubbla("R/1", (600, 1440, 1430), dx=-6, dy=-14)                    # märkning med kort pil
       plan.text("VILPLAN +780", (-800, 750, 780))                             # text på papperet vid punkten
       fasad.niva("+780 VILPLAN", (-1600, 0, 780), dx=26)                       # nivåtext med ▽
+      plan.stomnat(x={"1": 0, "2": 2380}, y={"A": 0}, marginal=800)                # stomlinjer med cirklar
       r.noter(["PLANRITNING ...", "..."])                                       # noterna till höger
 
 Vyernas riktning pekar mot betraktaren (som TechDraw): plan (0, 0, 1), framifrån (0, -1, 0). `x` är vyns
@@ -209,6 +210,43 @@ def _jobb(a):
             vo = b.ViewObject
             vo.Font, vo.Fontsize, vo.LineWidth = FONT, 3.5, 0.13
             return b
+
+        def stomlinje(self, namn, a_, b_, bubbla="a", avstand=6.0):
+            """Stomlinje (streckad, tunn) mellan två modellpunkter med namnet i en cirkel `avstand` mm utanför
+            ändpunkten: bubbla "a", "b" eller "bada"."""
+            tag = self.v.makeCosmeticLine3D(V(*a_), V(*b_))
+            ce = self.v.getCosmeticEdge(tag)
+            ce.Format = {"style": 4, "weight": 0.13, "color": (0.35, 0.35, 0.35, 1.0), "visible": True}
+            pa, pb = self.papper(a_), self.papper(b_)
+            L = max(((pb[0] - pa[0]) ** 2 + (pb[1] - pa[1]) ** 2) ** 0.5, 1e-9)
+            ux, uy = (pb[0] - pa[0]) / L, (pb[1] - pa[1]) / L
+            for slut, p_, sg in (("a", pa, -1), ("b", pb, 1)):
+                if bubbla in (slut, "bada"):
+                    c = (p_[0] + sg * ux * avstand, p_[1] + sg * uy * avstand)
+                    b = nytt("TechDraw::DrawViewBalloon", "Stom")
+                    b.SourceView = self.v
+                    page.addView(b)
+                    ox, oy = (c[0] - self.v.X.Value) / self.s, (c[1] - self.v.Y.Value) / self.s
+                    b.Text, b.BubbleShape = namn, "Circular"
+                    b.OriginX, b.OriginY, b.X, b.Y = ox, oy, ox, oy        # ingen ledare: cirkeln står vid linjen
+                    b.KinkLength = 0.0
+                    typer = b.getEnumerationsOfProperty("EndType")
+                    b.EndType = next((x for x in typer if "none" in x.lower() or "no " in x.lower()), b.EndType)
+                    vo = b.ViewObject
+                    vo.Font, vo.Fontsize, vo.LineWidth = FONT, 3.2, 0.18
+            return tag
+
+        def stomnat(self, x=None, y=None, z=0.0, marginal=1500.0, bubbla="a", avstand=6.0):
+            """Stomnät i ett vågrätt plan: `x` = {namn: x-koordinat} (linjer längs y), `y` = {namn: y} (linjer längs
+            x), över hela nätets utsträckning plus `marginal` mm. Bubblorna i början (lägsta koordinaten) med "a",
+            i slutet med "b". Exempel: plan.stomnat(x={"1": 0, "2": 6000}, y={"A": 0, "B": 4800}, z=0)."""
+            x, y = x or {}, y or {}
+            xs, ys = list(x.values()) or [0.0], list(y.values()) or [0.0]
+            x0, x1, y0, y1 = min(xs) - marginal, max(xs) + marginal, min(ys) - marginal, max(ys) + marginal
+            for n, xv in x.items():
+                self.stomlinje(n, (xv, y0, z), (xv, y1, z), bubbla, avstand)
+            for n, yv in y.items():
+                self.stomlinje(n, (x0, yv, z), (x1, yv, z), bubbla, avstand)
 
         def text(self, txt, p, dx=0.0, dy=0.0, storlek=2.6):
             px, py = self.papper(p)
