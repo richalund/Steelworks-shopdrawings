@@ -69,6 +69,30 @@ I en molnsession försvinner allt när sessionen stängs. Claude lägger därfö
 vid många filer, en zip) som du sparar eller delar där du vill. Uppdrag läggs aldrig på en gren: repot är publikt.
 Företagsuppgifterna kan läggas som miljövariabler i molnmiljöns inställningar.
 
+## Använda i ditt eget repo eller lokalt på datorn
+
+Samma skill, två andra sätt att få in den. Det publika repot är huvudvägen; de här är för den som vill spara
+uppdragen i ett eget privat repo eller slippa installationen i molnet.
+
+- **Skill i claude.ai-kontot (molnet och telefonen, oavsett repo).** Hämta `freecad-styrning.zip` från
+  https://github.com/richalund/Steelworks-shopdrawings/releases/latest (byggs automatiskt vid varje ändring av
+  skillen) och ladda upp den på claude.ai under **Customize → Skills → + → Upload a skill**. Skillen laddas då i
+  varje molnsession, även från ett eget repo, och synkas till Claude Code på datorn med samma konto. Repots hook
+  följer inte med: be Claude köra `installera_linux.sh` före första ritningen, eller lägg skriptet som
+  installationsskript i molnmiljöns inställningar. *Flödet är ännu inte provat från telefonen; säg till om något
+  kärvar.*
+- **Lokalt på datorn (Windows, macOS, Linux) med egen FreeCAD.** Ingen väntan på installation, filerna ligger
+  kvar på disken och modellen kan öppnas direkt i FreeCAD. Installera skillen i alla projekt som plugin i
+  Claude Code:
+
+  ```
+  /plugin install freecad-styrning --marketplace richalund/Steelworks-shopdrawings
+  ```
+
+  eller klona repot och öppna mappen. FreeCAD 1.x, SheetMetal 0.7.24 och `pip install pymupdf ezdxf` behövs;
+  be Claude installera dem om du vill slippa göra det själv. Egna uppgifter och skript läggs i `egna/` i det
+  projekt du jobbar i.
+
 ## Profilmått och materialkvaliteter verifieras mot öppna källor
 
 Profilmått (IPE, HEA, HEB, HEM, UPE, VKR/RHS/SHS, KKR, rör, L) hämtas från
@@ -82,6 +106,8 @@ någon källa hittas inte på: Claude säger till och söker upp tabellen.
 ```
 README.md, ANVANDA.md, BIDRA.md  – kom igång, användning, bidrag
 AGENTS.md                        – instruktioner till alla kodagenter (Codex, Copilot, Cursor ...)
+.claude-plugin/                  – plugin-manifest: installera skillen lokalt i alla projekt
+.github/workflows/skill-zip.yml  – bygger freecad-styrning.zip till claude.ai vid varje ändring av skillen
 CLAUDE.md                        – Claude Code: läser AGENTS.md och lägger till det som gäller Claude
 docs/index.html                  – infosidan (GitHub Pages)
 .agents/skills, .github/skills   – länkar till skillen för andra agenter
