@@ -532,7 +532,7 @@ def _jobb():
             tjock, varm = {}, {}
             for r in rader:
                 t = kallor.tjocklek(r["profil"])
-                tjock[r["material"]] = max(tjock.get(r["material"], 0.0), t or 0.0) or None
+                tjock[r["material"]] = max(tjock.get(r["material"]) or 0.0, t or 0.0) or None   # profil utan tjocklek: None
                 varm[r["material"]] = varm.get(r["material"], False) or r["profil"].upper().startswith(("KKR", "KCKR"))
             mat = {m: kallor.material(m, tjock[m], varm[m]) for m in tjock}
             kallrader = kallor.noter(kl, mat, bredd=70)
@@ -682,6 +682,62 @@ def _jobb():
                     anvanda.add(gi)
                     break
 
+        # ---- delningskedjor: upprepade delar (spjälor, ovaler, liggare, bjälkar) får sina mittlägen som egen
+        # måttkedja i första huvudvyn, som Teklas delningsmått. Per axel tas positionen med flest olika lägen
+        # (minst 3 delar, minst 2 lägen); en kedja som redan finns (t.ex. samma lägen som hålen) läggs inte till.
+        # Bara regelbundna delningar: högst två olika avstånd (t.ex. spjälor i fack + steget över en stolpe) och
+        # inget avstånd under 1/60 av vyns bredd, annars blir kedjan oläslig (språngmönster, sneda delar).
+        forsta = next((vd for vd in vdef if vd["snitt"] is None), None)
+        if forsta is not None:
+            y_ = forsta["d"].cross(forsta["x"])
+            per_pos, former_ = {}, {}
+            for o in forsta["delar"]:
+                bb = o.Shape.BoundBox
+                c = bb.Center
+                per_pos.setdefault(o.Pos, []).append((round(c.dot(forsta["x"]), 1), round(c.dot(y_), 1)))
+                former_.setdefault(o.Pos, set()).add((round(bb.XLength), round(bb.YLength), round(bb.ZLength)))
+            for pos_ in [p for p, f in former_.items() if len(f) > 1]:
+                del per_pos[pos_]                                      # olika vända (ekrar i 120°): ingen delning
+            ext = forsta["ext"]
+            for i, (nyckel, lo, hi) in enumerate((("kedja_x", ext[0], ext[1]), ("kedja_y", ext[2], ext[3]))):
+                bast_ = None
+                for pos_, lagen_ in per_pos.items():
+                    varden = sorted({p[i] for p in lagen_ if lo + 0.5 < p[i] < hi - 0.5})
+                    steg_ = [q - p for p, q in zip(varden, varden[1:])]
+                    olika = []
+                    for s_ in steg_:
+                        if not any(abs(s_ - o) <= 1.0 for o in olika):
+                            olika.append(s_)
+                    if len(olika) > 2:
+                        continue
+                    if i == 1 and len(varden) > 2 and len({p[0] for p in lagen_}) > 2:
+                        continue                                       # snett led (spjälor i trappa): bara x-kedjan
+                    if len(lagen_) >= 3 and len(varden) >= 2 and (bast_ is None or (len(varden), len(lagen_)) > bast_[0]):
+                        bast_ = ((len(varden), len(lagen_)), pos_, varden)
+                if bast_ is None:
+                    continue
+                # täta lika delningar slås ihop till ett mått "26×99.2=2579" som Tekla
+                v_ = bast_[2]
+                ked, j = [lo, v_[0]], 0
+                while j < len(v_) - 1:
+                    s0, k_ = v_[j + 1] - v_[j], j + 1
+                    while k_ < len(v_) - 1 and abs((v_[k_ + 1] - v_[k_]) - s0) <= 0.5:
+                        k_ += 1
+                    if k_ - j >= 3 and s0 < (hi - lo) / 25:
+                        forsta.setdefault("etiketter", {})[(round(v_[j], 1), round(v_[k_], 1))] = "%d×%s=%%.1w" % (k_ - j, fmt(s0))
+                        ked.append(v_[k_])
+                    else:
+                        ked += v_[j + 1:k_ + 1]
+                    j = k_
+                ked.append(hi)
+                if min(q - p for p, q in zip(ked, ked[1:])) < (hi - lo) / 60:
+                    continue                                           # fortfarande för tätt för att läsas
+                if ked not in forsta[nyckel]:
+                    forsta[nyckel].insert(len(forsta[nyckel]) - 1, ked)        # före totalmåttet
+                    logg("Delningskedja %s: %s, %d lägen" % (nyckel[-1], bast_[1], len(bast_[2])))
+            forsta["topp"] = FORST - 3 + STEG * len(forsta["kedja_x"]) + (HALRAD if forsta["hal"] else 0) + 2 + forsta["extra"]
+            forsta["vanster"] = FORST - 3 + STEG * len(forsta["kedja_y"]) + 2
+
         # ---- skalor och placering: huvudvyer i en kolumn till vänster, snitt i en kolumn till höger
         huvud_v = [vd for vd in vdef if vd["snitt"] is None]
         snitt_v = [vd for vd in vdef if vd["snitt"]]
@@ -812,12 +868,16 @@ def _jobb():
                     else:
                         pts = [(vy.punkt(ext[0], p), vy.punkt(ext[0], q)) for p, q in par]
                         seg = [(vy.papper(A_)[1], vy.papper(B_)[1]) for A_, B_ in pts]
-                    seg = [(min(u, v), max(u, v), textbredd(fmt(q - p), 3.0)) for (u, v), (p, q) in zip(seg, par)]
-                    for (A_, B_), c in zip(pts, lagen(seg, X if axel == "x" else Y)):
+                    etik = [vd.get("etiketter", {}).get((round(p, 1), round(q, 1))) for p, q in par]
+                    seg = [(min(u, v), max(u, v), textbredd(e.replace("%.1w", fmt(q - p)) if e else fmt(q - p), 3.0))
+                           for (u, v), (p, q), e in zip(seg, par, etik)]
+                    for (A_, B_), c, e in zip(pts, lagen(seg, X if axel == "x" else Y), etik):
                         if axel == "x":
-                            vy.matt("DistanceX", A_, B_, (c, Y + h_ / 2 + FORST + vd["extra"] + STEG * niva), "Matt%s" % vd["namn"])
+                            m_ = vy.matt("DistanceX", A_, B_, (c, Y + h_ / 2 + FORST + vd["extra"] + STEG * niva), "Matt%s" % vd["namn"])
                         else:
-                            vy.matt("DistanceY", A_, B_, (X - w / 2 - FORST - STEG * niva, c), "Matt%s" % vd["namn"])
+                            m_ = vy.matt("DistanceY", A_, B_, (X - w / 2 - FORST - STEG * niva, c), "Matt%s" % vd["namn"])
+                        if e:
+                            m_.FormatSpec = e                          # sammanslagen delning "26×99.2=%.1w"
                         nm += 1
         logg("Mått: %d" % nm)
 
@@ -947,6 +1007,14 @@ def _efterbehandla(r):
     bas = r["bas"]
     pdf = bas + ".pdf"
     with pymupdf.open(r["sidor"][0]) as d:
+        # sidans bakgrund och bubblorna exporteras ljusgrå (TechDraws PageColor F1F3F5 når inte exporten på Linux),
+        # medan vyernas ytor fylls vita - vita fläckar syns då där ytdetekteringen hittar en yta utanför delarna
+        # (t.ex. ovanför ett lutande trappräcke). Gör det grå vitt, som Teklas svart på vitt.
+        for xref in d[0].get_contents():
+            s = d.xref_stream(xref)
+            s2 = s.replace(b"0.945098042 0.952941179 0.960784316 scn", b"1 1 1 scn")
+            if s2 != s:
+                d.update_stream(xref, s2)
         try:
             if os.path.exists(pdf):
                 os.remove(pdf)

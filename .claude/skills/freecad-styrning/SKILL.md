@@ -158,7 +158,8 @@ Modellen byggs med ett konstruktionsskript i `konstruktioner/` (API i `scripts/s
 (sammanställningsmärke, t.ex. `B/1`), `VARIABLER` (kalkylbladet `Variabler`), `RITNING` (vyer, snitt, noter,
 stomnät) och `bygg(k, v)` med `k.balk(pos, profil, start, slut, upp=, oppning=)`, `k.plat(pos, "PL10*110",
 mitt=, langd=, lriktning=, briktning=)` och `k.hal(delar, punkter, riktning, bult="M12x44")` och `k.gera(del, yttre_hörn, inre_hörn)` (geringskapning, t.ex.
-UPE-ram med 45°-hörn). `k.egen(pos, "TEXT", bygg)` för kroppar som skriptet bygger självt med pd-API:t. `k.skiva(pos, "GLAS 8", langd, bredd, t, mitt=, material="Glas", form="ellips"|"rektangel")`
+UPE-ram med 45°-hörn). `k.egen(pos, "TEXT", bygg)` för kroppar som skriptet bygger självt med pd-API:t
+(`langd=` = utvecklad längd i materiallistan för bockade delar som ovaler och bågar). `k.skiva(pos, "GLAS 8", langd, bredd, t, mitt=, material="Glas", form="ellips"|"rektangel")`
 ger en plan skiva (bordsskiva, glas, lock; vikt med 2500 kg/m3 för glas). `k.gera` kapar också plant: två
 punkter i kapplanet och `upp=` vald så att profilens y-riktning ligger i planet (se `konstruktioner/soffbord.py`,
 ett trebent bord med utåtlutade rör, nav-och-ekrar-ram och oval glasskiva). Varje del blir en
@@ -179,7 +180,8 @@ python scripts/sammanstallning.py ritning "<mapp>\B1.FCStd" --uppdrag 2026-001 -
   krockar mellan delar (överlappande volym). Krockar och ej bestämda skisser ska vara "inga"/"alla".
 - `ritning` lägger bladet `Sammanstallningsritning` (mall `mallar/A2_tekla.svg`) i modellens FCStd:
   framvy och planvy (E-metoden, planvyn med dolda linjer om `RITNING["dolda"]`), snitten med egen skala och
-  rubrik `A - A`, isometri, måttkedjor (hål, hålgruppernas mitt, totalmått), positionsbubblor (varje
+  rubrik `A - A`, isometri, måttkedjor (hål, hålgruppernas mitt, delningen för upprepade delar som spjälor
+  och ovaler, där täta lika steg slås ihop till `8×99.2=793.6`, totalmått), positionsbubblor (varje
   positionsnummer en gång där delen syns störst; huvuddelen som `B/1 b/1 UPE140`), hålangivelser
   `4*Ø14 - M12x44` där hålen syns som cirklar, materiallista med ALLMÄNNA NOTERINGAR och noterna. Ger
   `<modell>.pdf`, `<modell>.png` och `<modell>_materiallista.csv`.
@@ -200,6 +202,15 @@ fackhöjd i Variabler flyttar alla hyllplan, hyllor och dörrar utan ombyggnad. 
 hämta geometrin ur en egen regelmotor eller en orderfil och köra bygg + ritning i ett svep. Riktvärde från ett
 vinställ 6 x 360, djup 520: 204 kroppar, 258 skisser, 98,9 kg, bygg 45 s, ritning ca 70 s. Höga objekt:
 `--vyer fram,hoger --skala 20` (vyerna staplas på höjden; med planvyn krävs 1:25 på A2).
+
+**Räcken (plana och i trappa).** Börja från `konstruktioner/racke.py` och modulen `scripts/racke.py`, inte från
+ett tomt skript: ram (stolpar på delning, handledare, under-/överliggare), utfyllnad `Spjalor`, `Ovaler`,
+`Sprang` (förskjutna språng) eller `Skiva` (glas/plåt), infästning fotplåt/sidoplåt, lutning för trappräcken
+(snedkapade stänger) och positionsnummer efter geometri. `bygg` kontrollerar höjd, största fria öppning
+(BBR-kulan) och golvspalt och skriver resultatet i noterna. Varianter utan att röra skriptet:
+`--var Lutning=35 --var Fyllnad=3 --var Montage=2 --var Typ=2`. Ett nytt mönster eller en ny infästning:
+skriv en klass med `bygg(r, a, b, uk, ok, i)` i det egna skriptet (se Spjalor) och lyft in den i `racke.py`
+först när den återkommer. Läs `references/racken.md` för krav, profiler och vad som inte ritas.
 
 ## Tillverkningsgranskning (plåt)
 `scripts/dfm.py` granskar utbredningen mot tumregler för kantpress och laser och anger regel, uppmätt värde
@@ -246,7 +257,8 @@ t.ex. ritningsnummer, material och ytbehandling i noterna.
 - `scripts/rendera_pdf.py` PDF till PNG för granskning; `scripts/installera_linux.sh` installation på Linux.
 - `delar/*.py` delskript för Part Design; `mallar/A3.svg` (enkelt titelblock) och `mallar/A2_tekla.svg`
   (Tekla-titelblock med stomnät, etapp och revisionsrad).
-- `references/smidesritningar.md` ritningskonventionerna; `references/partdesign.md` API:t;
+- `scripts/racke.py` räckesgeneratorn (ram, utfyllnad, infästning, öppningskontroll); `konstruktioner/racke.py`.
+- `references/smidesritningar.md` ritningskonventionerna; `references/racken.md` räcken; `references/partdesign.md` API:t;
   `references/fallor.md` kända fällor i FreeCAD 1.0.1.
 
 ## Begränsningar

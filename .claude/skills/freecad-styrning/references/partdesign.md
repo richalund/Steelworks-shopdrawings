@@ -36,6 +36,8 @@ Hjälpare (returnerar geometriindex; alla låser geometrin fullt):
 - `rektangel(b, h, mitt=(0, 0) | horn=(x, y), namn=(nb, nh))`
 - `rundad_rektangel(b, h, r, mitt=(0, 0) | horn=(x, y), namn=(nb, nh, nr))` – tangerande bågar i skissen
   (bättre än Fillet: inga kanter att leta).
+- `stadion(b, h, mitt=(0, 0), namn=(nb, nraka))` – stående oval med raka sidor (halvcirklar i ändarna, radie b/2);
+  två i samma skiss (yttre och inre) ger en ring, t.ex. en oval av bockat plattstål.
 - `cirkel(d, mitt=(x, y), namn=None)`
 - `halbild(d, ccx, ccy=0, mitt=(0, 0))` – 4 hål i rektangel, eller 2 på rad om ccx eller ccy är 0.
   Mittens läge blir namngivet mått om det är en variabel (t.ex. `mitt=(0, "HalHojd")`).

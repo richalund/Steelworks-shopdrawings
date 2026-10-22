@@ -14,8 +14,6 @@ stolparna sitter korta liggare (sp/3) i två höjder.
 Koordinater: X = räckets längd från vänster stolpes yttersida, Z uppåt från underliggarens underkant, Y = djup
 (räckets mittplan y = 0).
 """
-import pd
-
 NAMN = "Räcke med ovaler"
 MARKE = "R/1"
 VARIABLER = [
@@ -28,8 +26,7 @@ RITNING = dict(
     noter=["PRELIMINÄR RITNING – BEFINTLIGT RÄCKE SOM RENOVERAS, EJ FÖR TILLVERKNING",
            "UNDERLAG: FOTON FRÅN KUND 2026-10-17 (MAIL KRISTINA IWAR, SUNDBYBERG)",
            "ALLA MÅTT ÄR SKALMÄTTA FRÅN FOTO OCH FASTSTÄLLS VID INMÄTNING PÅ PLATS",
-           "OVALER o/1 12 st 130x570 c/c 187, PLATTSTÅL 10x20 BOCKAT, UTV. LÄNGD 1226",
-           "MÅTT: o/1 MITT 141.5 FRÅN STOLPENS YTTERSIDA, ÖK o/1 108 UNDER ÖK l/1, LIGGARE sp/3–4 c 228 OCH 582 ÖVER UK",
+           "OVALER o/1 PLATTSTÅL 10x20 BOCKADE, ÖK o/1 108 UNDER ÖK l/1",
            "PROFILER ANTAGNA: PLATTSTÅL 10x20 / 10x30, l/1 8x40, h/1 RUNDAD CA 40x16 (FÖRENKLAD), MATERIAL S235 ANTAGET",
            "RENOVERING: BLÄSTRING Sa 2½ (ROST OCH GAMMAL FÄRG), SPRICKOR I SVETSAR LAGAS a3",
            "YTBEHANDLING: GRUNDFÄRG + TÄCKFÄRG MÄSSINGSFÄRG (KULÖR ENL. KUND), INOMHUS",
@@ -48,36 +45,14 @@ DELNING = 187.0         # ovalernas c/c
 OVAL_B, OVAL_H = 130.0, 570.0      # ovalens yttermått
 OVAL_TOPP = 108.0       # överliggarens ovansida till ovalens överkant
 LIGG_Z = (582.0, 228.0)            # liggarnas mitthöjd (övre, nedre)
-
-
-def stadion(sk, b, h, namn=("b", "h")):
-    """Sluten stadionform b x h (halvcirkelbågar i ändarna, radie b/2) kring skissens origo: två lodräta linjer och
-    två bågar, tangerande i ändpunkterna. Fullt bestämd av bredden, höjden och bågmittarnas symmetri kring origo."""
-    import Part
-    from FreeCAD import Vector as V
-    import math
-    r, c = b / 2.0, h / 2.0 - b / 2.0
-    hoger = sk.geo(Part.LineSegment(V(r, -c, 0), V(r, c, 0)))
-    vanster = sk.geo(Part.LineSegment(V(-r, c, 0), V(-r, -c, 0)))
-    topp = sk.geo(Part.ArcOfCircle(Part.Circle(V(0, c, 0), V(0, 0, 1), r), 0.0, math.pi))
-    botten = sk.geo(Part.ArcOfCircle(Part.Circle(V(0, -c, 0), V(0, 0, 1), r), math.pi, 2 * math.pi))
-    sk.begr("Vertical", hoger)
-    sk.begr("Vertical", vanster)
-    sk.begr("Tangent", hoger, pd.SLUT, topp, pd.START)
-    sk.begr("Tangent", topp, pd.SLUT, vanster, pd.START)
-    sk.begr("Tangent", vanster, pd.SLUT, botten, pd.START)
-    sk.begr("Tangent", botten, pd.SLUT, hoger, pd.START)
-    sk.matt("DistanceX", vanster, pd.START, hoger, pd.START, varde=b, namn=namn[0])
-    sk.matt("DistanceY", hoger, pd.START, hoger, pd.SLUT, varde=h - b, namn=namn[1])
-    sk.begr("Symmetric", topp, pd.MITT, botten, pd.MITT, pd.ROT, 1)
-    return [hoger, vanster, topp, botten]
+UTV = round(2 * (OVAL_H - OVAL_B) + 3.14159 * (OVAL_B - BAND))    # ovalens utvecklade längd (bandets mittlinje)
 
 
 def oval(d):
     """Oval av plattstål: stadionring (yttre OVAL_B x OVAL_H, bandet BAND brett) padad T i djupled."""
     sk = d.skiss("Oval", "XY")
-    stadion(sk, OVAL_B, OVAL_H, namn=("Bredd", "_rak"))
-    stadion(sk, OVAL_B - 2 * BAND, OVAL_H - 2 * BAND, namn=("Innerbredd", "_rak_i"))
+    sk.stadion(OVAL_B, OVAL_H, namn=("Bredd", "_rak"))
+    sk.stadion(OVAL_B - 2 * BAND, OVAL_H - 2 * BAND, namn=("Innerbredd", "_rak_i"))
     d.kloss(sk, T, "Djup")
 
 
@@ -107,7 +82,7 @@ def bygg(k, v):
     xs = [kant + i * DELNING for i in range(ANTAL)]
     for x in xs:
         k.egen("o/1", "OVAL %gx%g" % (OVAL_B, OVAL_H), oval, mitt=(x, T / 2, (z_ovtopp + z_ovbott) / 2),
-               rot=((1, 0, 0), (0, 0, 1), (0, -1, 0)), material=STAL)
+               rot=((1, 0, 0), (0, 0, 1), (0, -1, 0)), material=STAL, langd=UTV)
         k.balk("sp/1", "PL10*20", (x, 0, z_ovtopp), (x, 0, z_ok), upp=upp, material=STAL)
         k.balk("sp/2", "PL10*20", (x, 0, BAND), (x, 0, z_ovbott), upp=upp, material=STAL)
     # liggare mellan ovalerna och mot stolparna, två höjder

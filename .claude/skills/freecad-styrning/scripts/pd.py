@@ -347,6 +347,32 @@ class Skiss:
             self.placera(g[3], START, self.d.kombi("{0} - {1}/2", mitt[0], b), self.d.kombi("{0} + {1}/2 - {2}", mitt[1], h, r))
         return g + a
 
+    def stadion(self, b, h, mitt=(0, 0), namn=(None, None)):
+        """Stadionform (oval med raka sidor) b x h, stående (h längs y), med halvcirkelbågar i ändarna (radie b/2):
+        två lodräta linjer och två bågar som tangerar i ändpunkterna. Två stadier i samma skiss (yttre och inre)
+        ger en ring, t.ex. en oval av bockat plattstål. Måtten är bredden och den raka delen (h - b).
+        Returnerar [höger, vänster, övre båge, undre båge]."""
+        bv, hv = self._v(b), self._v(h)
+        if bv <= 0 or hv <= bv:
+            raise ValueError("Stadion %g x %g: höjden måste vara större än bredden" % (bv, hv))
+        mx, my = self._v(mitt[0]), self._v(mitt[1])
+        r, c = bv / 2, hv / 2 - bv / 2
+        hoger = self.geo(Part.LineSegment(V(mx + r, my - c, 0), V(mx + r, my + c, 0)))
+        vanster = self.geo(Part.LineSegment(V(mx - r, my + c, 0), V(mx - r, my - c, 0)))
+        topp = self.geo(Part.ArcOfCircle(Part.Circle(V(mx, my + c, 0), V(0, 0, 1), r), 0.0, math.pi))
+        botten = self.geo(Part.ArcOfCircle(Part.Circle(V(mx, my - c, 0), V(0, 0, 1), r), math.pi, 2 * math.pi))
+        self.begr("Vertical", hoger)
+        self.begr("Vertical", vanster)
+        for g1, g2 in ((hoger, topp), (topp, vanster), (vanster, botten), (botten, hoger)):
+            self.begr("Tangent", g1, SLUT, g2, START)
+        self.matt("DistanceX", vanster, START, hoger, START, varde=b, namn=namn[0])
+        self.matt("DistanceY", hoger, START, hoger, SLUT, varde=self.d.kombi("{0} - {1}", h, b), namn=namn[1])
+        if all(_tal(m) and m == 0 for m in mitt):
+            self.begr("Symmetric", topp, MITT, botten, MITT, ROT, 1)
+        else:
+            self.placera(botten, MITT, mitt[0], self.d.kombi("{0} - ({1})/2 + ({2})/2", mitt[1], h, b))
+        return [hoger, vanster, topp, botten]
+
     def cirkel(self, d, mitt=(0, 0), namn=None):
         """Cirkel med diametern d och mitten i (x, y). Returnerar geometriindex."""
         c = self.geo(Part.Circle(V(self._v(mitt[0]), self._v(mitt[1]), 0), V(0, 0, 1), self._v(d) / 2))
