@@ -25,7 +25,9 @@ min, max, abs, round och math. `niva` är FEL (standard) eller VARNING.
 kontrolleras inte. Kontrollerna:
   - stång/profil längre än lagerlängden (lagerlangd_mm: VARNING, max_langd_mm: FEL); FL, FS och PL under 100 mm
     bredd räknas som stång
-  - plåt (PL, bredd minst 100 mm) större än plåtformatet (platformat_mm, båda orienteringarna)
+  - plåt (PL, bredd minst 100 mm) större än plåtformatet (platformat_mm, båda orienteringarna). En lång remsa
+    vars bredd ryms i formatets kortsida (fläns eller liv i en svetsad balk) prövas i stället mot remsa_langd_mm:
+    längre ger VARNING (skarvas med stumsvets eller specialbeställs); null = remsor prövas mot plåtformatet
   - del tyngre än vad som lyfts för hand (max_vikt_hand_kg: VARNING) eller med verkstadens lyft (max_vikt_kg: FEL)
   - sammanställningen större än förzinkningsbadet (forzinkning_mm) eller transporten (transport_mm)
   - hål med mindre diameter än godstjockleken (min_hal_mot_tjocklek, laser och stans)
@@ -79,6 +81,7 @@ def skillversion():
 def kontrollera(doc, regler=(), variabler=None, delar=None, verkstad=None, logg=print):
     """Kör produktreglerna och verkstadsgränserna på modellen. Returnerar dict(ok, fel, varningar, antal, version)
     och sparar den som JSON i Sammanstallning.Regelkontroll (om gruppen finns)."""
+    import fcapi
     import Part
     import stal
     g = doc.getObject("Sammanstallning")
@@ -127,7 +130,7 @@ def kontrollera(doc, regler=(), variabler=None, delar=None, verkstad=None, logg=
         except Exception:
             info = None
         L = stal.langd(o) if hasattr(o, "Group") else 0.0
-        etik = o.Label
+        etik = fcapi.etikett(o)
         plat = bool(info) and info["typ"] == "PL" and o.Profil.upper().startswith("PL") and info["b"] >= 100   # annars stång (FL, FS, smal PL)
         if info and not plat and L:
             antal += 1
@@ -140,7 +143,13 @@ def kontrollera(doc, regler=(), variabler=None, delar=None, verkstad=None, logg=
             ob = o.Shape.optimalBoundingBox(False, False) if hasattr(o.Shape, "optimalBoundingBox") else o.Shape.BoundBox
             matt = sorted((ob.XLength, ob.YLength, ob.ZLength))[1:]
             a_, b_ = sorted(vk("platformat_mm"))
-            if matt[0] > a_ + 0.5 or matt[1] > b_ + 0.5:
+            remsa = vk("remsa_langd_mm")
+            if remsa and matt[0] <= a_ + 0.5 and matt[1] > b_ + 0.5:
+                # lång remsa (fläns, liv i en svetsad balk): skärs ur längre plåt eller köps som bredplattstång
+                if matt[1] > remsa + 0.5:
+                    varn.append("%s är %.0f mm lång, längre än remslängden %s mm: skarvas med stumsvets eller "
+                                "specialbeställs" % (etik, matt[1], remsa))
+            elif matt[0] > a_ + 0.5 or matt[1] > b_ + 0.5:
                 fel.append("%s är %.0f x %.0f mm, större än plåtformatet %s x %s mm" % (etik, matt[1], matt[0], b_, a_))
         if hasattr(o, "Material"):
             m = o.Shape.Volume * 1e-9 * stal.densitet(o.Material)

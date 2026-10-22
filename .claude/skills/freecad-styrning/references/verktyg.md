@@ -78,7 +78,7 @@ hål. Pad (relief), Pocket med djup (gravyr) eller "genom" (genombrytning).
 
 ## Filer som verkstaden äger (i `egna/`, aldrig i skillen)
 - `egna/foretag.json`: titelblockets uppgifter och logga (foretag.py).
-- `egna/verkstad.json`: lagerlängd, största längd, plåtformat, lyft, förzinkningsbad, transport, hål mot tjocklek
+- `egna/verkstad.json`: lagerlängd, största längd, plåtformat, remslängd för svetsade balkar, lyft, förzinkningsbad, transport, hål mot tjocklek
   (mall `mallar/verkstad.json`).
 - `egna/komponenter.json`: inköpta komponenter med databladets mått, vikt, last och källa (komponenter.py).
 - `egna/leverans.json`: förifylld mottagare för `paket.py skicka` (mall `mallar/leverans.json`, anbud@smide.com).

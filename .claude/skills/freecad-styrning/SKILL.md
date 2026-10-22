@@ -263,7 +263,7 @@ När en kund skickar foton och några mått (mail, chatt) på ett räcke, en gri
 2. Rita omgivningen som referenskroppar (`k.referens`, `racke.rak_trappa`) med antagna mått, och skriv i noterna
    att måtten är antagna ur foton och kontrollmäts på plats.
 3. Bygg varje räcke/grind som en egen sammanställning (R/1, R/2, G/1) i `egna/konstruktioner/`, gemensamma mått
-   i en egen modul (`egna/<uppdrag>.py`) som alla skript och översikten importerar.
+   i en egen modul (`egna/<uppdrag>.py`, ignorerad av git) som alla skript och översikten importerar.
 4. Gör en översikt (alla delar på plats + omgivningen) för 3D-bilderna (`rendera.py`) och planritningen
    (`oversikt.py`), och visa PNG:erna för användaren efter varje steg.
 5. Offert: mängdunderlaget (`mangder.py`), beställningspaketet (`paket.py skapa`) och, när användaren vill,

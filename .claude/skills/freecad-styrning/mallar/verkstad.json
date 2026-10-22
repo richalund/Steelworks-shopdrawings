@@ -6,6 +6,8 @@
   "max_langd_mm": 12000,
   "_platformat_mm": "största plåtformat i lasern eller på lagret [kortsida, långsida]",
   "platformat_mm": [1500, 3000],
+  "_remsa_langd_mm": "längsta remsa (fläns eller liv i svetsad balk, bredd inom plåtformatets kortsida) som skärs ur grovplåt eller köps som bredplattstång; längre ger VARNING (skarvas med stumsvets), null = remsor prövas mot plåtformatet (FEL)",
+  "remsa_langd_mm": 12000,
   "_max_vikt_hand_kg": "tyngre del lyfts inte för hand (VARNING)",
   "max_vikt_hand_kg": 25,
   "_max_vikt_kg": "verkstadens lyft (FEL), null = ingen gräns",
