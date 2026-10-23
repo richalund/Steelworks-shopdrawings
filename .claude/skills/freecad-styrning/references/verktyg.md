@@ -15,6 +15,9 @@ Material; samma positionsnummer på flera delar = samma position (de ska vara li
 | `k.egen(pos, text, bygg, mitt=, rot=, material=)` | egen Part Design-kropp, `bygg(d)` med pd-API:t |
 | `k.hal(delar, punkter, riktning, bult="M12x44")` | hålgrupp genom delarna (hålangivelse på ritningen) |
 | `k.gera(del, yttre, inre, riktning=)` | gering eller plant kap genom två punkter |
+| `k.rorbage(pos, profil, radie, langd=0, mitt=, rot=)` | bockat rör/rundstång: halvcirkel + två raka ben (U-bage); materiallistan får utdragen längd |
+| `k.kap(del, yttre, inre, riktning, behall=)` | plant kap/gering av vilken kropp som helst (bockade rör, egna kroppar) |
+| `k.fiskmun(del, punkt, riktning, d, spalt=0.5)` | fiskmun: rörets/stångens ände urfräst mot ett rörs mantel |
 | `k.bockad(pos, t, punkter, langd, mitt=, rot=, radie=, sida="vanster")` | kantvikt plåt (SheetMetal) ur en öppen profil |
 | `k.trag(pos, t, langd, bredd, kant, mitt=, rot=, sidor=("-x","+x","-y","+y"))` | plåttråg, uppbockade kanter, hörnurtag |
 | `k.ladbalk(start, slut, H, Bo, Bu, tu, tw, to, keps=0, stod=, hal=, pos=)` | svetsad lådbalk av plåt: hattbalk (HSQ) eller kepsbalk (FSQ, `keps=±1` = brättets sida), ändplåtar, livplåtar och bulthål vid stöden |
@@ -30,6 +33,14 @@ Material; samma positionsnummer på flera delar = samma position (de ska vara li
   Används för pinnar, spjälor och regler som saknar hål (hålens kedjor kommer av sig själva).
 - `k.bockad`: punkterna är plåtens ena sida; materialet ligger till vänster om profilens riktning (moturs profil =
   yttermått). Inre radien standard = t. Profiltext `PL<t> BOCKAD`, längd = utdragslängden.
+- `k.rorbage`: bågen ligger i kroppens XY-plan på +y-sidan kring origo, benen går mot -y; `rot` vrider bågen på plats.
+  Egenskapen `Utdragslangd` (2·langd + π·radie, ämnets längd före kap) går före Pad-längden i materiallistan,
+  mängdunderlaget (1 bockning) och 3D-vyn; `Bockradie` = radien till axeln. Profiltext `RÖR21.3*2 R219`.
+- `k.kap`: planet genom yttre och inre punkt och längs `riktning`; den sida som inte innehåller `behall` (standard
+  tyngdpunkten) tas bort genom hela kroppen längs riktningen, så båda benen i en U-bage geras med ett anrop.
+  Gering mellan ett bockat rör och ett ben: `k.kap` på bagen och `k.gera` på benet (`upp` i planet).
+- `k.fiskmun`: låt delen gå fram till eller förbi det andra rörets axel; `riktning` = det andra rörets axel (i en
+  båge tangenten). Fickan har en fast längd (inte "genom"), se fallor.md.
 - `k.trag`: yttermått langd x bredd x kant; `mitt` = bottens undersida i mitten; kanterna bockas uppåt längs delens
   +z. Justeras efter bygget så att yttermåtten stämmer (OBS-rad i loggen om inte), även med kanter på bara några
   sidor och med delens z i negativ riktning (lock och hyllor med kanterna nedåt: `rot=((1,0,0),(0,-1,0),(0,0,-1))`,

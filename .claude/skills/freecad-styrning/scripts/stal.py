@@ -872,6 +872,127 @@ class Konstruktion:
         dd.ficka(sk, "genom", "Gering%d" % nr, symmetrisk=True)
         dd.stada()
 
+    # -------------------------------------------------------------- bockade rör, fiskmun och fria kap
+    def rorbage(self, pos, profil, radie, langd=0, mitt=(0, 0, 0), rot=((1, 0, 0), (0, 1, 0), (0, 0, 1)), material=None,
+                huvuddel=False):
+        """Bockat rör eller rundstång (RÖR/KKR/D): en halvcirkel med radien `radie` (till axeln) kring kroppens origo
+        i kroppens XY-plan på +y-sidan och två raka ben `langd` från bågens ändar mot -y – en U-bage (sittram,
+        armstöd, bygel, handtag). langd=0 ger bara bågen. Kroppen placeras med `mitt` och `rot` som k.egen.
+        Benen är en Pad och bågen en Revolution på kroppens Z-axel. Utdragen längd (raka delar + bågen längs axeln)
+        sparas i egenskapen Utdragslangd och står i materiallistan, mängdunderlaget och 3D-vyn; bockradien i
+        Bockradie. Profiltexten blir "<profil> R<radie>". Benens ändar kapas med k.kap (gering mot en annan del)
+        eller k.fiskmun (mot ett rörs mantel)."""
+        from FreeCAD import Vector as V
+        info = tolka(profil)
+        if info["typ"] not in ("O", "D"):
+            raise ValueError("rorbage() vill ha ett runt rör eller en rundstång (RÖR, D), fick %s" % profil)
+        self._notera_kalla(info)
+        d = self._del(pos)
+        dy = info["d"]
+        if dy >= 2 * radie:
+            raise ValueError("rorbage(): radien %g är för liten för %s" % (radie, profil))
+        cirklar = [("d", dy)] + ([("di", dy - 2 * info["t"])] if info["typ"] == "O" else [])
+        if langd:
+            sk = d.skiss("Raka", "XZ")
+            for x in (radie, -radie):
+                for n, c in cirklar:
+                    sk.cirkel(c, mitt=(x, 0), namn=n if x > 0 else "")
+            f = d.kloss(sk, langd, "Langd")
+            if f.Shape.BoundBox.YMin > -float(d.uttryck(langd)[1]) + 1:      # benen mot -y
+                f.Reversed = True
+                d._rakna(f)
+        sb = d.skiss("Bage", "XZ")
+        for n, c in cirklar:
+            sb.cirkel(c, mitt=(radie, 0), namn="")
+        b = d.varv(sb, 180, axel="Z", namn="Bage")
+        if b.Shape.BoundBox.YMax < radie:                                  # bågen mot +y
+            b.Reversed = True
+            d._rakna(b)
+        self._placera(d, tuple(V(*r) for r in rot), tuple(mitt))
+        o = self._ny(d, pos, "%s R%g" % (profil, round(radie)), material, huvuddel)
+        for p_, beskr in (("Utdragslangd", "utdragen längd längs axeln (mm), materiallistans längd"),
+                          ("Bockradie", "bockradie till rörets axel (mm)")):
+            o.addProperty("App::PropertyFloat", p_, "Stal", beskr)
+        o.Utdragslangd = round(2 * float(d.uttryck(langd)[1]) + math.pi * radie, 1)
+        o.Bockradie = float(radie)
+        return o
+
+    def fiskmun(self, o, punkt, riktning, d, spalt=0.5):
+        """Fiskmun: ficka genom kroppen `o` med ett rörs cirkel Ø d + 2·spalt, axel genom `punkt` längs `riktning`
+        (globala tal) – änden på ett rör, en stång eller ett plattstål som svetsas mot ett rörs mantel. Låt delen
+        gå fram till (eller förbi) det andra rörets axel. Spalten (svetsspalt, standard 0,5 mm) behövs: ett rör som
+        slutar i axeln på ett lika grovt rör ger annars tangerande ytor och olika volym på spegelvända delar."""
+        import pd
+        import FreeCAD as App
+        from FreeCAD import Vector as V
+        dd = pd.Del(self.doc, o.Name)
+        inv = o.Placement.inverse()
+        rl = inv.Rotation.multVec(V(*riktning)).normalize()
+        p = inv.multVec(V(*[dd.uttryck(c)[1] for c in punkt]))
+        r = App.Rotation(V(0, 0, 1), rl)
+        origo = rl * p.dot(rl)
+        nr = sum(1 for f in o.Group if f.TypeId == "PartDesign::Pocket" and f.Name.startswith("Fiskmun")) + 1
+        sk = dd.skiss("Fiskmun%d" % nr, "XY")
+        sk.obj.AttachmentOffset = App.Placement(origo, r)
+        self.doc.recompute()
+        q = r.inverted().multVec(p - origo)
+        sk.cirkel(round(d + 2 * spalt, 4), mitt=(round(q.x, 4), round(q.y, 4)), namn="")
+        # längd i stället för "genom": en symmetrisk ThroughAll skar ibland bara delvis (references/fallor.md)
+        f = dd.ficka(sk, round(2 * o.Shape.BoundBox.DiagonalLength + 10, 1), "Fiskmun%d" % nr, symmetrisk=True)
+        dd.stada()
+        return f
+
+    def kap(self, o, yttre, inre, riktning, behall=None):
+        """Plant kap eller gering av vilken kropp som helst (bockade rör från k.rorbage, egna kroppar): planet går
+        genom punkterna `yttre` och `inre` och innehåller `riktning` (globala tal). Sidan utan `behall` (en global
+        punkt, standard kroppens tyngdpunkt) tas bort med en ficka från en sluten, fullt bestämd skiss vinkelrät mot
+        riktningen; fickan går genom hela kroppen längs riktningen, så båda benen i en U-bage kapas på en gång.
+        För raka profiler från k.balk gäller k.gera (skissen följer Pad-längden)."""
+        import pd
+        import Part
+        import FreeCAD as App
+        from FreeCAD import Vector as V
+        dd = pd.Del(self.doc, o.Name)
+        self.doc.recompute()
+        inv = o.Placement.inverse()
+        rl = inv.Rotation.multVec(V(*riktning)).normalize()
+        r = App.Rotation(V(0, 0, 1), rl)
+        ri = r.inverted()
+        lok = lambda q: inv.multVec(V(*[dd.uttryck(c)[1] for c in q]))
+        po, pi_ = lok(yttre), lok(inre)
+        origo = rl * po.dot(rl)
+        if behall is None:
+            try:
+                k_ = o.Shape.CenterOfMass
+            except Exception:
+                k_ = o.Shape.BoundBox.Center
+            kp = inv.multVec(k_)
+        else:
+            kp = lok(behall)
+        O, I, K = (ri.multVec(x - origo) for x in (po, pi_, kp))
+        u = O - I
+        u.z = 0
+        if u.Length < 1e-6:
+            raise ValueError("kap: yttre och inre punkt sammanfaller sedda längs riktningen")
+        u.normalize()
+        n = V(-u.y, u.x, 0)
+        if n.dot(K - I) > 0:                                         # bort från sidan som behålls
+            n = -n
+        W = 2 * o.Shape.BoundBox.DiagonalLength + 20
+        pts = [I - u * W, O + u * W, O + u * W + n * W, I - u * W + n * W]
+        pts = [(round(p_.x, 4), round(p_.y, 4)) for p_ in pts]
+        nr = sum(1 for f in o.Group if f.TypeId == "PartDesign::Pocket" and f.Name.startswith("Gering")) + 1
+        sk = dd.skiss("Gering%d" % nr, "XY")
+        sk.obj.AttachmentOffset = App.Placement(origo, r)
+        self.doc.recompute()
+        g = [sk.geo(Part.LineSegment(V(*pts[i], 0), V(*pts[(i + 1) % 4], 0))) for i in range(4)]
+        for i in range(4):
+            sk.begr("Coincident", g[i], pd.SLUT, g[(i + 1) % 4], pd.START)
+            sk.placera(g[i], pd.START, pts[i][0], pts[i][1], namn="")
+        f = dd.ficka(sk, round(2 * o.Shape.BoundBox.DiagonalLength + 10, 1), "Gering%d" % nr, symmetrisk=True)
+        dd.stada()
+        return f
+
     def ritning(self, **val):
         self.grupp.Ritning = json.dumps(val, ensure_ascii=False)
 
@@ -917,11 +1038,13 @@ def profilnamn(o):
 
 def langd(o):
     """Delens längd i materiallistan: Pad-längden (följer variablerna); för en bockad plåt utdragslängden,
-    för ett tråg den längsta sidan."""
+    för ett bockat rör (egenskapen Utdragslangd) längden längs axeln, för ett tråg den längsta sidan."""
     if not hasattr(o, "Group"):
         if hasattr(o, "Length") and hasattr(o, "BendSide"):
             return float(getattr(o.Length, "Value", o.Length))
         return round(max(o.Shape.BoundBox.XLength, o.Shape.BoundBox.YLength, o.Shape.BoundBox.ZLength), 1)
+    if getattr(o, "Utdragslangd", 0):                                               # bockat rör (k.rorbage)
+        return round(float(o.Utdragslangd), 1)
     pad = next((f for f in o.Group if f.TypeId == "PartDesign::Pad"), None)
     L = float(pad.Length.Value) if pad is not None else 0.0
     if (getattr(o, "Profil", "") or "").upper().startswith("GLAS"):                   # glasruta: längsta sidan

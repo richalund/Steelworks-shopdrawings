@@ -172,14 +172,16 @@ För balkar, ramar, pelare, konsoler, räcken, grindar och dörrar med flera del
 sammanställningsritning från ett smidesföretag. Läs `references/smidesritningar.md` först.
 Modellen byggs med ett konstruktionsskript (API i `scripts/stal.py`, se `references/verktyg.md`): `NAMN`, `MARKE`
 (sammanställningsmärke, t.ex. `B/1`), `VARIABLER`, `RITNING` (vyer, snitt, noter, detaljer, språk), valfritt
-`REGLER`, och `bygg(k, v)` med bl.a. `k.balk`, `k.plat`, `k.hal`, `k.gera`, `k.skiva`, `k.egen`, `k.referens`,
+`REGLER`, och `bygg(k, v)` med bl.a. `k.balk`, `k.plat`, `k.hal`, `k.gera`, `k.rorbage`, `k.kap`, `k.fiskmun`, `k.skiva`, `k.egen`, `k.referens`,
 `k.bockad`, `k.trag`, `k.ladbalk`, `k.glas`, `k.inkop`, `k.rorelse` och `k.utseende`. Varje del blir en Part Design-kropp (eller
 SheetMetal-del) med egenskaperna Pos/Profil/Material. Koordinater och längder får vara uttryck mot Variabler.
 Mönster: `konstruktioner/balkongram.py`, `pelare.py`, `soffbord.py`, `trappracke.py`, `grind.py`, `handdukstork.py`
 (rör med gerade knän, fiskmunskapade pinnar, väggfästen i snitt), `skap.py` (plåtskåp på en stomme av VKR),
 `solgaller.py` (plattstänger i strålmönster med bockade fötter och skruvhål), `racke_ovaler.py` (ornament av
-bockat plattstål som stadionformad skiss, ovalernas delning med `kedjor`) och `hattbalk.py` (svetsad hattbalk HSQ
-och kepsbalk FSQ med `k.ladbalk`: flänsar, liv, ändplåtar, livplåtar över pelarna och bulthål vid stöden).
+bockat plattstål som stadionformad skiss, ovalernas delning med `kedjor`), `hattbalk.py` (svetsad hattbalk HSQ
+och kepsbalk FSQ med `k.ladbalk`: flänsar, liv, ändplåtar, livplåtar över pelarna och bulthål vid stöden) och
+`pall.py` (rörmöbel: sittram bockad till en U-bage med `k.rorbage`, framben gerade mot den med `k.kap`/`k.gera`,
+bakben och plattstål fiskmunskapade med `k.fiskmun`; materiallistan får det bockade rörets utdragna längd).
 ```
 python3 scripts/sammanstallning.py bygg konstruktioner/balkongram.py ut/B1.FCStd [--var Langd=2400] --png --step
 python3 scripts/sammanstallning.py ritning ut/B1.FCStd --uppdrag 2026-001 --objekt "KV EXEMPEL 1" "Byggbolaget AB" "Exempelgatan 1"
