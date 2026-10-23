@@ -105,6 +105,8 @@ def mangder(doc, logg=print):
         plat = bockad or (info is not None and info["typ"] == "PL" and profil.upper().startswith("PL") and info["b"] >= 100) or (
             not hasattr(o, "Profil") and _platta(s))
         laser, instick, bock = 0.0, 0, 0
+        if getattr(o, "Bockradie", 0):                   # bockat rör (k.rorbage): bågen bockas i en operation
+            bock = 1
         if plat:
             plan = [f for f in s.Faces if f.Surface.TypeId == "Part::GeomPlane"]
             f = max(plan, key=lambda f: f.Area) if plan else None

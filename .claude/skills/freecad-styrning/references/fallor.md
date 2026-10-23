@@ -330,3 +330,18 @@ allt i globala koordinater: kroppens placering är noll, skissernas lägen och P
   `ccx_run`, `load_results`; resultatet har `vonMises` och `DisplacementLengths`.
 - Jobbets resultat-dict får inte ha nyckeln `ok` (krockar med `fcapi.avsluta(ok, ...)`): använd t.ex. `godkand`.
 - argparse tolkar ett värde som börjar med `-` som en flagga: skriv `--fast=-z`, inte `--fast -z`.
+
+## Rörmöbler: bockade rör, fiskmun och gering mot en båge (karmstol, 2026-10-23)
+- **En U-bage** (sittram, armstöd) är en kropp med en Pad (de raka benen, två cirklar i XZ-planet) och en Revolution
+  180° på kroppens Z-axel. Riktningen på Pad och Revolution kontrolleras på lådan (benen mot -y, bågen mot +y) och
+  vänds med `Reversed`. Materiallistans längd var Pad-längden (bara ett ben): `k.rorbage` sparar utdragen längd i
+  egenskapen `Utdragslangd`, som `stal.langd` läser först.
+- **`k.gera` går inte på en U-bage**: den kräver en rak profil (Pad längs kroppens z). `k.kap` skär i ett fritt plan
+  med en sluten skiss vinkelrät mot planets riktning och tar bort sidan utan kroppens tyngdpunkt.
+- **Fiskmun med symmetrisk ThroughAll skar bara delvis** på vänster men inte höger ben (volymerna skilde 900 mm3):
+  samma fälla som för geringar ovan. `k.fiskmun` ger fickan en fast längd (2 × kroppens diagonal).
+- **Rör som slutar i axeln på ett lika grovt rör** ger tangerande ytor (änden har samma radie som fickans cylinder):
+  spegelvända ben fick olika volym ("OBS: olika geometri" i materiallistan). En svetsspalt på 0,5 mm (fickan Ø d + 1)
+  tar bort tangensen; `k.fiskmun(spalt=0.5)`.
+- Fiskmun mot en båge: använd bågens tangent i punkten som riktning (inte den raka sidans riktning).
+
